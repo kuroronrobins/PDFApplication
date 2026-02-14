@@ -32,7 +32,9 @@ def add_watermark_text(
             (rect.width * 0.25, rect.height * 0.5),
             watermark,
             fontsize=32,
-            rotate=20,
+            # PyMuPDF insert_text only supports right-angle rotation values
+            # (0, 90, 180, 270).
+            rotate=0,
             color=(0.7, 0.7, 0.7),
             overlay=True,
         )
