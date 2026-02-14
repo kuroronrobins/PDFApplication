@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import base64
+import json
 import time
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 import fitz
 import flet as ft
@@ -74,6 +76,13 @@ def _show_result(page: ft.Page, msg: str, error: bool = False) -> None:
 def _make_thumbnail(doc_page: fitz.Page, zoom: float = 0.18) -> str:
     pix = doc_page.get_pixmap(matrix=fitz.Matrix(zoom, zoom), alpha=False)
     return base64.b64encode(pix.tobytes("png")).decode("utf-8")
+
+
+def _serialize_usage_details(details: dict[str, Any]) -> dict[str, Any]:
+    def _default(value: Any) -> str:
+        return str(value)
+
+    return json.loads(json.dumps(details, ensure_ascii=False, default=_default))
 
 
 def main(page: ft.Page) -> None:
@@ -242,7 +251,7 @@ def main(page: ft.Page) -> None:
                 status="success",
                 input_count=1,
                 output_count=len(result.output_files),
-                details=result.details,
+                details=_serialize_usage_details(result.details),
             )
             _show_result(page, result.message)
         except Exception as exc:
@@ -273,7 +282,7 @@ def main(page: ft.Page) -> None:
                 status="success",
                 input_count=1,
                 output_count=len(result.output_files),
-                details=result.details,
+                details=_serialize_usage_details(result.details),
             )
             _show_result(page, result.message)
         except Exception as exc:
@@ -362,7 +371,7 @@ def main(page: ft.Page) -> None:
                 status="success",
                 input_count=len(inputs),
                 output_count=len(result.output_files),
-                details=result.details,
+                details=_serialize_usage_details(result.details),
             )
             _show_result(page, result.message)
         except Exception as exc:
