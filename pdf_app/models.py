@@ -28,5 +28,13 @@ class ProgressEvent:
     total: int
 
 
+@dataclass(slots=True)
+class EfficiencyMetrics:
+    baseline_seconds: float | None = None
+    actual_seconds: float | None = None
+    saved_seconds: float | None = None
+    model_version: str = "v1"
+
+
 class PDFApplicationError(Exception):
     """Domain level error for predictable user-facing failures."""
