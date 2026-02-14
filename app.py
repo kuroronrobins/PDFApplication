@@ -1,8 +1,11 @@
 from __future__ import annotations
 
 import base64
+import json
+import time
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 import fitz
 import flet as ft
@@ -22,6 +25,7 @@ from pdf_app.services import (
     split_pdf,
 )
 from pdf_app.services.common import open_fitz_document
+from pdf_app.services.usage_log import record_usage_event
 
 
 @dataclass
@@ -72,6 +76,13 @@ def _show_result(page: ft.Page, msg: str, error: bool = False) -> None:
 def _make_thumbnail(doc_page: fitz.Page, zoom: float = 0.18) -> str:
     pix = doc_page.get_pixmap(matrix=fitz.Matrix(zoom, zoom), alpha=False)
     return base64.b64encode(pix.tobytes("png")).decode("utf-8")
+
+
+def _serialize_usage_details(details: dict[str, Any]) -> dict[str, Any]:
+    def _default(value: Any) -> str:
+        return str(value)
+
+    return json.loads(json.dumps(details, ensure_ascii=False, default=_default))
 
 
 def main(page: ft.Page) -> None:
@@ -199,6 +210,7 @@ def main(page: ft.Page) -> None:
         return inputs[0]
 
     def load_workspace(_: ft.ControlEvent) -> None:
+        started_at = time.perf_counter()
         try:
             src = require_single_input()
             doc = open_fitz_document(src, password=open_password.value or "")
@@ -210,19 +222,50 @@ def main(page: ft.Page) -> None:
                 doc.close()
             refresh_workspace()
             _show_result(page, f"{len(workspace_tiles)}ページを読み込みました。")
+            record_usage_event(
+                action="workspace_load",
+                started_at=started_at,
+                status="success",
+                input_count=1,
+                output_count=len(workspace_tiles),
+            )
         except Exception as exc:
+            record_usage_event(
+                action="workspace_load",
+                started_at=started_at,
+                status="error",
+                input_count=1,
+                error_message=str(exc),
+            )
             _show_result(page, str(exc), error=True)
 
     def export_workspace(_: ft.ControlEvent) -> None:
+        started_at = time.perf_counter()
         try:
             src = require_single_input()
             out = Path(output_dir.value or "./output") / (output_name.value or "edited.pdf")
             result = apply_page_plan(src, active_order(), out, password=open_password.value or "")
+            record_usage_event(
+                action="workspace_export",
+                started_at=started_at,
+                status="success",
+                input_count=1,
+                output_count=len(result.output_files),
+                details=_serialize_usage_details(result.details),
+            )
             _show_result(page, result.message)
         except Exception as exc:
+            record_usage_event(
+                action="workspace_export",
+                started_at=started_at,
+                status="error",
+                input_count=1,
+                error_message=str(exc),
+            )
             _show_result(page, str(exc), error=True)
 
     def split_workspace(_: ft.ControlEvent) -> None:
+        started_at = time.perf_counter()
         try:
             src = require_single_input()
             out_dir_path = Path(output_dir.value or "./output")
@@ -233,8 +276,23 @@ def main(page: ft.Page) -> None:
                 out_dir_path,
                 password=open_password.value or "",
             )
+            record_usage_event(
+                action="workspace_split",
+                started_at=started_at,
+                status="success",
+                input_count=1,
+                output_count=len(result.output_files),
+                details=_serialize_usage_details(result.details),
+            )
             _show_result(page, result.message)
         except Exception as exc:
+            record_usage_event(
+                action="workspace_split",
+                started_at=started_at,
+                status="error",
+                input_count=1,
+                error_message=str(exc),
+            )
             _show_result(page, str(exc), error=True)
 
     def refresh_split_inputs(_: ft.ControlEvent | None = None) -> None:
@@ -251,8 +309,9 @@ def main(page: ft.Page) -> None:
     refresh_split_inputs()
 
     def run(action: str) -> None:
+        started_at = time.perf_counter()
+        inputs = _parse_paths(input_paths.value or "")
         try:
-            inputs = _parse_paths(input_paths.value or "")
             out_dir_path = Path(output_dir.value or "./output")
             out_file = out_dir_path / (output_name.value or "result.pdf")
             pwd = open_password.value or ""
@@ -306,8 +365,23 @@ def main(page: ft.Page) -> None:
             else:
                 raise PDFApplicationError("未対応アクションです。")
 
+            record_usage_event(
+                action=action,
+                started_at=started_at,
+                status="success",
+                input_count=len(inputs),
+                output_count=len(result.output_files),
+                details=_serialize_usage_details(result.details),
+            )
             _show_result(page, result.message)
         except Exception as exc:
+            record_usage_event(
+                action=action,
+                started_at=started_at,
+                status="error",
+                input_count=len(inputs),
+                error_message=str(exc),
+            )
             _show_result(page, str(exc), error=True)
 
     common_form = ft.Card(
