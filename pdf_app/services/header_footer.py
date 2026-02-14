@@ -15,23 +15,24 @@ def add_header_footer(
     password: str = "",
 ) -> JobResult:
     doc = open_fitz_document(input_file, password=password)
+    try:
+        for i, page in enumerate(doc, start=1):
+            rect = page.rect
+            if header:
+                page.insert_text((40, 24), header, fontsize=10, color=(0.2, 0.2, 0.2))
+            if footer:
+                page.insert_text((40, rect.height - 20), footer, fontsize=10, color=(0.2, 0.2, 0.2))
+            if add_page_numbers:
+                page.insert_text(
+                    (rect.width - 70, rect.height - 20),
+                    f"{i}/{len(doc)}",
+                    fontsize=10,
+                    color=(0.2, 0.2, 0.2),
+                )
 
-    for i, page in enumerate(doc, start=1):
-        rect = page.rect
-        if header:
-            page.insert_text((40, 24), header, fontsize=10, color=(0.2, 0.2, 0.2))
-        if footer:
-            page.insert_text((40, rect.height - 20), footer, fontsize=10, color=(0.2, 0.2, 0.2))
-        if add_page_numbers:
-            page.insert_text(
-                (rect.width - 70, rect.height - 20),
-                f"{i}/{len(doc)}",
-                fontsize=10,
-                color=(0.2, 0.2, 0.2),
-            )
-
-    output_file.parent.mkdir(parents=True, exist_ok=True)
-    doc.save(str(output_file))
-    doc.close()
+        output_file.parent.mkdir(parents=True, exist_ok=True)
+        doc.save(str(output_file))
+    finally:
+        doc.close()
 
     return JobResult(True, "ヘッダー/フッター・ページ番号を追加しました。", [output_file])

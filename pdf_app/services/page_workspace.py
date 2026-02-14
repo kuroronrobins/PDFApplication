@@ -39,8 +39,12 @@ def split_by_markers(
     password: str = "",
 ) -> JobResult:
     reader = open_pdf_reader(input_file, password=password)
+    total = len(reader.pages)
     if not page_order:
         raise PDFApplicationError("分割するページがありません。")
+    for page_no in page_order:
+        if page_no < 1 or page_no > total:
+            raise PDFApplicationError(f"不正なページ番号です: {page_no}")
 
     output_dir.mkdir(parents=True, exist_ok=True)
     outputs: list[Path] = []

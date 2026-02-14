@@ -43,6 +43,26 @@ def _parse_order(raw: str) -> list[int]:
         raise PDFApplicationError("ページ順はカンマ区切りの数字で指定してください。") from exc
 
 
+def _parse_positive_int(raw: str, *, field_name: str) -> int:
+    try:
+        value = int(raw.strip())
+    except ValueError as exc:
+        raise PDFApplicationError(f"{field_name}は整数で指定してください。") from exc
+    if value < 1:
+        raise PDFApplicationError(f"{field_name}は1以上を指定してください。")
+    return value
+
+
+def _parse_positive_float(raw: str, *, field_name: str) -> float:
+    try:
+        value = float(raw.strip())
+    except ValueError as exc:
+        raise PDFApplicationError(f"{field_name}は数値で指定してください。") from exc
+    if value <= 0:
+        raise PDFApplicationError(f"{field_name}は0より大きい値を指定してください。")
+    return value
+
+
 def _show_result(page: ft.Page, msg: str, error: bool = False) -> None:
     color = ft.colors.RED_600 if error else ft.colors.GREEN_700
     page.snack_bar = ft.SnackBar(ft.Text(msg, color=color), open=True)
@@ -73,6 +93,27 @@ def main(page: ft.Page) -> None:
     watermark_text = ft.TextField(label="透かし文字", value="CONFIDENTIAL")
     encrypt_password = ft.TextField(label="設定するパスワード", password=True, can_reveal_password=True)
     merge_after_convert = ft.Checkbox(label="変換後に結合", value=False)
+    split_mode = ft.Dropdown(
+        label="分割モード",
+        value="pages",
+        options=[
+            ft.dropdown.Option("pages", "ページ数で分割"),
+            ft.dropdown.Option("size", "ファイルサイズで分割"),
+        ],
+    )
+    split_unit = ft.TextField(
+        label="分割単位（Nページごと）",
+        value="1",
+        helper_text="例: 10",
+        keyboard_type=ft.KeyboardType.NUMBER,
+    )
+    split_max_size_mb = ft.TextField(
+        label="分割サイズ上限（MB）",
+        value="",
+        helper_text="例: 2.5",
+        keyboard_type=ft.KeyboardType.NUMBER,
+    )
+    split_mode_hint = ft.Text(size=11, color=ft.colors.BLUE_GREY_500)
 
     inspect_result = ft.Text(selectable=True)
     workspace_hint = ft.Text("PDFを読み込むとタイルが表示されます。", color=ft.colors.BLUE_GREY_600)
@@ -161,10 +202,12 @@ def main(page: ft.Page) -> None:
         try:
             src = require_single_input()
             doc = open_fitz_document(src, password=open_password.value or "")
-            workspace_tiles.clear()
-            for i, doc_page in enumerate(doc, start=1):
-                workspace_tiles.append(PageTileState(original_page=i, thumbnail_b64=_make_thumbnail(doc_page)))
-            doc.close()
+            try:
+                workspace_tiles.clear()
+                for i, doc_page in enumerate(doc, start=1):
+                    workspace_tiles.append(PageTileState(original_page=i, thumbnail_b64=_make_thumbnail(doc_page)))
+            finally:
+                doc.close()
             refresh_workspace()
             _show_result(page, f"{len(workspace_tiles)}ページを読み込みました。")
         except Exception as exc:
@@ -194,6 +237,19 @@ def main(page: ft.Page) -> None:
         except Exception as exc:
             _show_result(page, str(exc), error=True)
 
+    def refresh_split_inputs(_: ft.ControlEvent | None = None) -> None:
+        is_pages = split_mode.value == "pages"
+        split_unit.disabled = not is_pages
+        split_max_size_mb.disabled = is_pages
+        if is_pages:
+            split_mode_hint.value = "ページ数で均等に分割します。例: 10 なら10ページごと。"
+        else:
+            split_mode_hint.value = "ファイルサイズ上限(MB)を目安に分割します。"
+        page.update()
+
+    split_mode.on_change = refresh_split_inputs
+    refresh_split_inputs()
+
     def run(action: str) -> None:
         try:
             inputs = _parse_paths(input_paths.value or "")
@@ -204,7 +260,31 @@ def main(page: ft.Page) -> None:
             if action == "merge":
                 result = merge_pdfs(inputs, out_file, password=pwd)
             elif action == "split":
-                result = split_pdf(require_single_input(), out_dir_path, password=pwd)
+                if split_mode.value == "size":
+                    size_raw = (split_max_size_mb.value or "").strip()
+                    if not size_raw:
+                        raise PDFApplicationError("サイズ分割では分割サイズ上限(MB)を入力してください。")
+                    max_size_mb = _parse_positive_float(
+                        size_raw,
+                        field_name="分割サイズ上限",
+                    )
+                    result = split_pdf(
+                        require_single_input(),
+                        out_dir_path,
+                        max_size_mb=max_size_mb,
+                        password=pwd,
+                    )
+                else:
+                    pages_per_file = _parse_positive_int(
+                        split_unit.value or "1",
+                        field_name="分割単位",
+                    )
+                    result = split_pdf(
+                        require_single_input(),
+                        out_dir_path,
+                        pages_per_file=pages_per_file,
+                        password=pwd,
+                    )
             elif action == "reorder":
                 result = reorder_pages(require_single_input(), _parse_order(reorder_order.value or ""), out_file, password=pwd)
             elif action == "convert":
@@ -271,7 +351,7 @@ def main(page: ft.Page) -> None:
             ft.ResponsiveRow(
                 [
                     ft.Container(ft.Card(ft.Container(ft.Column([ft.Text("PDF結合"), ft.ElevatedButton("実行", on_click=lambda _: run("merge"))]), padding=10)), col={"sm": 12, "md": 4}),
-                    ft.Container(ft.Card(ft.Container(ft.Column([ft.Text("PDF分割"), ft.ElevatedButton("実行", on_click=lambda _: run("split"))]), padding=10)), col={"sm": 12, "md": 4}),
+                    ft.Container(ft.Card(ft.Container(ft.Column([ft.Text("PDF分割"), split_mode, split_unit, split_max_size_mb, split_mode_hint, ft.ElevatedButton("実行", on_click=lambda _: run("split"))]), padding=10)), col={"sm": 12, "md": 4}),
                     ft.Container(ft.Card(ft.Container(ft.Column([ft.Text("ページ入れ替え"), reorder_order, ft.ElevatedButton("実行", on_click=lambda _: run("reorder"))]), padding=10)), col={"sm": 12, "md": 4}),
                     ft.Container(ft.Card(ft.Container(ft.Column([ft.Text("Office/PDF変換"), merge_after_convert, ft.ElevatedButton("実行", on_click=lambda _: run("convert"))]), padding=10)), col={"sm": 12, "md": 4}),
                     ft.Container(ft.Card(ft.Container(ft.Column([ft.Text("ヘッダー/フッター"), header_text, footer_text, ft.ElevatedButton("実行", on_click=lambda _: run("header_footer"))]), padding=10)), col={"sm": 12, "md": 4}),
