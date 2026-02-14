@@ -29,7 +29,7 @@ def convert_files_to_pdf(
 
         if suffix == ".pdf":
             target = output_dir / src.name
-            target.write_bytes(src.read_bytes())
+            shutil.copy2(src, target)
             outputs.append(target)
             continue
 
@@ -48,7 +48,12 @@ def convert_files_to_pdf(
         result = subprocess.run(cmd, capture_output=True, text=True)
         if result.returncode != 0:
             raise PDFApplicationError(f"変換失敗: {src.name}\n{result.stderr.strip() or result.stdout.strip()}")
-        outputs.append(output_dir / f"{src.stem}.pdf")
+        converted = output_dir / f"{src.stem}.pdf"
+        if not converted.exists():
+            raise PDFApplicationError(
+                f"変換結果のPDFが見つかりませんでした: {converted.name}"
+            )
+        outputs.append(converted)
 
     if merge and len(outputs) > 1:
         merged_file = output_dir / "merged_converted.pdf"

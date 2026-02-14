@@ -26,21 +26,23 @@ def add_watermark_text(
     input_file: Path, output_file: Path, watermark: str, password: str = ""
 ) -> JobResult:
     doc = open_fitz_document(input_file, password=password)
-    for page in doc:
-        rect = page.rect
-        page.insert_text(
-            (rect.width * 0.25, rect.height * 0.5),
-            watermark,
-            fontsize=32,
-            # PyMuPDF insert_text only supports right-angle rotation values
-            # (0, 90, 180, 270).
-            rotate=0,
-            color=(0.7, 0.7, 0.7),
-            overlay=True,
-        )
-    output_file.parent.mkdir(parents=True, exist_ok=True)
-    doc.save(str(output_file))
-    doc.close()
+    try:
+        for page in doc:
+            rect = page.rect
+            page.insert_text(
+                (rect.width * 0.25, rect.height * 0.5),
+                watermark,
+                fontsize=32,
+                # PyMuPDF insert_text only supports right-angle rotation values
+                # (0, 90, 180, 270).
+                rotate=0,
+                color=(0.7, 0.7, 0.7),
+                overlay=True,
+            )
+        output_file.parent.mkdir(parents=True, exist_ok=True)
+        doc.save(str(output_file))
+    finally:
+        doc.close()
     return JobResult(True, "透かしを追加しました。", [output_file])
 
 
