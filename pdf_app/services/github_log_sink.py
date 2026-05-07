@@ -4,11 +4,20 @@ import base64
 import json
 import time
 from urllib import error, request
+from urllib.parse import urlparse
 
 from pdf_app.models import PDFApplicationError
 
 
 GITHUB_API_BASE = "https://api.github.com"
+
+
+def _open_github_request(req: request.Request, timeout: int = 20):
+    parsed = urlparse(req.full_url)
+    if parsed.scheme != "https" or parsed.netloc.lower() != "api.github.com":
+        raise PDFApplicationError("Unexpected GitHub API URL")
+    # Only GitHub API URLs reach this call; scheme and host are validated above.
+    return request.urlopen(req, timeout=timeout)  # nosec B310
 
 
 def _build_headers(token: str) -> dict[str, str]:
@@ -24,7 +33,7 @@ def _get_file(repo: str, path: str, token: str, branch: str) -> tuple[str, str] 
     url = f"{GITHUB_API_BASE}/repos/{repo}/contents/{path}?ref={branch}"
     req = request.Request(url, headers=_build_headers(token), method="GET")
     try:
-        with request.urlopen(req, timeout=20) as response:
+        with _open_github_request(req, timeout=20) as response:
             payload = json.loads(response.read().decode("utf-8"))
             content = base64.b64decode(payload.get("content", "")).decode("utf-8")
             sha = payload["sha"]
@@ -65,7 +74,7 @@ def append_jsonl_to_github(repo: str, path: str, token: str, branch: str, line: 
             method="PUT",
         )
         try:
-            with request.urlopen(req, timeout=20):
+            with _open_github_request(req, timeout=20):
                 return
         except error.HTTPError as exc:
             if exc.code == 409 and attempt < max_retries:
