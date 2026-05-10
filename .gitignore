@@ -13,3 +13,7 @@ pnpm-debug.log*
 docs/reports/edge-profile*/
 docs/reports/chrome-profile*/
 docs/reports/*.log
+__pycache__/
+*.pyc
+src-python/.venv/
+src-python/.pytest_cache/

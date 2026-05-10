@@ -5,6 +5,7 @@ import {
   type ChangeEvent,
   type DragEvent,
 } from "react";
+import { convertFileSrc } from "@tauri-apps/api/core";
 import {
   ArrowDown,
   ArrowUp,
@@ -40,6 +41,15 @@ import {
   X,
 } from "lucide-react";
 import { cleanupCacheSession, prepareCacheSession } from "./features/workbench/backend";
+import {
+  cancelCurrentExportWithEngine,
+  exportCurrentWorkspaceWithEngine,
+  isCurrentExportCancellationRequested,
+  isProcessingEngineCancelled,
+  processAllPendingEngineFiles,
+  processNextPendingEngineFile,
+  resetCurrentExportCancellation,
+} from "./features/workbench/engineWorkflow";
 import {
   browserFilesToInputInfo,
   droppedFilesToInputInfo,
@@ -164,6 +174,13 @@ function isTextInputTarget(target: EventTarget | null): boolean {
   );
 }
 
+function localAssetSrc(path?: string): string | undefined {
+  if (!path) {
+    return undefined;
+  }
+  return isTauriRuntime() ? convertFileSrc(path) : path;
+}
+
 function decorationLabel(kind: DecorationKind): string {
   switch (kind) {
     case "header":
@@ -205,8 +222,12 @@ function AppBar() {
   const addLog = useWorkbenchStore((state) => state.addLog);
   const setExportDirectory = useWorkbenchStore((state) => state.setExportDirectory);
   const startExportJob = useWorkbenchStore((state) => state.startExportJob);
+  const setExportJobProgress = useWorkbenchStore((state) => state.setExportJobProgress);
+  const completeExportJob = useWorkbenchStore((state) => state.completeExportJob);
+  const failExportJob = useWorkbenchStore((state) => state.failExportJob);
   const exportJob = useWorkbenchStore((state) => state.exportJob);
   const exportDirectory = useWorkbenchStore((state) => state.exportDirectory);
+  const cacheSession = useWorkbenchStore((state) => state.cacheSession);
 
   const handleAddFiles = async () => {
     if (selectingFiles) {
@@ -252,6 +273,56 @@ function AppBar() {
       addInputFiles(browserFilesToInputInfo(event.target.files));
     }
     event.target.value = "";
+  };
+
+  const handleExport = async () => {
+    if (exportJob.status === "running") {
+      return;
+    }
+
+    if (!isTauriRuntime()) {
+      startExportJob();
+      return;
+    }
+
+    let directory = exportDirectory;
+    if (!directory) {
+      try {
+        const selected = await openOutputDirectoryDialog();
+        if (!selected) {
+          addLog("warn", "出力先の選択がキャンセルされました。");
+          return;
+        }
+        directory = selected;
+        setExportDirectory(selected);
+      } catch (error) {
+        addLog("error", `出力先を設定できませんでした: ${errorMessage(error)}`);
+        return;
+      }
+    }
+
+    if (!cacheSession.path) {
+      failExportJob("一時キャッシュが未初期化です。アプリを再起動してください。");
+      return;
+    }
+
+    resetCurrentExportCancellation();
+    startExportJob();
+    try {
+      setExportJobProgress(8, "Office変換", "入力ファイルを実PDFとして準備中");
+      await processAllPendingEngineFiles(cacheSession.path);
+      if (isCurrentExportCancellationRequested()) {
+        return;
+      }
+      setExportJobProgress(66, "結合", "PDFを書き出し中");
+      const result = await exportCurrentWorkspaceWithEngine(directory);
+      completeExportJob(result.outputFiles);
+    } catch (error) {
+      if (isProcessingEngineCancelled(error)) {
+        return;
+      }
+      failExportJob(errorMessage(error));
+    }
   };
 
   return (
@@ -314,7 +385,7 @@ function AppBar() {
         <button
           className="export-button"
           disabled={exportJob.status === "running"}
-          onClick={startExportJob}
+          onClick={handleExport}
         >
           <Upload size={17} />
           書き出し
@@ -439,6 +510,11 @@ function FileCard({
         <span>{file.extension?.toUpperCase() ?? "形式未取得"}</span>
         <span>{formatSize(file.sizeBytes)}</span>
       </div>
+      {file.errorMessage && (
+        <div className="file-error" title={file.errorMessage}>
+          {file.errorMessage}
+        </div>
+      )}
       {file.cacheState === "converting" && (
         <div className="mini-progress" aria-label={cacheLabel(file)}>
           <span style={{ width: `${file.progress ?? 0}%` }} />
@@ -671,7 +747,10 @@ function PageCard({
       type="button"
       data-file-id={fileId}
     >
-      <div className="page-sheet">
+      <div className={["page-sheet", page.thumbnailPath ? "has-thumbnail" : ""].join(" ")}>
+        {page.thumbnailPath && (
+          <img className="page-thumbnail" src={localAssetSrc(page.thumbnailPath)} alt="" />
+        )}
         <div className="header-zone">ヘッダー</div>
         <div className="page-lines">
           <span />
@@ -1047,6 +1126,20 @@ function OutputBar({
   const files = useWorkbenchStore((state) => state.files);
   const exportJob = useWorkbenchStore((state) => state.exportJob);
   const cancelExportJob = useWorkbenchStore((state) => state.cancelExportJob);
+  const handleCancel = async () => {
+    if (isTauriRuntime()) {
+      try {
+        await cancelCurrentExportWithEngine();
+      } catch (error) {
+        useWorkbenchStore
+          .getState()
+          .addLog("warn", `キャンセル要求の送信に失敗しました: ${errorMessage(error)}`);
+        cancelExportJob();
+      }
+      return;
+    }
+    cancelExportJob();
+  };
   const pendingCount = files.filter((file) =>
     ["queued", "converting", "stale"].includes(file.cacheState),
   ).length;
@@ -1090,7 +1183,7 @@ function OutputBar({
           <span style={{ width: progressWidth }} />
         </div>
         {exportJob.status === "running" && (
-          <button onClick={cancelExportJob}>
+          <button onClick={handleCancel}>
             <CircleStop size={16} />
             中止
           </button>
@@ -1152,6 +1245,7 @@ export function App() {
   const deleteSelectedPages = useWorkbenchStore((state) => state.deleteSelectedPages);
   const setActiveTool = useWorkbenchStore((state) => state.setActiveTool);
   const setCacheSession = useWorkbenchStore((state) => state.setCacheSession);
+  const cacheSession = useWorkbenchStore((state) => state.cacheSession);
   const tickBackgroundJobs = useWorkbenchStore((state) => state.tickBackgroundJobs);
   const tickExportJob = useWorkbenchStore((state) => state.tickExportJob);
 
@@ -1177,12 +1271,19 @@ export function App() {
 
   useEffect(() => {
     const timer = window.setInterval(() => {
+      if (isTauriRuntime() && cacheSession.path) {
+        processNextPendingEngineFile(cacheSession.path);
+        return;
+      }
       tickBackgroundJobs();
     }, 900);
     return () => window.clearInterval(timer);
-  }, [tickBackgroundJobs]);
+  }, [cacheSession.path, tickBackgroundJobs]);
 
   useEffect(() => {
+    if (isTauriRuntime()) {
+      return;
+    }
     const timer = window.setInterval(() => {
       tickExportJob();
     }, 700);

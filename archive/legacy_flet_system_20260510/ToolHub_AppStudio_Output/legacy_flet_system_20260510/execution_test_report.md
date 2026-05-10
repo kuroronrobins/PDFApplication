@@ -1,17 +1,27 @@
 # Execution Test Report
 
 - app_id: `legacy_flet_system_20260510`
-- generated_at: `2026-05-11T06:12:44`
-- overall_status: `fail`
-- approval_allowed: `false`
+- generated_at: `2026-05-11T06:27:30`
+- overall_status: `warn`
+- approval_allowed: `true`
 - approval_blocking_warnings_count: `0`
-- non_blocking_warnings_count: `0`
-- info_count: `0`
-- unresolved_distribution_risks_count: `1`
+- non_blocking_warnings_count: `2`
+- info_count: `9`
+- unresolved_distribution_risks_count: `0`
 
 | Status | Category | Blocking | Check | Detail |
 | --- | --- | --- | --- | --- |
-| fail | fail | true | apply started | Apply started and has not reached final execution checks yet. |
+| pass | info | false | app.yaml exists | C:\Users\kuroron\Documents\RD\20260426_Toolhub\launcher\src-tauri\target\release\apps\legacy_flet_system_20260510\app.yaml |
+| pass | info | false | app.yaml parse | runner=exe, entry=bin/legacy_flet_system_20260510/legacy_flet_system_20260510.exe |
+| pass | info | false | runner supported | exe |
+| pass | info | false | frozen-folder executable | C:\Users\kuroron\Documents\RD\20260426_Toolhub\launcher\src-tauri\target\release\apps\legacy_flet_system_20260510\bin\legacy_flet_system_20260510\legacy_flet_system_20260510.exe |
+| pass | info | false | .py run.entry blocked | bin/legacy_flet_system_20260510/legacy_flet_system_20260510.exe |
+| pass | info | false | registered BUILD_REQUIRED marker | BUILD_REQUIRED.txt is not present in apps/<app_id>/bin. |
+| pass | info | false | frozen data files | 1 packaged data file(s) were found. |
+| pass | info | false | forbidden registered payload | No forbidden credential, log, cache, temp, or build_env files were registered. |
+| warn | non_blocking_warning | false | secret scan | No Apply-blocking secret findings. warnings=6, manual_checks=6 |
+| pass | info | false | distribution check | Distribution checks passed. |
+| warn | non_blocking_warning | false | runner dry execution | Skipped for exe/frozen-folder mode. Browser, login, and GUI flows require human launch verification. |
 
 ## Evidence
 
@@ -59,43 +69,43 @@
   "output_dir": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\archive\\legacy_flet_system_20260510\\ToolHub_AppStudio_Output\\legacy_flet_system_20260510",
   "build_env_path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\archive\\legacy_flet_system_20260510\\ToolHub_AppStudio_Output\\legacy_flet_system_20260510\\be",
   "build_env_python": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\archive\\legacy_flet_system_20260510\\ToolHub_AppStudio_Output\\legacy_flet_system_20260510\\be\\Scripts\\python.exe",
-  "pyinstaller_probe_python": null,
-  "pyinstaller_build_python": null,
+  "pyinstaller_probe_python": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\archive\\legacy_flet_system_20260510\\ToolHub_AppStudio_Output\\legacy_flet_system_20260510\\be\\Scripts\\python.exe",
+  "pyinstaller_build_python": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\archive\\legacy_flet_system_20260510\\ToolHub_AppStudio_Output\\legacy_flet_system_20260510\\be\\Scripts\\python.exe",
   "frozen_build_report": {
     "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\archive\\legacy_flet_system_20260510\\ToolHub_AppStudio_Output\\legacy_flet_system_20260510\\frozen_folder_build_report.md",
-    "exists": false,
-    "last_write_time": null,
-    "size": null
+    "exists": true,
+    "last_write_time": "2026-05-11T06:27:23",
+    "size": 11143
   },
   "frozen_exe": {
     "path": "C:\\Users\\kuroron\\Documents\\RD\\20260426_Toolhub\\launcher\\src-tauri\\target\\release\\apps\\legacy_flet_system_20260510\\bin\\legacy_flet_system_20260510\\legacy_flet_system_20260510.exe",
-    "exists": false,
-    "last_write_time": null,
-    "size": null
+    "exists": true,
+    "last_write_time": "2026-05-11T06:27:22",
+    "size": 8109507
   },
   "output_frozen_exe": {
     "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\archive\\legacy_flet_system_20260510\\ToolHub_AppStudio_Output\\legacy_flet_system_20260510\\final_app\\bin\\legacy_flet_system_20260510\\legacy_flet_system_20260510.exe",
-    "exists": false,
-    "last_write_time": null,
-    "size": null
+    "exists": true,
+    "last_write_time": "2026-05-11T06:27:22",
+    "size": 8109507
   },
   "app_yaml": {
     "path": "C:\\Users\\kuroron\\Documents\\RD\\20260426_Toolhub\\launcher\\src-tauri\\target\\release\\apps\\legacy_flet_system_20260510\\app.yaml",
-    "exists": false,
-    "last_write_time": null,
-    "size": null
+    "exists": true,
+    "last_write_time": "2026-05-11T06:26:48",
+    "size": 1577
   },
   "build_profile": {
-    "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\archive\\legacy_flet_system_20260510\\ToolHub_AppStudio_Output\\legacy_flet_system_20260510\\build_profile.json",
+    "path": "C:\\Users\\kuroron\\Documents\\RD\\20260426_Toolhub\\launcher\\src-tauri\\target\\release\\apps\\legacy_flet_system_20260510\\build_profile.json",
     "exists": true,
-    "last_write_time": "2026-05-11T06:12:44",
+    "last_write_time": "2026-05-11T06:26:48",
     "size": 2449
   },
   "timing_report": {
     "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\archive\\legacy_flet_system_20260510\\ToolHub_AppStudio_Output\\legacy_flet_system_20260510\\timing_report.json",
     "exists": true,
-    "last_write_time": "2026-05-11T06:12:44",
-    "size": 1770
+    "last_write_time": "2026-05-11T06:26:48",
+    "size": 1769
   }
 }
 ```

@@ -1,3 +1,4 @@
+altgraph==0.17.5
 anyio==4.13.0
 certifi==2026.4.22
 flet==0.85.0
@@ -8,8 +9,14 @@ httpx==0.28.1
 idna==3.14
 msgpack==1.1.2
 oauthlib==3.3.1
+packaging==26.2
+pefile==2024.8.26
+pyinstaller==6.20.0
+pyinstaller-hooks-contrib==2026.5
 PyMuPDF==1.27.2.3
 pypdf==6.11.0
 pywin32==311
+pywin32-ctypes==0.2.3
 repath==0.9.0
+setuptools==82.0.1
 six==1.17.0

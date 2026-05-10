@@ -56,6 +56,8 @@ export type PdfMetadata = {
   pageSizeLabel?: string;
 };
 
+export type FileEngineState = "synthetic" | "inspected" | "cached";
+
 export type WorkbenchFile = {
   id: string;
   sourcePath?: string;
@@ -70,14 +72,18 @@ export type WorkbenchFile = {
   expanded: boolean;
   excluded: boolean;
   priority?: boolean;
+  engineState?: FileEngineState;
+  errorMessage?: string;
   metadata?: PdfMetadata;
 };
 
 export type PageItem = {
   id: string;
   fileId: string;
+  sourceFileId?: string;
   pageNumber: number;
   originalPageNumber: number;
+  thumbnailPath?: string;
   excluded: boolean;
   selected: boolean;
   splitAfter: boolean;

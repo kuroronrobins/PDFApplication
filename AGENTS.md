@@ -7,6 +7,7 @@ This repository is the new Tauri-based rebuild of the PDF application. Codex age
 The source of truth for the product direction is:
 
 - `docs/tauri_ui_redesign_plan.md`
+- `docs/processing_engine_plan.md`
 - `docs/assets/ui_mockups/`
 - `docs/development_process.md`
 
@@ -58,16 +59,24 @@ States:
 
 ## 3.1 Current Implementation Boundary
 
-As of 2026-05-11, the React/Tauri workbench implements the full UI, state model, session-cache command boundary, export-job progress model, logs, and visual verification screens for Phases 0-11 in `docs/implementation_roadmap.md`.
+As of 2026-05-11, the React/Tauri workbench implements the full UI, state model, session-cache command boundary, export-job progress model, logs, visual verification screens for Phases 0-11, the first real processing-engine connection in Phase 12, and streaming/cancel support for the active export worker process.
 
 Do not overclaim this as a completed production PDF engine. The current backend still needs real PDF/Office processing integration for:
 
-- Office-to-PDF conversion
-- Real PDF page count and thumbnail generation
-- Real PDF merge/split/page deletion/page reordering
-- Header/footer/page-number/watermark rendering into PDF bytes
-- Search/replace PDF writing
-- Input password unlock and output encryption
+- Full cancellation for pre-export Office/PDF preparation jobs
+- Real Microsoft Office COM verification for Word/Excel/PowerPoint
+- Python runtime and dependency packaging for end-user PCs
+- Large-PDF lazy thumbnail generation
+- Full input-password unlock UX
+
+The accepted processing direction is:
+
+- Use Microsoft Office COM only for Office-to-PDF conversion. Do not add LibreOffice fallback unless the user explicitly changes this decision.
+- Accept Microsoft Office as a runtime dependency.
+- Reuse the archived Python service logic as the first production processing engine, but do not import or execute files from `archive/` at runtime.
+- Port reviewed processing code into the active `src-python/pdf_workbench_engine/` structure documented in `docs/processing_engine_plan.md`; do not import `archive/` at runtime.
+- Keep Rust/Tauri responsible for job orchestration, session cache management, progress events, worker launch, and error normalization.
+- Implement search/replace as position detection plus visual overwrite/redaction, not full PDF text-object reconstruction.
 
 When implementing those items, connect them behind explicit Tauri job/cache commands and update `docs/implementation_roadmap.md` and `docs/reports/` in the same change.
 
@@ -110,6 +119,7 @@ Keep the code modular:
 - `src/features/workbench/`: file cards, page timeline, tools, output preview
 - `src/features/jobs/`: progress, log drawer, export orchestration
 - `src/features/cache/`: Office temporary PDF cache state
+- `src-python/pdf_workbench_engine/`: active Python worker for Office COM conversion and PDF byte processing
 - `src-tauri/`: Tauri commands and desktop integration
 - `docs/`: design, process, reports, screenshots
 

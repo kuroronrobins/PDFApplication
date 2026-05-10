@@ -4,7 +4,7 @@
 
 ## 現在地
 
-PDF Workbench は旧 Flet/Python システムを `archive/legacy_flet_system_20260510/` に隔離し、Tauri v2 + React + TypeScript の新環境で開発する。現在は、ユーザーが要求した「一画面ワークベンチ」「ファイル単位カード」「ページ展開編集」「一括ジョブ」の操作体験を、UI/状態管理/ジョブ境界まで実装済み。
+PDF Workbench は旧 Flet/Python システムを `archive/legacy_flet_system_20260510/` に隔離し、Tauri v2 + React + TypeScript の新環境で開発する。現在は、ユーザーが要求した「一画面ワークベンチ」「ファイル単位カード」「ページ展開編集」「一括ジョブ」の操作体験を、UI/状態管理/ジョブ境界に加えて、active Python workerによる実PDF処理の初期接続まで実装済み。
 
 完了済み:
 
@@ -20,12 +20,15 @@ PDF Workbench は旧 Flet/Python システムを `archive/legacy_flet_system_202
 - Phase 9: 検索置換、暗号化、PDF情報パネルの統合
 - Phase 10: 一括書き出しジョブの進捗、キャンセル、詳細ログ、下部バー接続
 - Phase 11: 1366x768/1920x1080スクリーンショット確認、Tauriリリースビルド、npm監査
+- Phase 12: `src-python/pdf_workbench_engine/` worker、Tauri command、UIからのPDF検査/Office変換/サムネイル生成/実PDF書き出し接続
 
 今回の重要な境界:
 
-- 実ファイル処理エンジンはまだ本格接続していない。現在の書き出しは、UI/状態/進捗/ログのジョブ境界を確認するための安全な実装である。
-- OfficeのPDF化はセッション一時キャッシュ方針とUI状態を実装済み。実変換は今後、LibreOffice/Office COM/既存Pythonサービスのいずれかを明示的なバックエンド境界として接続する。
-- PDFの実結合/分割/装飾/暗号化は、旧システムの `pdf_app.services` を参考にできるが、旧UIや旧出力物を新環境へ混ぜてはならない。
+- 実ファイル処理エンジンはactiveな `src-python/pdf_workbench_engine/` に接続済み。`archive/` 配下は参照専用であり、実行時には直接importしない。
+- OfficeのPDF化は Microsoft Office COM のみを正式方針とし、LibreOffice fallback は採用しない。
+- 書き出しworkerはNDJSONイベントで進捗をストリーミングし、Tauri側でPython子プロセスを保持してキャンセル時にkillする。
+- 書き出し前のOffice/PDF準備処理はまだ個別同期worker呼び出しが残るため、完全キャンセル対象外である。
+- Python workerソースはTauri bundle resourceへ含める。Python実行環境と依存ライブラリの完全同梱方式は未確定。
 
 ## 検証結果
 
@@ -34,14 +37,18 @@ PDF Workbench は旧 Flet/Python システムを `archive/legacy_flet_system_202
 | `npm run build` | 成功 |
 | `npm run tauri build` | 成功 |
 | `npm audit --json` | 脆弱性 0 件 |
+| `cargo check` | 成功 |
 | Codex内ブラウザ DOM 確認 | 成功、コンソールエラー 0 件 |
 | 1366x768 スクリーンショット | 成功 |
 | 1920x1080 スクリーンショット | 成功 |
+| 実PDF worker smoke | 成功、結合/分割/ページ移動/装飾/検索上書き/暗号化を一時PDFで確認 |
+| worker streaming smoke | 成功、NDJSON進捗11イベントとresultを確認 |
 
 検証画像:
 
 - `docs/reports/screenshots/2026-05-11-workbench-complete-1366x768.png`
 - `docs/reports/screenshots/2026-05-11-workbench-complete-1920x1080.png`
+- `docs/reports/screenshots/2026-05-11-engine-ui-connected.png`
 
 配布物:
 
@@ -63,6 +70,8 @@ PDF Workbench は旧 Flet/Python システムを `archive/legacy_flet_system_202
 6. 進捗と検証結果を `docs/reports/` に残す。
 
 旧システムは参照専用とする。新規実装を `archive/` に追加しない。
+
+実処理エンジンの詳細方針は `docs/processing_engine_plan.md` を正とする。旧Pythonサービスの処理ロジックは再利用するが、`archive/legacy_flet_system_20260510/` を実行時に直接参照しない。必要な処理は新しい `src-python/pdf_workbench_engine/` 配下へレビューして移植する。
 
 ## Phase Details
 
@@ -132,7 +141,7 @@ PDF Workbench は旧 Flet/Python システムを `archive/legacy_flet_system_202
 
 ### Phase 4: Office一時PDFキャッシュ
 
-状態: 完了（ジョブ境界まで）
+状態: 完了（実worker初期接続まで）
 
 目的: Officeファイルを追加直後からカード操作可能にし、裏側でセッション一時PDF化を進める。
 
@@ -147,12 +156,12 @@ PDF Workbench は旧 Flet/Python システムを `archive/legacy_flet_system_202
 
 残る改善:
 
-- 実変換バックエンドを接続する。
+- Microsoft Office COM実機変換を検証する。
 - 実キャッシュファイルの破棄タイミングを統合テストする。
 
 ### Phase 5: PDF読み込みとページ展開
 
-状態: 完了（UI/状態モデル）
+状態: 完了（実PDF検査/サムネイル初期接続まで）
 
 目的: PDFまたは変換済みOfficeをページ単位で編集対象にする。
 
@@ -166,7 +175,7 @@ PDF Workbench は旧 Flet/Python システムを `archive/legacy_flet_system_202
 
 残る改善:
 
-- PDF.js等による実サムネイル生成。
+- 大容量PDFでのサムネイル生成負荷対策。
 - 暗号化PDFのパスワード解除フロー。
 
 ### Phase 6: ページ編集
@@ -247,7 +256,7 @@ PDF Workbench は旧 Flet/Python システムを `archive/legacy_flet_system_202
 
 ### Phase 10: 一括書き出し
 
-状態: 完了（ジョブ境界まで）
+状態: 完了（実PDF書き出し初期接続まで）
 
 目的: ワークベンチ状態を一括ジョブとして処理し、進捗とログだけを見せる。
 
@@ -262,8 +271,8 @@ PDF Workbench は旧 Flet/Python システムを `archive/legacy_flet_system_202
 
 残る改善:
 
-- 実PDF処理エンジンの接続。
-- 実出力ファイルの保存、失敗時の復旧、リトライ。
+- worker進捗イベントのストリーミング化。
+- キャンセル時の子プロセス停止、失敗時のリトライ。
 
 ### Phase 11: 品質、配布、運用
 
@@ -286,18 +295,61 @@ PDF Workbench は旧 Flet/Python システムを `archive/legacy_flet_system_202
 - 実ファイルを使った結合/分割/暗号化/装飾のE2Eテスト。
 - リリース署名、アイコン、インストーラー表記の最終調整。
 
+### Phase 12: 実処理エンジン接続
+
+状態: 完了（進捗ストリーミング/書き出しキャンセル初期対応）
+
+目的: 既存UI/状態モデルをactiveなPython workerへ接続し、表示上の操作を実PDFバイトへ反映する。
+
+実装済み:
+
+- `src-python/pdf_workbench_engine/` のactive worker
+- Tauri command `run_processing_engine`
+- Tauri bundle resourceへの `src-python` 同梱設定
+- Tauri実行時のPDF検査、Office COM変換、サムネイル生成のバックグラウンド接続
+- Office/PDFの処理エラーをカードとログへ表示
+- 実ファイル追加時にサンプルワークスペースを自動クリア
+- ページ移動後も元PDFを参照できる `sourceFileId`
+- 書き出し時の実PDF結合、分割、ページ除外、ページ移動、装飾、検索上書き、暗号化
+- workerのNDJSON進捗イベント
+- Tauri job registryによるPython子プロセス保持
+- 書き出し中止時の `cancel_processing_engine_job` と子プロセスkill
+- UI下部バーへのworker進捗反映
+
+残る改善:
+
+- 書き出し前のOffice/PDF準備処理まで含む完全キャンセル
+- Office COM実機変換検証
+- Python runtime/dependency同梱方式の確定
+- 大容量PDFでの遅延サムネイル生成
+
 ## 次に着手する作業
 
-次の大きな実装対象は **実処理エンジン接続** とする。
+次の大きな実装対象は **実処理エンジンの仕上げ** とする。
 
 推奨順:
 
-1. PDFエンジンの選定: Rust実装、PDFium/PDF.js併用、または旧Pythonサービスのブリッジ化。
-2. Office変換方式の選定: LibreOffice CLI、Microsoft Office COM、または環境別アダプタ。
-3. Tauri側にジョブマネージャを作り、フロントエンドの既存 `ExportJobState` とイベント接続する。
-4. 実PDFページ数/サムネイル/暗号化状態を読み込み、現在のダミーページを置き換える。
-5. 実PDFの結合、分割、除外、ページ移動、装飾、検索置換、暗号化を順番に接続する。
-6. サンプルPDF/OfficeセットでE2E検証を作る。
+1. Tauri側にジョブマネージャを作り、workerの進捗/ログをフロントエンドへイベント配信する。
+2. キャンセル時にPython子プロセスを停止し、途中生成ファイルを破棄する。
+3. Microsoft Office COM実機で Word/Excel/PowerPoint 変換を検証する。
+4. Python実行環境と `pypdf` / PyMuPDF / pywin32 の配布方式を決める。
+5. 暗号化PDFの入力パスワード解除フローをUIとして仕上げる。
+6. 大容量PDFでサムネイル生成を遅延/ページ単位にする。
+7. サンプルPDF/OfficeセットでE2E検証を作る。
+
+### 実処理エンジン方針
+
+| 項目 | 方針 |
+| --- | --- |
+| PDF結合/分割/ページ再構成 | 旧Pythonサービスの `pypdf` 実装方針を新しいPython workerへ移植して利用する |
+| ページサムネイル/検索位置検出/装飾 | 旧Pythonサービスの PyMuPDF 実装方針を新しいPython workerへ移植して利用する |
+| PDF暗号化 | 旧Pythonサービスの `pypdf` 実装方針を新しいPython workerへ移植して利用する |
+| Office変換 | Microsoft Office COM のみ使用する |
+| LibreOffice | 採用しない |
+| RustネイティブPDF処理 | 初期実装では採用しない。将来の高速化/配布単純化候補として残す |
+| Tauri/Rustの責務 | ジョブ管理、進捗イベント、ファイル選択、セッションキャッシュ、worker起動、エラー整形 |
+
+詳細なファイル構成、worker通信プロトコル、移植ルール、実装タスクは `docs/processing_engine_plan.md` に記録する。
 
 完了条件:
 

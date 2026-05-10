@@ -17,6 +17,8 @@ PDFアプリケーションは Tauri を使用して全面刷新する。旧Flet
 - Excel / Word / PowerPoint / PDF は同じワークスペースへ追加できる。
 - Officeファイルは追加直後から順序変更、除外、出力対象化ができる。
 - Officeファイルはバックグラウンドでセッション一時PDF化する。
+- Officeファイルの実変換は Microsoft Office COM のみを使用する。LibreOffice は採用しない。
+- 実行環境に Microsoft Word / Excel / PowerPoint と COM 自動化に必要な依存があることを前提にする。
 - 一時PDFキャッシュは永続保存しない。
 - 複雑な処理は通常画面に露出せず、下部の進捗とログドロワーに閉じ込める。
 - 結合、分割、削除、装飾、検索置換、暗号化は個別実行ではなく、一括書き出しでまとめて反映する。
@@ -202,6 +204,19 @@ Officeファイルは、最終的にはPDF化しないとPDF編集や書き出�
 - `error`: 変換エラー
 - `stale`: 元ファイル更新または設定変更により再変換が必要
 
+## 4.3 実変換方式
+
+Office変換は Microsoft Office COM のみを正式対応とする。LibreOffice headless は使用しない。
+
+理由:
+
+- Word/Excel/PowerPoint の実レイアウト再現性を優先する。
+- 旧Pythonサービスに `pywin32` + COM の実装がすでに存在する。
+- ユーザーはOffice依存を許容している。
+- 変換品質の差異を複数エンジンで吸収するより、まず高品質なWindows/Office前提へ絞る。
+
+COM変換が失敗した場合は、対象ファイル、Officeアプリ名、例外メッセージをログへ出し、ジョブ全体は復旧可能なエラーとして扱う。自動的にLibreOfficeへfallbackしない。
+
 ## 5. 出力とジョブ表示
 
 下部には出力プレビューとジョブバーを常時表示する。
@@ -271,10 +286,14 @@ Officeファイルは、最終的にはPDF化しないとPDF編集や書き出�
 - PDF preview: PDF.js または同等の実績あるPDFレンダラー
 - Drag and drop: HTML D&D + pointer補助レイヤー
 - Backend bridge: Tauri command
-- PDF/Office処理: Rust worker、Python worker、またはCLIラッパーを明示境界として隔離
+- PDF/Office処理: active Python workerを明示境界として隔離し、Tauri command `run_processing_engine` から呼ぶ
+- 初期PDF処理: 旧Pythonサービスの処理ロジックを新しい `src-python/pdf_workbench_engine/` へ移植し、worker/CLI境界で利用する
+- Office変換: Microsoft Office COM のみ
 - Long running task: Tauri側でジョブ管理し、進捗とログをイベントでfrontendへ送る
 
-新環境では、旧Flet UIと旧Pythonアプリ本体をルートに置かない。既存処理を使う場合は、サービス境界を作って必要な機能だけを呼び出す。
+新環境では、旧Flet UIと旧Pythonアプリ本体をルートに戻さない。既存処理を使う場合は、`archive/` を直接参照せず、レビュー済みの処理をactiveなPython workerへ移植する。実処理エンジンの詳細な構成と移植ルールは `docs/processing_engine_plan.md` に従う。
+
+検索置換はPDF内部テキストを完全に再構成する方式ではなく、検索位置を検出し、該当領域を塗りつぶして置換文字を上書きする方式とする。この方針により、既存PDFの構造破壊を避けつつ、ユーザーが期待する見た目の置換を優先する。
 
 ## 8. 実装ステップ
 
@@ -291,7 +310,7 @@ Officeファイルは、最終的にはPDF化しないとPDF編集や書き出�
 11. 下部出力プレビューと一括書き出しジョブを実装する。
 12. ログドロワー、エラー復旧、再試行を実装する。
 13. 1366x768と1920x1080で視認性、操作密度、重なり、ドラッグ挙動を検証する。
-14. 実PDF/Office処理エンジンを接続し、E2Eテストを作る。
+14. 実PDF/Office処理エンジンを接続し、E2Eテストを作る。初期接続は完了。残りはOffice COM実機検証、進捗ストリーミング、キャンセル、配布同梱。
 
 ## 9. 完成予想図
 

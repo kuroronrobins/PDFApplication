@@ -10,6 +10,7 @@ import {
   initialSecurity,
 } from "./sampleData";
 import type {
+  CacheState,
   CacheSession,
   Decoration,
   DecorationKind,
@@ -20,6 +21,7 @@ import type {
   JobStep,
   OutputPlan,
   PageItem,
+  PdfMetadata,
   SearchReplaceState,
   SecurityState,
   ToolId,
@@ -48,6 +50,24 @@ type WorkbenchState = WorkbenchSnapshot & {
   moveFile: (fileId: string, direction: -1 | 1) => void;
   moveFileToIndex: (fileId: string, insertionIndex: number) => void;
   prioritizeFileConversion: (fileId: string) => void;
+  setFileCacheProgress: (
+    fileId: string,
+    cacheState: CacheState,
+    progress?: number,
+    message?: string,
+  ) => void;
+  completeFileInspection: (
+    fileId: string,
+    payload: {
+      cachePath: string;
+      pageCount: number;
+      metadata: PdfMetadata;
+      thumbnailPaths?: Record<number, string>;
+      engineState?: WorkbenchFile["engineState"];
+      message?: string;
+    },
+  ) => void;
+  failFileProcessing: (fileId: string, message: string) => void;
   tickBackgroundJobs: () => void;
   selectPage: (pageId: string, additive?: boolean) => void;
   togglePageExcluded: (pageId: string) => void;
@@ -65,6 +85,9 @@ type WorkbenchState = WorkbenchSnapshot & {
   applySearchReplace: () => void;
   updateSecurity: (patch: Partial<SecurityState>) => void;
   startExportJob: () => void;
+  setExportJobProgress: (progress: number, currentStep?: JobStep, message?: string) => void;
+  completeExportJob: (outputFiles?: string[]) => void;
+  failExportJob: (message: string) => void;
   tickExportJob: () => void;
   cancelExportJob: () => void;
   undo: () => void;
@@ -174,6 +197,14 @@ function fileKey(file: WorkbenchFile): string {
   return file.sourcePath || `${file.name}:${file.sizeBytes ?? "unknown"}`;
 }
 
+function isVirtualSource(path?: string): boolean {
+  return Boolean(
+    path?.startsWith("sample://") ||
+      path?.startsWith("browser://") ||
+      path?.startsWith("session://"),
+  );
+}
+
 function createFileId(info: InputFileInfo, index: number): string {
   const stem = info.name.replace(/\.[^.]+$/, "").replace(/[^\w-]+/g, "-");
   const safeStem = stem || "file";
@@ -191,12 +222,19 @@ function estimatePageCount(file: Pick<WorkbenchFile, "kind" | "sizeBytes">): num
   return Math.max(1, Math.min(24, Math.max(defaultByKind, sizeBased)));
 }
 
-function createPages(fileId: string, pageCount: number): PageItem[] {
+function createPages(
+  fileId: string,
+  pageCount: number,
+  sourceFileId = fileId,
+  thumbnailPaths: Record<number, string> = {},
+): PageItem[] {
   return Array.from({ length: pageCount }, (_, index) => ({
     id: `${fileId}-p${index + 1}`,
     fileId,
+    sourceFileId,
     pageNumber: index + 1,
     originalPageNumber: index + 1,
+    thumbnailPath: thumbnailPaths[index + 1],
     excluded: false,
     selected: false,
     splitAfter: false,
@@ -208,6 +246,7 @@ function renumberPages(pages: PageItem[], fileId: string): PageItem[] {
   return pages.map((page, index) => ({
     ...page,
     fileId,
+    sourceFileId: page.sourceFileId ?? fileId,
     pageNumber: index + 1,
   }));
 }
@@ -308,11 +347,20 @@ export const useWorkbenchStore = create<WorkbenchState>((set, get) => ({
     }
 
     const current = get();
-    const files = current.files.map((file) => ({
-      ...file,
-      metadata: file.metadata ? { ...file.metadata } : undefined,
-    }));
-    const pagesByFile = clonePages(current.pagesByFile);
+    const incomingRealFiles = inputFiles.some(
+      (info) => info.kind !== "unsupported" && !isVirtualSource(info.path),
+    );
+    const replaceSampleWorkspace =
+      incomingRealFiles &&
+      current.files.length > 0 &&
+      current.files.every((file) => isVirtualSource(file.sourcePath));
+    const files = replaceSampleWorkspace
+      ? []
+      : current.files.map((file) => ({
+          ...file,
+          metadata: file.metadata ? { ...file.metadata } : undefined,
+        }));
+    const pagesByFile = replaceSampleWorkspace ? {} : clonePages(current.pagesByFile);
     const logs = [...current.logs];
     const existingKeys = new Set(files.map(fileKey));
     let addedCount = 0;
@@ -342,7 +390,7 @@ export const useWorkbenchStore = create<WorkbenchState>((set, get) => ({
       files.push({
         id,
         sourcePath: info.path,
-        cachePath: info.kind === "pdf" ? `session://${id}.pdf` : undefined,
+        cachePath: info.kind === "pdf" ? info.path : undefined,
         name: info.name,
         kind: info.kind,
         extension: info.extension || undefined,
@@ -352,6 +400,7 @@ export const useWorkbenchStore = create<WorkbenchState>((set, get) => ({
         progress: info.kind === "pdf" ? 100 : undefined,
         expanded: false,
         excluded: false,
+        engineState: info.kind === "pdf" ? "synthetic" : undefined,
         metadata: {
           encrypted: false,
           title: info.name.replace(/\.[^.]+$/, ""),
@@ -363,10 +412,14 @@ export const useWorkbenchStore = create<WorkbenchState>((set, get) => ({
 
       const message =
         info.kind === "pdf"
-          ? `${info.name} を追加し、${pageCount}ページを解析しました。`
+          ? `${info.name} を追加しました。PDF解析をバックグラウンドで実データ化します。`
           : `${info.name} を追加しました。PDF 化はバックグラウンドで待機します。`;
       logs.unshift(createLog("info", message));
     });
+
+    if (replaceSampleWorkspace && addedCount > 0) {
+      logs.unshift(createLog("info", "実ファイル追加に合わせてサンプルワークスペースをクリアしました。"));
+    }
 
     if (addedCount === 0) {
       set({ logs });
@@ -380,9 +433,19 @@ export const useWorkbenchStore = create<WorkbenchState>((set, get) => ({
         files,
         pagesByFile,
         activeTool: current.activeTool,
-        decorations: current.decorations.map((decoration) => ({ ...decoration })),
-        selectedDecorationId: current.selectedDecorationId,
-        searchReplace: cloneSearchReplace(current.searchReplace),
+        decorations: replaceSampleWorkspace
+          ? []
+          : current.decorations.map((decoration) => ({ ...decoration })),
+        selectedDecorationId: replaceSampleWorkspace ? undefined : current.selectedDecorationId,
+        searchReplace: replaceSampleWorkspace
+          ? {
+              query: "",
+              replacement: "",
+              target: "all",
+              matchCount: 0,
+              appliedCount: 0,
+            }
+          : cloneSearchReplace(current.searchReplace),
         security: cloneSecurity(current.security),
       },
       { logs },
@@ -506,6 +569,114 @@ export const useWorkbenchStore = create<WorkbenchState>((set, get) => ({
             ...current.logs,
           ]
         : current.logs,
+    });
+  },
+
+  setFileCacheProgress: (fileId, cacheState, progress, message) => {
+    const current = get();
+    const files = current.files.map((file) =>
+      file.id === fileId
+        ? {
+            ...file,
+            cacheState,
+            progress,
+            errorMessage: undefined,
+          }
+        : { ...file },
+    );
+    set({
+      ...derive({
+        files,
+        pagesByFile: clonePages(current.pagesByFile),
+        activeTool: current.activeTool,
+        decorations: current.decorations.map((decoration) => ({ ...decoration })),
+        selectedDecorationId: current.selectedDecorationId,
+        searchReplace: cloneSearchReplace(current.searchReplace),
+        security: cloneSecurity(current.security),
+      }),
+      logs: message ? [createLog("info", message), ...current.logs] : current.logs,
+    });
+  },
+
+  completeFileInspection: (fileId, payload) => {
+    const current = get();
+    const target = current.files.find((file) => file.id === fileId);
+    if (!target) {
+      return;
+    }
+
+    const pagesByFile = clonePages(current.pagesByFile);
+    pagesByFile[fileId] = createPages(
+      fileId,
+      payload.pageCount,
+      fileId,
+      payload.thumbnailPaths,
+    );
+
+    const files = current.files.map((file) =>
+      file.id === fileId
+        ? {
+            ...file,
+            cachePath: payload.cachePath,
+            pageCount: payload.pageCount,
+            cacheState: "ready" as const,
+            progress: 100,
+            priority: false,
+            engineState: payload.engineState ?? "inspected",
+            errorMessage: undefined,
+            metadata: { ...payload.metadata },
+          }
+        : { ...file },
+    );
+
+    set({
+      ...derive({
+        files,
+        pagesByFile,
+        activeTool: current.activeTool,
+        decorations: current.decorations.map((decoration) => ({ ...decoration })),
+        selectedDecorationId: current.selectedDecorationId,
+        searchReplace: cloneSearchReplace(current.searchReplace),
+        security: cloneSecurity(current.security),
+      }),
+      logs: [
+        createLog(
+          "info",
+          payload.message ?? `${target.name} のPDF解析が完了しました。${payload.pageCount}ページ。`,
+        ),
+        ...current.logs,
+      ],
+    });
+  },
+
+  failFileProcessing: (fileId, message) => {
+    const current = get();
+    const files = current.files.map((file) =>
+      file.id === fileId
+        ? {
+            ...file,
+            cacheState: "error" as const,
+            progress: undefined,
+            priority: false,
+            errorMessage: message,
+          }
+        : { ...file },
+    );
+    const target = current.files.find((file) => file.id === fileId);
+    set({
+      ...derive({
+        files,
+        pagesByFile: clonePages(current.pagesByFile),
+        activeTool: current.activeTool,
+        decorations: current.decorations.map((decoration) => ({ ...decoration })),
+        selectedDecorationId: current.selectedDecorationId,
+        searchReplace: cloneSearchReplace(current.searchReplace),
+        security: cloneSecurity(current.security),
+      }),
+      logs: [
+        createLog("error", `${target?.name ?? fileId} の処理に失敗しました: ${message}`),
+        ...current.logs,
+      ],
     });
   },
 
@@ -667,7 +838,11 @@ export const useWorkbenchStore = create<WorkbenchState>((set, get) => ({
         ? insertionIndex - 1
         : insertionIndex;
     const clampedIndex = Math.max(0, Math.min(adjustedIndex, targetPages.length));
-    targetPages.splice(clampedIndex, 0, { ...page, fileId: targetFileId });
+    targetPages.splice(clampedIndex, 0, {
+      ...page,
+      fileId: targetFileId,
+      sourceFileId: page.sourceFileId ?? sourceFileId,
+    });
     pagesByFile[sourceFileId] = renumberPages(sourcePages, sourceFileId);
     pagesByFile[targetFileId] = renumberPages(targetPages, targetFileId);
 
@@ -904,6 +1079,59 @@ export const useWorkbenchStore = create<WorkbenchState>((set, get) => ({
         ),
         ...current.logs,
       ],
+    });
+  },
+
+  setExportJobProgress: (progress, currentStep, message) => {
+    const current = get();
+    if (current.exportJob.status !== "running") {
+      return;
+    }
+    set({
+      exportJob: {
+        ...current.exportJob,
+        progress: Math.max(0, Math.min(99, progress)),
+        currentStep: currentStep ?? current.exportJob.currentStep,
+        message: message ?? current.exportJob.message,
+      },
+    });
+  },
+
+  completeExportJob: (outputFiles) => {
+    const current = get();
+    const names =
+      outputFiles && outputFiles.length > 0
+        ? outputFiles.map((file) => file.split(/[\\/]/).pop() ?? file)
+        : current.outputPlan.outputFiles;
+    set({
+      exportJob: {
+        status: "completed",
+        progress: 100,
+        currentStep: "保存",
+        startedAt: current.exportJob.startedAt,
+        completedAt: Date.now(),
+        cancellable: false,
+        message: "書き出し完了",
+      },
+      logs: [
+        createLog("info", `書き出しが完了しました: ${names.join(", ")}`),
+        ...current.logs,
+      ],
+    });
+  },
+
+  failExportJob: (message) => {
+    const current = get();
+    set({
+      exportJob: {
+        ...current.exportJob,
+        status: "error",
+        progress: current.exportJob.progress,
+        completedAt: Date.now(),
+        cancellable: false,
+        message: "書き出しエラー",
+      },
+      logs: [createLog("error", `書き出しに失敗しました: ${message}`), ...current.logs],
     });
   },
 

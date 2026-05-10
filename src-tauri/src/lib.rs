@@ -1,6 +1,10 @@
 use serde::Serialize;
+use serde_json::Value;
 use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
+use tauri::{Emitter, Manager};
+
+mod python_worker;
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -100,14 +104,57 @@ fn cleanup_cache_session(session_id: String) -> Result<(), String> {
     Ok(())
 }
 
+#[tauri::command]
+fn run_processing_engine(app: tauri::AppHandle, request: Value) -> Result<Value, String> {
+    let resource_dir = app.path().resource_dir().ok();
+    python_worker::run(request, resource_dir)
+}
+
+#[tauri::command]
+fn start_processing_engine_job(
+    app: tauri::AppHandle,
+    registry: tauri::State<python_worker::EngineJobRegistry>,
+    request: Value,
+) -> Result<String, String> {
+    let resource_dir = app.path().resource_dir().ok();
+    python_worker::start_stream(app, request, resource_dir, registry.inner().clone())
+}
+
+#[tauri::command]
+fn cancel_processing_engine_job(
+    app: tauri::AppHandle,
+    registry: tauri::State<python_worker::EngineJobRegistry>,
+    job_id: String,
+) -> Result<bool, String> {
+    let cancelled = registry.cancel(&job_id)?;
+    if cancelled {
+        python_worker::emit_cancel(&app, &job_id);
+    } else {
+        let _ = app.emit(
+            "processing-engine-event",
+            serde_json::json!({
+                "type": "log",
+                "jobId": job_id,
+                "level": "warn",
+                "message": "キャンセル対象の処理はすでに終了しています。",
+            }),
+        );
+    }
+    Ok(cancelled)
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .manage(python_worker::EngineJobRegistry::default())
         .plugin(tauri_plugin_dialog::init())
         .invoke_handler(tauri::generate_handler![
             describe_input_files,
             prepare_cache_session,
-            cleanup_cache_session
+            cleanup_cache_session,
+            run_processing_engine,
+            start_processing_engine_job,
+            cancel_processing_engine_job
         ])
         .run(tauri::generate_context!())
         .expect("error while running PDF Workbench");

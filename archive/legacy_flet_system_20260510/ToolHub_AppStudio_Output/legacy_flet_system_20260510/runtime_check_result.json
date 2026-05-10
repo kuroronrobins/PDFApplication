@@ -1,0 +1,154 @@
+{
+  "app_id": "legacy_flet_system_20260510",
+  "overall_status": "pass",
+  "checks": [
+    {
+      "name": "frozen-folder executable exists",
+      "status": "pass",
+      "detail": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\archive\\legacy_flet_system_20260510\\ToolHub_AppStudio_Output\\legacy_flet_system_20260510\\final_app\\bin\\legacy_flet_system_20260510\\legacy_flet_system_20260510.exe",
+      "approval_category": "info",
+      "approval_blocking": false,
+      "resolved": false
+    },
+    {
+      "name": "app.yaml run.entry",
+      "status": "pass",
+      "detail": "bin/legacy_flet_system_20260510/legacy_flet_system_20260510.exe",
+      "approval_category": "info",
+      "approval_blocking": false,
+      "resolved": false
+    },
+    {
+      "name": "requirements.lock exists",
+      "status": "pass",
+      "detail": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\archive\\legacy_flet_system_20260510\\ToolHub_AppStudio_Output\\legacy_flet_system_20260510\\final_app\\requirements.lock",
+      "approval_category": "info",
+      "approval_blocking": false,
+      "resolved": false
+    },
+    {
+      "name": "distribution run.entry policy",
+      "status": "pass",
+      "detail": "bin/legacy_flet_system_20260510/legacy_flet_system_20260510.exe",
+      "approval_category": "info",
+      "approval_blocking": false,
+      "resolved": false
+    },
+    {
+      "name": "BUILD_REQUIRED marker removed",
+      "status": "pass",
+      "detail": "BUILD_REQUIRED.txt is not present in final_app/bin.",
+      "approval_category": "info",
+      "approval_blocking": false,
+      "resolved": false
+    },
+    {
+      "name": "pyinstaller layout command",
+      "status": "pass",
+      "detail": "PyInstaller command includes --contents-directory . for old-style onedir layout.",
+      "approval_category": "info",
+      "approval_blocking": false,
+      "resolved": false
+    },
+    {
+      "name": "required add-data files",
+      "status": "pass",
+      "detail": "1 packaged data item(s) were found.",
+      "approval_category": "info",
+      "approval_blocking": false,
+      "resolved": false
+    },
+    {
+      "name": "forbidden payload files",
+      "status": "pass",
+      "detail": "No forbidden credential, log, cache, temp, or build_env files were found.",
+      "approval_category": "info",
+      "approval_blocking": false,
+      "resolved": false
+    },
+    {
+      "name": "build_env separation",
+      "status": "pass",
+      "detail": "build_env is outside final_app: C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\archive\\legacy_flet_system_20260510\\ToolHub_AppStudio_Output\\legacy_flet_system_20260510\\be",
+      "approval_category": "info",
+      "approval_blocking": false,
+      "resolved": false
+    },
+    {
+      "name": "frozen-folder size",
+      "status": "pass",
+      "detail": "73299083 bytes (69.9 MB)",
+      "approval_category": "info",
+      "approval_blocking": false,
+      "resolved": false
+    },
+    {
+      "name": "add-data source size",
+      "status": "pass",
+      "detail": "26604 bytes (0.0 MB)",
+      "approval_category": "info",
+      "approval_blocking": false,
+      "resolved": false
+    },
+    {
+      "name": "frozen smoke execution",
+      "status": "pass",
+      "detail": "Process stayed alive for 4.0s; no immediate crash was detected.",
+      "approval_category": "info",
+      "approval_blocking": false,
+      "resolved": false
+    }
+  ],
+  "evidence": {
+    "app_studio_cli_path": "C:\\Users\\kuroron\\Documents\\RD\\20260426_Toolhub\\launcher\\src-tauri\\target\\release\\tools\\app_studio\\main.py",
+    "app_studio_policy_id": "normal_python_source_to_frozen_folder_build_env_v3",
+    "registration_policy": "user-distribution",
+    "repo_root": "C:\\Users\\kuroron\\Documents\\RD\\20260426_Toolhub\\launcher\\src-tauri\\target\\release",
+    "git_commit": "ba7f326",
+    "main_py_hash": "ab3f8cc4599d07d19888c93aa253e43ba7bd6978b49923cc590f0a33452a3c82",
+    "frozen_folder_builder_hash": "013fd7b68cfb7622a8f4166e34f7885e08b8cb18051d3d98ae034416bdc1f237",
+    "argv": [
+      "import",
+      "--entry",
+      "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\archive\\legacy_flet_system_20260510\\app.py",
+      "--build-mode",
+      "frozen-folder",
+      "--app-id",
+      "legacy_flet_system_20260510",
+      "--name",
+      "Legacy Flet System 20260510",
+      "--generate-lock",
+      "--build-frozen-folder",
+      "--verify-runtime",
+      "--apply"
+    ],
+    "normalized_options": {
+      "build_mode": "frozen-folder",
+      "source_root": null,
+      "create_app_env": false,
+      "rebuild_app_env": false,
+      "skip_app_env_build": false,
+      "generate_lock": true,
+      "skip_lock": false,
+      "build_frozen_folder": true,
+      "rebuild_frozen_folder": true,
+      "skip_frozen_build": false,
+      "verify_runtime": true
+    },
+    "source_entry": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\archive\\legacy_flet_system_20260510\\app.py",
+    "source_root": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\archive\\legacy_flet_system_20260510",
+    "source_root_origin": "entry_parent",
+    "source_root_warnings": [],
+    "output_dir": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\archive\\legacy_flet_system_20260510\\ToolHub_AppStudio_Output\\legacy_flet_system_20260510",
+    "build_env_path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\archive\\legacy_flet_system_20260510\\ToolHub_AppStudio_Output\\legacy_flet_system_20260510\\be",
+    "build_env_python": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\archive\\legacy_flet_system_20260510\\ToolHub_AppStudio_Output\\legacy_flet_system_20260510\\be\\Scripts\\python.exe",
+    "pyinstaller_probe_python": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\archive\\legacy_flet_system_20260510\\ToolHub_AppStudio_Output\\legacy_flet_system_20260510\\be\\Scripts\\python.exe",
+    "pyinstaller_build_python": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\archive\\legacy_flet_system_20260510\\ToolHub_AppStudio_Output\\legacy_flet_system_20260510\\be\\Scripts\\python.exe"
+  },
+  "approval_blocking_warnings_count": 0,
+  "non_blocking_warnings_count": 0,
+  "info_count": 12,
+  "unresolved_distribution_risks_count": 0,
+  "approval_blocking_reasons": [],
+  "non_blocking_warning_summaries": []
+}

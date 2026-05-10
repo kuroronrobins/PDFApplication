@@ -21,6 +21,7 @@ export const initialFiles: WorkbenchFile[] = [
     progress: 42,
     expanded: false,
     excluded: false,
+    engineState: "synthetic",
     metadata: { encrypted: false, pageSizeLabel: "A4" },
   },
   {
@@ -34,6 +35,7 @@ export const initialFiles: WorkbenchFile[] = [
     cacheState: "queued",
     expanded: false,
     excluded: false,
+    engineState: "synthetic",
     metadata: { encrypted: false, pageSizeLabel: "A4" },
   },
   {
@@ -48,6 +50,7 @@ export const initialFiles: WorkbenchFile[] = [
     progress: 18,
     expanded: false,
     excluded: false,
+    engineState: "synthetic",
     metadata: { encrypted: false, pageSizeLabel: "16:9" },
   },
   {
@@ -63,6 +66,7 @@ export const initialFiles: WorkbenchFile[] = [
     progress: 100,
     expanded: true,
     excluded: false,
+    engineState: "synthetic",
     metadata: {
       encrypted: false,
       title: "添付資料",
@@ -76,6 +80,7 @@ export const initialPagesByFile: Record<string, PageItem[]> = {
   appendix: Array.from({ length: 12 }, (_, index) => ({
     id: `appendix-${index + 1}`,
     fileId: "appendix",
+    sourceFileId: "appendix",
     pageNumber: index + 1,
     originalPageNumber: index + 1,
     excluded: index === 3,
