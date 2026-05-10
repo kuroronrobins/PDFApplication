@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "text_prompt_generation_status": "success",
+  "image_generation_status": "success",
+  "image_model": "gpt-image-1.5",
+  "api_candidate_count": 3,
+  "failure_class": "",
+  "failure_message": "none",
+  "admin_next_action": "none",
+  "selected_icon_source": "candidate_png",
+  "default_icon_used": false,
+  "default_icon_reason": "",
+  "icon_status": "ai_candidate_selected",
+  "package_secret_scan_status": "blocked",
+  "ai_payload_secret_scan_status": "passed",
+  "ai_submission_blocked": false,
+  "ai_submission_block_reason": "none"
+}

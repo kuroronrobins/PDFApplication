@@ -1,0 +1,293 @@
+{
+  "app_id": "app_20260215_pdfapplication",
+  "name": "PDF編集",
+  "version": "0.1.0",
+  "entry": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\app.py",
+  "source_root": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication",
+  "source_root_origin": "entry_parent",
+  "source_root_warnings": [
+    "auto source_root contains a .git directory; use --source-root if only a subdirectory should be packaged."
+  ],
+  "entry_relative": "app.py",
+  "source_scope": {
+    "source_root": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication",
+    "source_root_origin": "entry_parent",
+    "entry_relative": "app.py",
+    "included_count": 15,
+    "excluded_count": 7,
+    "blocked_count": 0,
+    "manual_check_count": 11,
+    "excluded_directory_count": 5,
+    "sensitive_excluded_directory_count": 0,
+    "sensitive_excluded_file_count": 0,
+    "source_root_warnings": [
+      "auto source_root contains a .git directory; use --source-root if only a subdirectory should be packaged."
+    ],
+    "toolhubignore_pattern_count": 0
+  },
+  "excluded_directories": [
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\.git",
+      "relative_path": ".git",
+      "reason": "excluded generated or external-work directory",
+      "pattern": ""
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\logs",
+      "relative_path": "logs",
+      "reason": "excluded runtime/user-output directory",
+      "pattern": ""
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\pdf_app\\__pycache__",
+      "relative_path": "pdf_app/__pycache__",
+      "reason": "excluded generated or external-work directory",
+      "pattern": ""
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\pdf_app\\services\\__pycache__",
+      "relative_path": "pdf_app/services/__pycache__",
+      "reason": "excluded generated or external-work directory",
+      "pattern": ""
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\ToolHub_AppStudio_Output",
+      "relative_path": "ToolHub_AppStudio_Output",
+      "reason": "excluded generated or external-work directory",
+      "pattern": ""
+    }
+  ],
+  "sensitive_excluded_directories": [],
+  "sensitive_excluded_files": [],
+  "toolhubignore_patterns": [],
+  "suggested_toolhubignore_report": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\ToolHub_AppStudio_Output\\app_20260215_pdfapplication\\suggested_toolhubignore.md",
+  "output_dir": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\ToolHub_AppStudio_Output\\app_20260215_pdfapplication",
+  "requested_build_mode": "frozen-folder",
+  "selected_build_mode": "frozen-folder",
+  "registration_policy": "user-distribution",
+  "runner": "exe",
+  "run_entry": "bin/app_20260215_pdfapplication/app_20260215_pdfapplication.exe",
+  "required_runtime": null,
+  "secret_high_findings": false,
+  "package_secret_scan_status": "blocked",
+  "ai_payload_secret_scan_status": "passed",
+  "ai_submission_blocked": false,
+  "ai_submission_block_reason": "none",
+  "ai_blocked_by_secret_scan": false,
+  "package_ai_blocked_by_secret_scan": true,
+  "apply_blocked_by_secret_scan": false,
+  "blocking_secret_findings_count": 0,
+  "warning_secret_findings_count": 6,
+  "manual_check_secret_findings_count": 6,
+  "false_positive_secret_findings_count": 0,
+  "secret_scan_report": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\ToolHub_AppStudio_Output\\app_20260215_pdfapplication\\secret_scan_report.md",
+  "blocking_secret_findings": [],
+  "icon_style_reference": "Existing ToolHub icon references: app_20260201_agendasnap, run_xcgate_upload, sample_gui_app, sample_playwright_app",
+  "icon_style_preset": "",
+  "icon_style_custom": "",
+  "icon_revision_image_used": false,
+  "icon_function_interpretation": {
+    "app_id": "app_20260215_pdfapplication",
+    "name": "PDF編集",
+    "entry_name": "app.py",
+    "purpose": "PDF編集 をToolHubから起動するアプリです。",
+    "app_kind": "document workflow tool",
+    "primary_action": "launch",
+    "secondary_action": "",
+    "input_objects": [
+      "pdf/document"
+    ],
+    "output_objects": [
+      "pdf/document"
+    ],
+    "action_flow": "pdf/document -> launch -> pdf/document",
+    "visual_priority": [
+      "make the launch action visible",
+      "show input as pdf/document",
+      "show output as pdf/document",
+      "keep the relationship readable at 32px"
+    ],
+    "avoid_generic": [
+      "generic abstract shapes only",
+      "document-only icon",
+      "gear-only icon",
+      "checkmark-only icon",
+      "network nodes only",
+      "initial-letter-only icon",
+      "tiny readable text or fake logo letters",
+      "photorealistic image",
+      "crowded UI screenshot"
+    ],
+    "composition_template": "Show a clear before-to-after workflow with 2 to 4 objects connected by one visible action path.",
+    "primary_motif": "帳票から分析チャートが浮き上がるシンボル",
+    "secondary_motifs": [
+      "ページ端の折り返しではなく固有の指標マーク",
+      "確認済みのデータバー"
+    ],
+    "avoid": [
+      "書類だけのアイコン",
+      "歯車だけのアイコン",
+      "チェックだけのアイコン",
+      "頭文字だけのアイコン",
+      "読めない小さい文字やロゴ風文字",
+      "写真風、画面キャプチャ風、過密なUI画面"
+    ],
+    "palette": "インディゴ、スレート、アクセントのアンバー",
+    "texture": "マットな紙質とシャープなチャートの対比",
+    "small_size_rule": "32pxでも主役モチーフの輪郭が判別でき、細かい文字に頼らない。",
+    "high_resolution_rule": "256px以上では輪郭、光沢、余白、素材感がきれいに見える高精細な仕上げ。",
+    "toolhub_style_rule": "既存ToolHubアイコンと並べて違和感のない、角丸の余白と落ち着いた業務向け品質。",
+    "categories": [
+      "業務ツール"
+    ],
+    "keywords": [
+      "PDF編集",
+      "app_20260215_pdfapplication",
+      "ToolHub"
+    ],
+    "use_cases": [
+      "PDF編集 をToolHubからすばやく起動する"
+    ],
+    "inputs": [
+      "アプリ設定に依存"
+    ],
+    "outputs": [
+      "アプリ実行結果"
+    ],
+    "source_files": [
+      ".gitkeep",
+      "_app_data.json",
+      "_bootstrap.py",
+      "_gitup.py",
+      "app.py",
+      "README.md",
+      "requirements.txt"
+    ],
+    "dependency_signals": [
+      "__future__",
+      "base64",
+      "dataclasses",
+      "datetime",
+      "fitz",
+      "flet",
+      "importlib",
+      "json",
+      "os",
+      "pathlib",
+      "pdf_app",
+      "pypdf",
+      "socket",
+      "threading",
+      "time",
+      "typing"
+    ],
+    "readme_excerpt": "# PDFApplication\n\nFlet を使った PDF 統合ユーティリティです。業務利用を想定し、操作性（UX）と堅牢性を両立しています。\n\n## 主な機能\n\n- PDF 結合・分割（ページ数指定 / ファイルサイズ上限指定を選択可能）\n- ページ入れ替え（ドラッグ操作）\n- Office / PDF の PDF 変換（変換のみ・結合）\n- ヘッダー/フッター/ページ番号の追記\n- PDF 文字置換\n- 透かし追加、パスワード暗号化、PDF情報表示\n- 暗号化PDFの入力パスワード対応（対応機能で共通利用）\n\n## UX強化ポイント\n\n- 入力PDFをサムネイルタイルとして表示\n- ドラッグ&ドロップでページ順を直感的に変更\n- 右上 × でページ除外（復帰も可）\n- 「このページの後で分割」スイッチで分割位置を視覚設定\n- 共通設定 + タブ構成で画面バランスを改善\n\n## セットアップ\n\n```bash\npython -m venv .venv\nsource .venv/bin/activate\npip install -r requirements.txt\n```\n\n## 起動\n\n```bash\npython app.py\n```\n\n## 変換機能について\n\nOffice 変換は Microsoft Office (Word / Excel / PowerPoint) のインストールを前提としています。 \nWindows 環境で COM 経由で PDF 出力を実行します。\n\n## 構成\n\n- `app.py`: Flet UI（共通設定、ページ編集ワークスペース、標準機能、セキュリティ機能）\n- `pdf_app/models.py`: 共通ジョブモデル\n- `pdf_app/services/common.py`: 入力検証・暗号化PDFオープン共通処理\n- `pdf_app/services/`: PDF 操作のサービス群\n\n## 利用ログ収集と効率化分析\n\n本アプリは実行イベントを JSONL で記録し、任意で GitHub 上の JSONL に追記できます。\n\n### ローカルログ\n\n- 既定ログパス: `.[local path]\n- 1行1イベントで、`action`, `status`, `duration_ms`, `baseline_",
+    "style_reference": "Existing ToolHub icon references: app_20260201_agendasnap, run_xcgate_upload, sample_gui_app, sample_playwright_app"
+  },
+  "icon_candidate_count": 3,
+  "api_candidate_count": 3,
+  "failure_class": "",
+  "admin_next_action": "none",
+  "icon_ai_diagnostics": {
+    "api_candidate_count": 3,
+    "image_api_success": true,
+    "image_generation_status": "success",
+    "latest_image_api_failure": "",
+    "failure_class": "",
+    "failure_message": "none",
+    "admin_next_action": "none",
+    "selected_icon_source": "candidate_png",
+    "default_icon_used": false,
+    "default_icon_reason": "",
+    "icon_status": "ai_candidate_selected",
+    "package_secret_scan_status": "blocked",
+    "package_secret_scan_findings": 6,
+    "package_ai_submission_blocked": true,
+    "package_ai_submission_block_reason": "manual-check-secret-assignment: password has a non-empty value that is not clearly a placeholder.; manual-check-secret-assignment: password has a non-empty value that is not clearly a placeholder.; manual-check-secret-assignment: password has a non-empty value that is not clearly a placeholder.",
+    "ai_payload_secret_scan_status": "passed",
+    "ai_submission_blocked": false,
+    "ai_submission_block_reason": "none",
+    "model": "gpt-image-1.5",
+    "style_preset": "",
+    "image_evaluation_status": "deterministic_png_check",
+    "image_evaluation_note": "Vision evaluation is not run in this MVP; candidates use deterministic prompt/concept checks and PNG small-size checks when pixels are available."
+  },
+  "selected_icon_source": "candidate_png",
+  "default_icon_used": false,
+  "default_icon_reason": "",
+  "icon_status": "ai_candidate_selected",
+  "icon_override_used": true,
+  "icon_override_warnings": [],
+  "metadata_ai_report": "api: responses.create\nstatus: skipped\nmodel: gpt-5.4-mini\nai_enabled: true\napi_key_present: true\nparse_status: not_attempted\nfallback_reason: secret scan blocked AI submission, AI skipped",
+  "metadata_override_used": false,
+  "metadata_override_keys": [],
+  "metadata_override_warnings": [],
+  "create_app_env": false,
+  "generate_lock": true,
+  "build_frozen_folder": true,
+  "verify_runtime": true,
+  "build_env": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\ToolHub_AppStudio_Output\\app_20260215_pdfapplication\\build_env",
+  "registration_copy_breakdown": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\ToolHub_AppStudio_Output\\app_20260215_pdfapplication\\registration_copy_breakdown.json",
+  "registration_copy_report": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\ToolHub_AppStudio_Output\\app_20260215_pdfapplication\\registration_copy_report.md",
+  "build_env_cache_enabled": true,
+  "rebuild_build_env": false,
+  "build_env_cache_build_profile_hash": "ff36a29ab5c2acf88c0cc0ea04ce90656506985b667374d2feeee3b3f332cfb2",
+  "build_tools_packages": [
+    "PyInstaller>=6,<7",
+    "pyinstaller-hooks-contrib>=2024.0"
+  ],
+  "build_profile_source": "saved+auto",
+  "exe_readiness_status": "warn",
+  "manual_checks": [
+    "app.py: Path - call uses a dynamic path expression",
+    "pdf_app/services/usage_log.py: Path - call uses a dynamic path expression",
+    "pdf_app/services/usage_log.py: read_text - Path read call uses a dynamic path expression"
+  ],
+  "app_studio_cli_path": "C:\\Users\\kuroron\\Documents\\RD\\20260426_Toolhub\\launcher\\src-tauri\\target\\release\\tools\\app_studio\\main.py",
+  "app_studio_policy_id": "normal_python_source_to_frozen_folder_build_env_v2",
+  "repo_root": "C:\\Users\\kuroron\\Documents\\RD\\20260426_Toolhub\\launcher\\src-tauri\\target\\release",
+  "git_commit": "e35f167",
+  "main_py_hash": "8aeb03d1bb8297c017eaf4ec8535f87cda25e6ca05cf2e42f6cb49681b1bd887",
+  "frozen_folder_builder_hash": "dc71d68db82e7230a3a2a17d7755701c02cf5cf192b697ea7e7eb2d54d37d067",
+  "argv": [
+    "import",
+    "--entry",
+    "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\app.py",
+    "--build-mode",
+    "frozen-folder",
+    "--app-id",
+    "20260215_pdfapplication",
+    "--name",
+    "PDF編集",
+    "--icon-override",
+    "C:\\Users\\kuroron\\AppData\\Local\\ToolHub\\data\\app_studio\\icon_overrides\\20260215_pdfapplication_1778414028840.json",
+    "--generate-lock",
+    "--build-frozen-folder",
+    "--verify-runtime",
+    "--apply"
+  ],
+  "normalized_options": {
+    "build_mode": "frozen-folder",
+    "source_root": null,
+    "create_app_env": false,
+    "rebuild_app_env": false,
+    "skip_app_env_build": false,
+    "generate_lock": true,
+    "skip_lock": false,
+    "build_frozen_folder": true,
+    "rebuild_frozen_folder": true,
+    "skip_frozen_build": false,
+    "verify_runtime": true
+  },
+  "source_entry": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\app.py",
+  "build_env_path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\ToolHub_AppStudio_Output\\app_20260215_pdfapplication\\build_env",
+  "build_env_python": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\ToolHub_AppStudio_Output\\app_20260215_pdfapplication\\build_env\\Scripts\\python.exe",
+  "pyinstaller_probe_python": null,
+  "pyinstaller_build_python": null,
+  "timing_report": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\ToolHub_AppStudio_Output\\app_20260215_pdfapplication\\timing_report.json",
+  "timing_summary": {
+    "estimated_total_seconds": 86,
+    "total_duration_seconds": 74.196,
+    "phase_count": 7
+  }
+}

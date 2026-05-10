@@ -1,0 +1,107 @@
+# Execution Test Report
+
+- app_id: `app_20260215_pdfapplication`
+- generated_at: `2026-05-10T20:55:03`
+- overall_status: `fail`
+- approval_allowed: `false`
+- approval_blocking_warnings_count: `0`
+- non_blocking_warnings_count: `0`
+- info_count: `0`
+- unresolved_distribution_risks_count: `1`
+
+| Status | Category | Blocking | Check | Detail |
+| --- | --- | --- | --- | --- |
+| fail | fail | true | apply started | Apply started and has not reached final execution checks yet. |
+
+## Evidence
+
+```json
+{
+  "app_studio_cli_path": "C:\\Users\\kuroron\\Documents\\RD\\20260426_Toolhub\\launcher\\src-tauri\\target\\release\\tools\\app_studio\\main.py",
+  "app_studio_policy_id": "normal_python_source_to_frozen_folder_build_env_v2",
+  "registration_policy": "user-distribution",
+  "repo_root": "C:\\Users\\kuroron\\Documents\\RD\\20260426_Toolhub\\launcher\\src-tauri\\target\\release",
+  "git_commit": "e35f167",
+  "main_py_hash": "8aeb03d1bb8297c017eaf4ec8535f87cda25e6ca05cf2e42f6cb49681b1bd887",
+  "frozen_folder_builder_hash": "dc71d68db82e7230a3a2a17d7755701c02cf5cf192b697ea7e7eb2d54d37d067",
+  "argv": [
+    "import",
+    "--entry",
+    "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\app.py",
+    "--build-mode",
+    "frozen-folder",
+    "--app-id",
+    "20260215_pdfapplication",
+    "--name",
+    "PDF編集",
+    "--icon-override",
+    "C:\\Users\\kuroron\\AppData\\Local\\ToolHub\\data\\app_studio\\icon_overrides\\20260215_pdfapplication_1778414028840.json",
+    "--generate-lock",
+    "--build-frozen-folder",
+    "--verify-runtime",
+    "--apply"
+  ],
+  "normalized_options": {
+    "build_mode": "frozen-folder",
+    "source_root": null,
+    "create_app_env": false,
+    "rebuild_app_env": false,
+    "skip_app_env_build": false,
+    "generate_lock": true,
+    "skip_lock": false,
+    "build_frozen_folder": true,
+    "rebuild_frozen_folder": true,
+    "skip_frozen_build": false,
+    "verify_runtime": true
+  },
+  "source_entry": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\app.py",
+  "source_root": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication",
+  "source_root_origin": "entry_parent",
+  "source_root_warnings": [
+    "auto source_root contains a .git directory; use --source-root if only a subdirectory should be packaged."
+  ],
+  "output_dir": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\ToolHub_AppStudio_Output\\app_20260215_pdfapplication",
+  "build_env_path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\ToolHub_AppStudio_Output\\app_20260215_pdfapplication\\build_env",
+  "build_env_python": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\ToolHub_AppStudio_Output\\app_20260215_pdfapplication\\build_env\\Scripts\\python.exe",
+  "pyinstaller_probe_python": null,
+  "pyinstaller_build_python": null,
+  "frozen_build_report": {
+    "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\ToolHub_AppStudio_Output\\app_20260215_pdfapplication\\frozen_folder_build_report.md",
+    "exists": false,
+    "last_write_time": null,
+    "size": null
+  },
+  "frozen_exe": {
+    "path": "C:\\Users\\kuroron\\Documents\\RD\\20260426_Toolhub\\launcher\\src-tauri\\target\\release\\apps\\app_20260215_pdfapplication\\bin\\app_20260215_pdfapplication\\app_20260215_pdfapplication.exe",
+    "exists": false,
+    "last_write_time": null,
+    "size": null
+  },
+  "output_frozen_exe": {
+    "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\ToolHub_AppStudio_Output\\app_20260215_pdfapplication\\final_app\\bin\\app_20260215_pdfapplication\\app_20260215_pdfapplication.exe",
+    "exists": false,
+    "last_write_time": null,
+    "size": null
+  },
+  "app_yaml": {
+    "path": "C:\\Users\\kuroron\\Documents\\RD\\20260426_Toolhub\\launcher\\src-tauri\\target\\release\\apps\\app_20260215_pdfapplication\\app.yaml",
+    "exists": false,
+    "last_write_time": null,
+    "size": null
+  },
+  "build_profile": {
+    "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\ToolHub_AppStudio_Output\\app_20260215_pdfapplication\\build_profile.json",
+    "exists": true,
+    "last_write_time": "2026-05-10T20:55:03",
+    "size": 1994
+  },
+  "timing_report": {
+    "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\ToolHub_AppStudio_Output\\app_20260215_pdfapplication\\timing_report.json",
+    "exists": true,
+    "last_write_time": "2026-05-10T20:55:03",
+    "size": 1764
+  }
+}
+```
+
+Human approval is required before enabling this app in release/app_manifest.json.

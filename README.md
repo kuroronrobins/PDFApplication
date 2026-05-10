@@ -1,90 +1,20 @@
-# PDFApplication
+# PDF Workbench
 
-Flet を使った PDF 統合ユーティリティです。業務利用を想定し、操作性（UX）と堅牢性を両立しています。
+Tauri を使用して PDF アプリケーション UI を全面刷新するための新環境です。
 
-## 主な機能
+現行の Flet/Python システムは、新環境に混ざらないよう以下へ隔離しています。
 
-- PDF 結合・分割（ページ数指定 / ファイルサイズ上限指定を選択可能）
-- ページ入れ替え（ドラッグ操作）
-- Office / PDF の PDF 変換（変換のみ・結合）
-- ヘッダー/フッター/ページ番号の追記
-- PDF 文字置換
-- 透かし追加、パスワード暗号化、PDF情報表示
-- 暗号化PDFの入力パスワード対応（対応機能で共通利用）
+- `archive/legacy_flet_system_20260510/`
 
-## UX強化ポイント
+新 UI の確定方針、操作設計、Office ファイルの一時 PDF キャッシュ方針、完成予想図は以下を参照してください。
 
-- 入力PDFをサムネイルタイルとして表示
-- ドラッグ&ドロップでページ順を直感的に変更
-- 右上 × でページ除外（復帰も可）
-- 「このページの後で分割」スイッチで分割位置を視覚設定
-- 共通設定 + タブ構成で画面バランスを改善
+- `AGENTS.md`
+- `docs/tauri_ui_redesign_plan.md`
+- `docs/development_process.md`
+- `docs/implementation_roadmap.md`
 
-## セットアップ
+新 UI は、左サイドバーなしの一画面ワークベンチ型です。通常は 1ファイルを 1カードとして扱い、必要なファイルだけ展開してページ単位の並べ替え、削除、ハサミ分割、ヘッダー/フッター/ページ番号/透かし配置を行います。Excel、Word、PowerPoint は追加直後からファイル単位で操作でき、バックグラウンドでセッション限定の一時 PDF キャッシュを作成します。
 
-```bash
-python -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-```
+今後の開発では、`AGENTS.md` と `docs/development_process.md` に従い、実装単位ごとに `docs/reports/` へ検証記録を残します。
 
-## 起動
-
-```bash
-python app.py
-```
-
-## 変換機能について
-
-Office 変換は LibreOffice の headless 実行を前提としています。`soffice` コマンドが利用できない環境では、分かりやすいエラーメッセージを返します。
-
-## 構成
-
-- `app.py`: Flet UI（共通設定、ページ編集ワークスペース、標準機能、セキュリティ機能）
-- `pdf_app/models.py`: 共通ジョブモデル
-- `pdf_app/services/common.py`: 入力検証・暗号化PDFオープン共通処理
-- `pdf_app/services/`: PDF 操作のサービス群
-
-
-## 利用ログ収集と効率化分析
-
-本アプリは実行イベントを JSONL で記録し、任意で GitHub 上の JSONL に追記できます。
-
-### ローカルログ
-
-- 既定ログパス: `./logs/usage_events.jsonl`
-- 1行1イベントで、`action`, `status`, `duration_ms`, `baseline_seconds`, `saved_seconds` などを保存
-- ログパス変更: `PDFAPP_USAGE_LOG_PATH`
-
-### GitHub へのオンライン追記
-
-以下を設定すると、実行時に GitHub Contents API で JSONL を追記更新します。
-
-- `GITHUB_TOKEN`: repo 書き込み権限を持つトークン
-- `PDFAPP_LOG_REPO`: 例 `owner/repo`
-- `PDFAPP_LOG_PATH`: 例 `logs/usage_events.jsonl`
-- `PDFAPP_LOG_BRANCH`: 既定 `main`
-
-通信失敗時は `./logs/usage_spool.jsonl` に退避し、次回成功時に再送します。
-
-### 削減時間算出ルール
-
-- `actual_seconds = duration_ms / 1000`
-- `saved_seconds = baseline_seconds - actual_seconds`
-- 機能別ベースラインは内部既定値を利用し、`PDFAPP_BASELINE_<ACTION>` 環境変数で上書き可能
-- `inspect` は分析対象外のため `saved_seconds = null`
-
-### 分析バッチ
-
-```bash
-python scripts/analyze_efficiency.py --input logs/usage_events.jsonl --output reports/efficiency_report.json
-```
-
-レポートには以下を出力します。
-
-- 総実行回数
-- 成功率
-- 総削減時間
-- 1操作あたり平均削減時間
-- 機能別・日別の削減時間
-- 除外件数（JSON破損、重複ID、負の処理時間）
+直近の残課題と実装順序は `docs/implementation_roadmap.md` に集約しています。

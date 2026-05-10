@@ -1,0 +1,347 @@
+{
+  "schema_version": 3,
+  "standard_icon_size": "512x512",
+  "api_icon_size": "1024x1024",
+  "legacy_candidate_png": "icon_candidate_1.png",
+  "function_interpretation": {
+    "app_id": "app_20260215_pdfapplication",
+    "name": "PDF編集",
+    "entry_name": "app.py",
+    "purpose": "PDF編集 をToolHubから起動するアプリです。",
+    "app_kind": "document workflow tool",
+    "primary_action": "launch",
+    "secondary_action": "",
+    "input_objects": [
+      "pdf/document"
+    ],
+    "output_objects": [
+      "pdf/document"
+    ],
+    "action_flow": "pdf/document -> launch -> pdf/document",
+    "visual_priority": [
+      "make the launch action visible",
+      "show input as pdf/document",
+      "show output as pdf/document",
+      "keep the relationship readable at 32px"
+    ],
+    "avoid_generic": [
+      "generic abstract shapes only",
+      "document-only icon",
+      "gear-only icon",
+      "checkmark-only icon",
+      "network nodes only",
+      "initial-letter-only icon",
+      "tiny readable text or fake logo letters",
+      "photorealistic image",
+      "crowded UI screenshot"
+    ],
+    "composition_template": "Show a clear before-to-after workflow with 2 to 4 objects connected by one visible action path.",
+    "primary_motif": "帳票から分析チャートが浮き上がるシンボル",
+    "secondary_motifs": [
+      "ページ端の折り返しではなく固有の指標マーク",
+      "確認済みのデータバー"
+    ],
+    "avoid": [
+      "書類だけのアイコン",
+      "歯車だけのアイコン",
+      "チェックだけのアイコン",
+      "頭文字だけのアイコン",
+      "読めない小さい文字やロゴ風文字",
+      "写真風、画面キャプチャ風、過密なUI画面"
+    ],
+    "palette": "インディゴ、スレート、アクセントのアンバー",
+    "texture": "マットな紙質とシャープなチャートの対比",
+    "small_size_rule": "32pxでも主役モチーフの輪郭が判別でき、細かい文字に頼らない。",
+    "high_resolution_rule": "256px以上では輪郭、光沢、余白、素材感がきれいに見える高精細な仕上げ。",
+    "toolhub_style_rule": "既存ToolHubアイコンと並べて違和感のない、角丸の余白と落ち着いた業務向け品質。",
+    "categories": [
+      "業務ツール"
+    ],
+    "keywords": [
+      "PDF編集",
+      "app_20260215_pdfapplication",
+      "ToolHub"
+    ],
+    "use_cases": [
+      "PDF編集 をToolHubからすばやく起動する"
+    ],
+    "inputs": [
+      "アプリ設定に依存"
+    ],
+    "outputs": [
+      "アプリ実行結果"
+    ],
+    "source_files": [
+      ".gitkeep",
+      "_app_data.json",
+      "_bootstrap.py",
+      "_gitup.py",
+      "app.py",
+      "README.md",
+      "requirements.txt"
+    ],
+    "dependency_signals": [
+      "__future__",
+      "base64",
+      "dataclasses",
+      "datetime",
+      "fitz",
+      "flet",
+      "importlib",
+      "json",
+      "os",
+      "pathlib",
+      "pdf_app",
+      "pypdf",
+      "socket",
+      "threading",
+      "time",
+      "typing"
+    ],
+    "readme_excerpt": "# PDFApplication\n\nFlet を使った PDF 統合ユーティリティです。業務利用を想定し、操作性（UX）と堅牢性を両立しています。\n\n## 主な機能\n\n- PDF 結合・分割（ページ数指定 / ファイルサイズ上限指定を選択可能）\n- ページ入れ替え（ドラッグ操作）\n- Office / PDF の PDF 変換（変換のみ・結合）\n- ヘッダー/フッター/ページ番号の追記\n- PDF 文字置換\n- 透かし追加、パスワード暗号化、PDF情報表示\n- 暗号化PDFの入力パスワード対応（対応機能で共通利用）\n\n## UX強化ポイント\n\n- 入力PDFをサムネイルタイルとして表示\n- ドラッグ&ドロップでページ順を直感的に変更\n- 右上 × でページ除外（復帰も可）\n- 「このページの後で分割」スイッチで分割位置を視覚設定\n- 共通設定 + タブ構成で画面バランスを改善\n\n## セットアップ\n\n```bash\npython -m venv .venv\nsource .venv/bin/activate\npip install -r requirements.txt\n```\n\n## 起動\n\n```bash\npython app.py\n```\n\n## 変換機能について\n\nOffice 変換は Microsoft Office (Word / Excel / PowerPoint) のインストールを前提としています。 \nWindows 環境で COM 経由で PDF 出力を実行します。\n\n## 構成\n\n- `app.py`: Flet UI（共通設定、ページ編集ワークスペース、標準機能、セキュリティ機能）\n- `pdf_app/models.py`: 共通ジョブモデル\n- `pdf_app/services/common.py`: 入力検証・暗号化PDFオープン共通処理\n- `pdf_app/services/`: PDF 操作のサービス群\n\n## 利用ログ収集と効率化分析\n\n本アプリは実行イベントを JSONL で記録し、任意で GitHub 上の JSONL に追記できます。\n\n### ローカルログ\n\n- 既定ログパス: `.[local path]\n- 1行1イベントで、`action`, `status`, `duration_ms`, `baseline_",
+    "style_reference": "Existing ToolHub icon references: app_20260201_agendasnap, run_xcgate_upload, sample_gui_app, sample_playwright_app"
+  },
+  "image_api_summary": {
+    "api_candidate_count": 3,
+    "image_api_success": true,
+    "image_generation_status": "success",
+    "latest_image_api_failure": "",
+    "failure_class": "",
+    "failure_message": "none",
+    "admin_next_action": "none",
+    "selected_icon_source": "candidate_png",
+    "default_icon_used": false,
+    "default_icon_reason": "",
+    "icon_status": "ai_candidate_selected",
+    "package_secret_scan_status": "blocked",
+    "package_secret_scan_findings": 6,
+    "package_ai_submission_blocked": true,
+    "package_ai_submission_block_reason": "manual-check-secret-assignment: password has a non-empty value that is not clearly a placeholder.; manual-check-secret-assignment: password has a non-empty value that is not clearly a placeholder.; manual-check-secret-assignment: password has a non-empty value that is not clearly a placeholder.",
+    "ai_payload_secret_scan_status": "passed",
+    "ai_submission_blocked": false,
+    "ai_submission_block_reason": "none",
+    "model": "gpt-image-1.5",
+    "style_preset": "",
+    "image_evaluation_status": "deterministic_png_check",
+    "image_evaluation_note": "Vision evaluation is not run in this MVP; candidates use deterministic prompt/concept checks and PNG small-size checks when pixels are available."
+  },
+  "candidates": [
+    {
+      "candidate_id": "icon_candidate_1",
+      "number": 1,
+      "source": "api_generate",
+      "prompt": "USER ICON REQUEST - HIGHEST PRIORITY:\nToolHub向けの高精細な業務用アプリアイコン。中央に、インディゴとスレートのPDF書類が開き、その上にアンバーの分析チャートが立体的に浮かび上がるシンボルを配置する。左側に入力PDF、右側に編集後のPDFを示す2〜4個の要素を、一本の明確な起動フローでつなぎ、起動アクションが一目で分かる構図にする。ページ端の固有の指標マークや、確認済みを示す控えめなデータバーを補助的に入れる。マットな紙質とシャープなチャートの対比を強調し、角丸の余白で整えた落ち着いた業務向けデザインにする。32pxでも主役モチーフの輪郭が判別できるように簡潔に、256px以上では輪郭や素材感が美しく見える高精細仕上げ。写真風や画面キャプチャ風にはせず、読める文字やロゴ文字は入れない。\n\nFollow the user request above as the source of truth for motif, composition, style, color, material, and mood.\nDo not replace the user's requested image with a generic workflow metaphor.\nUse app context only as a secondary guardrail so the icon still belongs to this app.\n\nSTYLE SOURCE:\nNo separate style preset is selected. Derive the style from the user request.\n\nGenerated concept JSON - optional support only, never an override:\n{\"id\": \"c1\", \"direction\": \"c1\", \"concept\": \"Central PDF sheet lifting into a 3D amber bar chart, with a before/after document pair connected by a curved launch arrow\", \"primary_motif\": \"帳票から分析チャートが浮き上がるシンボル\", \"secondary_motif\": \"確認済みのデータバー\", \"composition\": \"Left input PDF sheet, center active PDF sheet with an amber chart emerging upward, right edited PDF sheet; one bold curved arrow runs left-to-right through the center to make launch and transformation readable at 32px.\", \"style_family\": \"polished corporate icon, dimensional document workflow\", \"why_specific\": \"The floating chart directly expresses PDF editing as analytical document enhancement, while the visible flow from input to output makes the launch action unambiguous and keeps it distinct from generic file icons.\", \"avoid_elements\": [\"generic abstract shapes only\", \"document-only icon\", \"gear-only icon\", \"checkmark-only icon\", \"network nodes only\", \"initial-letter-only icon\", \"tiny readable text or fake logo letters\", \"photorealistic image\"]}\n\nEnglish rendering guidance: Create a distinctive 1024x1024 PNG app icon for a desktop launcher.\nStyle preset:\n- preset: user_prompt\n- visual material: derive the visual material from the user's icon prompt; do not add an unrelated house style\n- color behavior: derive color, mood, and contrast from the user's icon prompt\n- line/edge treatment: keep the user's requested style while preserving small-icon readability\n- lighting: derive lighting and depth from the user's icon prompt\n- style-specific forbidden elements: do not add a separate preset style that conflicts with the user's prompt\n- custom style override: none\nDo not introduce a style preset that conflicts with the user's prompt.\nUse generous safe margins and a strong app-specific silhouette.\nIf the user specified a central object, keep it central. If the user specified transformation, motion, material, or style, make that visibly dominant.\nPrimary action: launch\nInput objects: pdf/document\nOutput objects: pdf/document\nApp composition hint: Show a clear before-to-after workflow with 2 to 4 objects connected by one visible action path.\nCandidate direction: c1\nLeft input PDF sheet, center active PDF sheet with an amber chart emerging upward, right edited PDF sheet; one bold curved arrow runs left-to-right through the center to make launch and transformation readable at 32px.\nDo not repeat the same composition as previous candidates: none yet.\nUse a small number of readable visual elements. Prioritize the user's requested subject over generated metadata.\nForbidden unless explicitly requested by the user: generic abstract shapes only, tiny unreadable text, full-photo scenes, screenshots, crowded UI panels, gear-only icons, check-only icons, nodes-only icons, or initial-letter-only icons.\nReadable at 32px, attractive at 256px and above, no watermark, no mockup frame, transparent or clean icon background acceptable.\n\nGenerated prompt context for audit - lower priority than USER ICON REQUEST:\nnone",
+      "model": "gpt-image-1.5",
+      "status": "success",
+      "resolution": "1024x1024",
+      "fallback": false,
+      "file_name": "icon_candidate_1.png",
+      "url_file_name": "",
+      "url": "",
+      "notes": "c1: API returned b64 image data. It will be saved as icon_candidate_1.png.",
+      "revision_of": "",
+      "api": "images.generate",
+      "content_type": "b64_png",
+      "fallback_reason": "",
+      "error_category": "",
+      "failure_class": "",
+      "failure_message": "",
+      "admin_next_action": "",
+      "ai_payload_secret_scan_status": "passed",
+      "ai_submission_blocked": false,
+      "ai_submission_block_reason": "",
+      "concept_id": "c1",
+      "concept": {
+        "id": "c1",
+        "direction": "c1",
+        "concept": "Central PDF sheet lifting into a 3D amber bar chart, with a before/after document pair connected by a curved launch arrow",
+        "primary_motif": "帳票から分析チャートが浮き上がるシンボル",
+        "secondary_motif": "確認済みのデータバー",
+        "composition": "Left input PDF sheet, center active PDF sheet with an amber chart emerging upward, right edited PDF sheet; one bold curved arrow runs left-to-right through the center to make launch and transformation readable at 32px.",
+        "style_family": "polished corporate icon, dimensional document workflow",
+        "why_specific": "The floating chart directly expresses PDF editing as analytical document enhancement, while the visible flow from input to output makes the launch action unambiguous and keeps it distinct from generic file icons.",
+        "avoid_elements": [
+          "generic abstract shapes only",
+          "document-only icon",
+          "gear-only icon",
+          "checkmark-only icon",
+          "network nodes only",
+          "initial-letter-only icon",
+          "tiny readable text or fake logo letters",
+          "photorealistic image"
+        ]
+      },
+      "scores": {
+        "semantic_clarity": 5.0,
+        "specificity": 5.0,
+        "small_size_legibility": 5.0,
+        "aesthetics": 7.0,
+        "diversity": 8.0
+      },
+      "score_total": 30.0,
+      "score_basis": "rule_based_pixels_and_prompt",
+      "semantic_score": 5.0,
+      "specificity_score": 5.0,
+      "small_size_score": 8.73,
+      "aesthetic_score": 9.0,
+      "revision_follow_score": 9.0,
+      "generic_risk_score": 10.0,
+      "quality_total": 61.22,
+      "quality_label": "usable",
+      "quality_reasons": [
+        "Contrast is sufficient for small-size review.",
+        "Visible motif uses the canvas with reasonable margins."
+      ],
+      "quality_warnings": [
+        "16px downsample loses too much shape information.",
+        "Candidate may be too generic for this app purpose."
+      ],
+      "image_evaluation_status": "deterministic_png_check",
+      "image_evaluation_note": "PNG pixels inspected with deterministic small-size and contrast checks (1024x1024)."
+    },
+    {
+      "candidate_id": "icon_candidate_2",
+      "number": 2,
+      "source": "api_generate",
+      "prompt": "USER ICON REQUEST - HIGHEST PRIORITY:\nToolHub向けの高精細な業務用アプリアイコン。中央に、インディゴとスレートのPDF書類が開き、その上にアンバーの分析チャートが立体的に浮かび上がるシンボルを配置する。左側に入力PDF、右側に編集後のPDFを示す2〜4個の要素を、一本の明確な起動フローでつなぎ、起動アクションが一目で分かる構図にする。ページ端の固有の指標マークや、確認済みを示す控えめなデータバーを補助的に入れる。マットな紙質とシャープなチャートの対比を強調し、角丸の余白で整えた落ち着いた業務向けデザインにする。32pxでも主役モチーフの輪郭が判別できるように簡潔に、256px以上では輪郭や素材感が美しく見える高精細仕上げ。写真風や画面キャプチャ風にはせず、読める文字やロゴ文字は入れない。\n\nFollow the user request above as the source of truth for motif, composition, style, color, material, and mood.\nDo not replace the user's requested image with a generic workflow metaphor.\nUse app context only as a secondary guardrail so the icon still belongs to this app.\n\nSTYLE SOURCE:\nNo separate style preset is selected. Derive the style from the user request.\n\nGenerated concept JSON - optional support only, never an override:\n{\"id\": \"c2\", \"direction\": \"c2\", \"concept\": \"Split-and-merge workbench with one PDF sheet being opened into two panels that reveal an amber chart overlay and a refined output PDF\", \"primary_motif\": \"帳票から分析チャートが浮き上がるシンボル\", \"secondary_motif\": \"ページ端の折り返しではなく固有の指標マーク\", \"composition\": \"Three objects: an input PDF sheet on the left, a middle transformation panel showing the sheet opening like a controlled edit seam with chart lines rising, and a completed output PDF sheet on the right; a straight action path links them like a workflow lane.\", \"style_family\": \"workflow schematic with dimensional paper cut\", \"why_specific\": \"The split seam communicates editing and launch as an active operation rather than passive viewing, and the panel-style transformation gives a different silhouette from a simple floating-chart document.\", \"avoid_elements\": [\"書類だけのアイコン\", \"歯車だけのアイコン\", \"チェックだけのアイコン\", \"頭文字だけのアイコン\", \"読めない小さい文字やロゴ風文字\", \"写真風、画面キャプチャ風、過密なUI画面\"]}\n\nEnglish rendering guidance: Create a distinctive 1024x1024 PNG app icon for a desktop launcher.\nStyle preset:\n- preset: user_prompt\n- visual material: derive the visual material from the user's icon prompt; do not add an unrelated house style\n- color behavior: derive color, mood, and contrast from the user's icon prompt\n- line/edge treatment: keep the user's requested style while preserving small-icon readability\n- lighting: derive lighting and depth from the user's icon prompt\n- style-specific forbidden elements: do not add a separate preset style that conflicts with the user's prompt\n- custom style override: none\nDo not introduce a style preset that conflicts with the user's prompt.\nUse generous safe margins and a strong app-specific silhouette.\nIf the user specified a central object, keep it central. If the user specified transformation, motion, material, or style, make that visibly dominant.\nPrimary action: launch\nInput objects: pdf/document\nOutput objects: pdf/document\nApp composition hint: Show a clear before-to-after workflow with 2 to 4 objects connected by one visible action path.\nCandidate direction: c2\nThree objects: an input PDF sheet on the left, a middle transformation panel showing the sheet opening like a controlled edit seam with chart lines rising, and a completed output PDF sheet on the right; a straight action path links them like a workflow lane.\nDo not repeat the same composition as previous candidates: icon_candidate_1.\nUse a small number of readable visual elements. Prioritize the user's requested subject over generated metadata.\nForbidden unless explicitly requested by the user: generic abstract shapes only, tiny unreadable text, full-photo scenes, screenshots, crowded UI panels, gear-only icons, check-only icons, nodes-only icons, or initial-letter-only icons.\nReadable at 32px, attractive at 256px and above, no watermark, no mockup frame, transparent or clean icon background acceptable.\n\nGenerated prompt context for audit - lower priority than USER ICON REQUEST:\nnone",
+      "model": "gpt-image-1.5",
+      "status": "success",
+      "resolution": "1024x1024",
+      "fallback": false,
+      "file_name": "icon_candidate_2.png",
+      "url_file_name": "",
+      "url": "",
+      "notes": "c2: API returned b64 image data. It will be saved as icon_candidate_2.png.",
+      "revision_of": "",
+      "api": "images.generate",
+      "content_type": "b64_png",
+      "fallback_reason": "",
+      "error_category": "",
+      "failure_class": "",
+      "failure_message": "",
+      "admin_next_action": "",
+      "ai_payload_secret_scan_status": "passed",
+      "ai_submission_blocked": false,
+      "ai_submission_block_reason": "",
+      "concept_id": "c2",
+      "concept": {
+        "id": "c2",
+        "direction": "c2",
+        "concept": "Split-and-merge workbench with one PDF sheet being opened into two panels that reveal an amber chart overlay and a refined output PDF",
+        "primary_motif": "帳票から分析チャートが浮き上がるシンボル",
+        "secondary_motif": "ページ端の折り返しではなく固有の指標マーク",
+        "composition": "Three objects: an input PDF sheet on the left, a middle transformation panel showing the sheet opening like a controlled edit seam with chart lines rising, and a completed output PDF sheet on the right; a straight action path links them like a workflow lane.",
+        "style_family": "workflow schematic with dimensional paper cut",
+        "why_specific": "The split seam communicates editing and launch as an active operation rather than passive viewing, and the panel-style transformation gives a different silhouette from a simple floating-chart document.",
+        "avoid_elements": [
+          "書類だけのアイコン",
+          "歯車だけのアイコン",
+          "チェックだけのアイコン",
+          "頭文字だけのアイコン",
+          "読めない小さい文字やロゴ風文字",
+          "写真風、画面キャプチャ風、過密なUI画面"
+        ]
+      },
+      "scores": {
+        "semantic_clarity": 5.0,
+        "specificity": 4.0,
+        "small_size_legibility": 5.0,
+        "aesthetics": 7.0,
+        "diversity": 8.0
+      },
+      "score_total": 29.0,
+      "score_basis": "rule_based_pixels_and_prompt",
+      "semantic_score": 5.0,
+      "specificity_score": 4.0,
+      "small_size_score": 8.78,
+      "aesthetic_score": 10.0,
+      "revision_follow_score": 9.0,
+      "generic_risk_score": 8.5,
+      "quality_total": 63.8,
+      "quality_label": "usable",
+      "quality_reasons": [
+        "Contrast is sufficient for small-size review.",
+        "Visible motif uses the canvas with reasonable margins."
+      ],
+      "quality_warnings": [
+        "16px downsample loses too much shape information.",
+        "Candidate may be too generic for this app purpose."
+      ],
+      "image_evaluation_status": "deterministic_png_check",
+      "image_evaluation_note": "PNG pixels inspected with deterministic small-size and contrast checks (1024x1024)."
+    },
+    {
+      "candidate_id": "icon_candidate_3",
+      "number": 3,
+      "source": "api_generate",
+      "prompt": "USER ICON REQUEST - HIGHEST PRIORITY:\nToolHub向けの高精細な業務用アプリアイコン。中央に、インディゴとスレートのPDF書類が開き、その上にアンバーの分析チャートが立体的に浮かび上がるシンボルを配置する。左側に入力PDF、右側に編集後のPDFを示す2〜4個の要素を、一本の明確な起動フローでつなぎ、起動アクションが一目で分かる構図にする。ページ端の固有の指標マークや、確認済みを示す控えめなデータバーを補助的に入れる。マットな紙質とシャープなチャートの対比を強調し、角丸の余白で整えた落ち着いた業務向けデザインにする。32pxでも主役モチーフの輪郭が判別できるように簡潔に、256px以上では輪郭や素材感が美しく見える高精細仕上げ。写真風や画面キャプチャ風にはせず、読める文字やロゴ文字は入れない。\n\nFollow the user request above as the source of truth for motif, composition, style, color, material, and mood.\nDo not replace the user's requested image with a generic workflow metaphor.\nUse app context only as a secondary guardrail so the icon still belongs to this app.\n\nSTYLE SOURCE:\nNo separate style preset is selected. Derive the style from the user request.\n\nGenerated concept JSON - optional support only, never an override:\n{\"id\": \"c3\", \"direction\": \"c3\", \"concept\": \"PDF page stack launching into a rising chart pedestal, with edited output shown as a stabilized finished sheet and amber data bars beneath\", \"primary_motif\": \"帳票から分析チャートが浮き上がるシンボル\", \"secondary_motif\": \"確認済みのデータバー\", \"composition\": \"A compact stack of input PDFs on the left feeds into a central launch pedestal where an amber chart rises from the top page, then a single finished PDF exits on the right; the path is a clean diagonal ascent to signal quick start.\", \"style_family\": \"compact premium app badge, slight isometric workflow\", \"why_specific\": \"Using a stack rather than a single sheet gives a stronger PDF-processing silhouette and suggests document management, while the pedestal-like launch point makes this feel like an app entry icon, not a generic editor badg\", \"avoid_elements\": [\"generic abstract shapes only\", \"document-only icon\", \"gear-only icon\", \"checkmark-only icon\", \"network nodes only\", \"initial-letter-only icon\", \"tiny readable text or fake logo letters\", \"photorealistic image\"]}\n\nEnglish rendering guidance: Create a distinctive 1024x1024 PNG app icon for a desktop launcher.\nStyle preset:\n- preset: user_prompt\n- visual material: derive the visual material from the user's icon prompt; do not add an unrelated house style\n- color behavior: derive color, mood, and contrast from the user's icon prompt\n- line/edge treatment: keep the user's requested style while preserving small-icon readability\n- lighting: derive lighting and depth from the user's icon prompt\n- style-specific forbidden elements: do not add a separate preset style that conflicts with the user's prompt\n- custom style override: none\nDo not introduce a style preset that conflicts with the user's prompt.\nUse generous safe margins and a strong app-specific silhouette.\nIf the user specified a central object, keep it central. If the user specified transformation, motion, material, or style, make that visibly dominant.\nPrimary action: launch\nInput objects: pdf/document\nOutput objects: pdf/document\nApp composition hint: Show a clear before-to-after workflow with 2 to 4 objects connected by one visible action path.\nCandidate direction: c3\nA compact stack of input PDFs on the left feeds into a central launch pedestal where an amber chart rises from the top page, then a single finished PDF exits on the right; the path is a clean diagonal ascent to signal quick start.\nDo not repeat the same composition as previous candidates: icon_candidate_1, icon_candidate_2.\nUse a small number of readable visual elements. Prioritize the user's requested subject over generated metadata.\nForbidden unless explicitly requested by the user: generic abstract shapes only, tiny unreadable text, full-photo scenes, screenshots, crowded UI panels, gear-only icons, check-only icons, nodes-only icons, or initial-letter-only icons.\nReadable at 32px, attractive at 256px and above, no watermark, no mockup frame, transparent or clean icon background acceptable.\n\nGenerated prompt context for audit - lower priority than USER ICON REQUEST:\nnone",
+      "model": "gpt-image-1.5",
+      "status": "success",
+      "resolution": "1024x1024",
+      "fallback": false,
+      "file_name": "icon_candidate_3.png",
+      "url_file_name": "",
+      "url": "",
+      "notes": "c3: API returned b64 image data. It will be saved as icon_candidate_3.png.",
+      "revision_of": "",
+      "api": "images.generate",
+      "content_type": "b64_png",
+      "fallback_reason": "",
+      "error_category": "",
+      "failure_class": "",
+      "failure_message": "",
+      "admin_next_action": "",
+      "ai_payload_secret_scan_status": "passed",
+      "ai_submission_blocked": false,
+      "ai_submission_block_reason": "",
+      "concept_id": "c3",
+      "concept": {
+        "id": "c3",
+        "direction": "c3",
+        "concept": "PDF page stack launching into a rising chart pedestal, with edited output shown as a stabilized finished sheet and amber data bars beneath",
+        "primary_motif": "帳票から分析チャートが浮き上がるシンボル",
+        "secondary_motif": "確認済みのデータバー",
+        "composition": "A compact stack of input PDFs on the left feeds into a central launch pedestal where an amber chart rises from the top page, then a single finished PDF exits on the right; the path is a clean diagonal ascent to signal quick start.",
+        "style_family": "compact premium app badge, slight isometric workflow",
+        "why_specific": "Using a stack rather than a single sheet gives a stronger PDF-processing silhouette and suggests document management, while the pedestal-like launch point makes this feel like an app entry icon, not a generic editor badg",
+        "avoid_elements": [
+          "generic abstract shapes only",
+          "document-only icon",
+          "gear-only icon",
+          "checkmark-only icon",
+          "network nodes only",
+          "initial-letter-only icon",
+          "tiny readable text or fake logo letters",
+          "photorealistic image"
+        ]
+      },
+      "scores": {
+        "semantic_clarity": 5.0,
+        "specificity": 5.0,
+        "small_size_legibility": 8.0,
+        "aesthetics": 7.0,
+        "diversity": 8.0
+      },
+      "score_total": 33.0,
+      "score_basis": "rule_based_pixels_and_prompt",
+      "semantic_score": 5.0,
+      "specificity_score": 5.0,
+      "small_size_score": 8.76,
+      "aesthetic_score": 10.0,
+      "revision_follow_score": 9.0,
+      "generic_risk_score": 10.0,
+      "quality_total": 62.93,
+      "quality_label": "usable",
+      "quality_reasons": [
+        "Contrast is sufficient for small-size review.",
+        "Visible motif uses the canvas with reasonable margins."
+      ],
+      "quality_warnings": [
+        "16px downsample loses too much shape information.",
+        "Candidate may be too generic for this app purpose."
+      ],
+      "image_evaluation_status": "deterministic_png_check",
+      "image_evaluation_note": "PNG pixels inspected with deterministic small-size and contrast checks (1024x1024)."
+    }
+  ]
+}

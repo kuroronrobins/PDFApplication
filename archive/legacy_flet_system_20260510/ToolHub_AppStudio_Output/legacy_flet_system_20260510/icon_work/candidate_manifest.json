@@ -1,0 +1,342 @@
+{
+  "schema_version": 3,
+  "standard_icon_size": "512x512",
+  "api_icon_size": "1024x1024",
+  "legacy_candidate_png": "icon_candidate_1.png",
+  "function_interpretation": {
+    "app_id": "legacy_flet_system_20260510",
+    "name": "Legacy Flet System 20260510",
+    "entry_name": "app.py",
+    "purpose": "Legacy Flet System 20260510 をToolHubから起動するアプリです。",
+    "app_kind": "document workflow tool",
+    "primary_action": "launch",
+    "secondary_action": "",
+    "input_objects": [
+      "pdf/document"
+    ],
+    "output_objects": [
+      "pdf/document"
+    ],
+    "action_flow": "pdf/document -> launch -> pdf/document",
+    "visual_priority": [
+      "make the launch action visible",
+      "show input as pdf/document",
+      "show output as pdf/document",
+      "keep the relationship readable at 32px"
+    ],
+    "avoid_generic": [
+      "generic abstract shapes only",
+      "document-only icon",
+      "gear-only icon",
+      "checkmark-only icon",
+      "network nodes only",
+      "initial-letter-only icon",
+      "tiny readable text or fake logo letters",
+      "photorealistic image",
+      "crowded UI screenshot"
+    ],
+    "composition_template": "Show a clear before-to-after workflow with 2 to 4 objects connected by one visible action path.",
+    "primary_motif": "帳票から分析チャートが浮き上がるシンボル",
+    "secondary_motifs": [
+      "ページ端の折り返しではなく固有の指標マーク",
+      "確認済みのデータバー"
+    ],
+    "avoid": [
+      "書類だけのアイコン",
+      "歯車だけのアイコン",
+      "チェックだけのアイコン",
+      "頭文字だけのアイコン",
+      "読めない小さい文字やロゴ風文字",
+      "写真風、画面キャプチャ風、過密なUI画面"
+    ],
+    "palette": "インディゴ、スレート、アクセントのアンバー",
+    "texture": "マットな紙質とシャープなチャートの対比",
+    "small_size_rule": "32pxでも主役モチーフの輪郭が判別でき、細かい文字に頼らない。",
+    "high_resolution_rule": "256px以上では輪郭、光沢、余白、素材感がきれいに見える高精細な仕上げ。",
+    "toolhub_style_rule": "既存ToolHubアイコンと並べて違和感のない、角丸の余白と落ち着いた業務向け品質。",
+    "categories": [
+      "業務ツール"
+    ],
+    "keywords": [
+      "Legacy Flet System 20260510",
+      "legacy_flet_system_20260510",
+      "ToolHub"
+    ],
+    "use_cases": [
+      "Legacy Flet System 20260510 をToolHubからすばやく起動する"
+    ],
+    "inputs": [
+      "アプリ設定に依存"
+    ],
+    "outputs": [
+      "アプリ実行結果"
+    ],
+    "source_files": [
+      ".gitkeep",
+      "_app_data.json",
+      "_bootstrap.py",
+      "_gitup.py",
+      "app.py",
+      "ARCHIVE.md",
+      "README.md",
+      "requirements.txt"
+    ],
+    "dependency_signals": [
+      "__future__",
+      "base64",
+      "dataclasses",
+      "datetime",
+      "fitz",
+      "flet",
+      "importlib",
+      "json",
+      "os",
+      "pathlib",
+      "pdf_app",
+      "pypdf",
+      "socket",
+      "threading",
+      "time",
+      "typing"
+    ],
+    "readme_excerpt": "# PDFApplication\n\nFlet を使った PDF 統合ユーティリティです。業務利用を想定し、操作性（UX）と堅牢性を両立しています。\n\n## 主な機能\n\n- PDF 結合・分割（ページ数指定 / ファイルサイズ上限指定を選択可能）\n- ページ入れ替え（ドラッグ操作）\n- Office / PDF の PDF 変換（変換のみ・結合）\n- ヘッダー/フッター/ページ番号の追記\n- PDF 文字置換\n- 透かし追加、パスワード暗号化、PDF情報表示\n- 暗号化PDFの入力パスワード対応（対応機能で共通利用）\n\n## UX強化ポイント\n\n- 入力PDFをサムネイルタイルとして表示\n- ドラッグ&ドロップでページ順を直感的に変更\n- 右上 × でページ除外（復帰も可）\n- 「このページの後で分割」スイッチで分割位置を視覚設定\n- 共通設定 + タブ構成で画面バランスを改善\n\n## セットアップ\n\n```bash\npython -m venv .venv\nsource .venv/bin/activate\npip install -r requirements.txt\n```\n\n## 起動\n\n```bash\npython app.py\n```\n\n## 変換機能について\n\nOffice 変換は Microsoft Office (Word / Excel / PowerPoint) のインストールを前提としています。 \nWindows 環境で COM 経由で PDF 出力を実行します。\n\n## 構成\n\n- `app.py`: Flet UI（共通設定、ページ編集ワークスペース、標準機能、セキュリティ機能）\n- `pdf_app/models.py`: 共通ジョブモデル\n- `pdf_app/services/common.py`: 入力検証・暗号化PDFオープン共通処理\n- `pdf_app/services/`: PDF 操作のサービス群\n\n## 利用ログ収集と効率化分析\n\n本アプリは実行イベントを JSONL で記録し、任意で GitHub 上の JSONL に追記できます。\n\n### ローカルログ\n\n- 既定ログパス: `.[local path]\n- 1行1イベントで、`action`, `status`, `duration_ms`, `baseline_",
+    "style_reference": "Existing ToolHub icon references: app_20260201_agendasnap, run_xcgate_upload, sample_gui_app, sample_playwright_app"
+  },
+  "image_api_summary": {
+    "api_candidate_count": 3,
+    "image_api_success": true,
+    "image_generation_status": "success",
+    "latest_image_api_failure": "",
+    "failure_class": "",
+    "failure_message": "none",
+    "admin_next_action": "none",
+    "selected_icon_source": "default_icon",
+    "default_icon_used": true,
+    "default_icon_reason": "No uploaded icon or adopted AI image candidate was selected, so ToolHub uses the common default app icon.",
+    "icon_status": "default_icon",
+    "package_secret_scan_status": "blocked",
+    "package_secret_scan_findings": 6,
+    "package_ai_submission_blocked": true,
+    "package_ai_submission_block_reason": "manual-check-secret-assignment: password has a non-empty value that is not clearly a placeholder.; manual-check-secret-assignment: password has a non-empty value that is not clearly a placeholder.; manual-check-secret-assignment: password has a non-empty value that is not clearly a placeholder.",
+    "ai_payload_secret_scan_status": "passed",
+    "ai_submission_blocked": false,
+    "ai_submission_block_reason": "none",
+    "model": "gpt-image-1.5",
+    "style_preset": "",
+    "image_evaluation_status": "deterministic_png_check",
+    "image_evaluation_note": "Vision evaluation is not run in this MVP; candidates use deterministic prompt/concept checks and PNG small-size checks when pixels are available."
+  },
+  "candidates": [
+    {
+      "candidate_id": "icon_candidate_1",
+      "number": 1,
+      "source": "api_generate",
+      "prompt": "USER ICON REQUEST - HIGHEST PRIORITY:\nToolHub向けの高精細な業務用アプリアイコン。中央に、インディゴとスレートの落ち着いた帳票PDFを立体的に配置し、そこからアンバーの分析チャートが上向きに浮かび上がる様子を表現する。左側に入力PDF、右側に出力PDFを2〜4枚の意味のあるオブジェクトで示し、中央の「起動」を感じさせる明確な矢印や光の流れで、pdf/document → launch → pdf/document の関係が一目で分かる構図にする。補助モチーフとして、ページ端の折り返しではなく固有の指標マークと、確認済みのデータバーをさりげなく加える。マットな紙質とシャープなチャートの対比を強調し、角丸の余白を十分に取った整然としたレイアウトにする。32pxでも主役モチーフの輪郭が判別できるように簡潔で読みやすく、256px以上では輪郭、光沢、余白、素材感が美しく見える洗練された仕上げ。写真風や画面キャプチャ風にはせず、読めない文字やロゴ風文字は入れない。\n\nFollow the user request above as the source of truth for motif, composition, style, color, material, and mood.\nDo not replace the user's requested image with a generic workflow metaphor.\nUse app context only as a secondary guardrail so the icon still belongs to this app.\n\nSTYLE SOURCE:\nNo separate style preset is selected. Derive the style from the user request.\n\nGenerated concept JSON - optional support only, never an override:\n{\"id\": \"c1\", \"direction\": \"c1\", \"concept\": \"Document ignition arc\", \"primary_motif\": \"インディゴのPDF帳票が中央で扇状に開き、上方へアンバーの分析チャートが立ち上がる\", \"secondary_motif\": \"右上に小さな確認済みデータバー、左下に入力PDFの束\", \"composition\": \"左に入力PDF 1束、中央に開いた帳票と上向きの発光カーブ、右に出力PDF 1束を置き、弧を描く光の流れで launch を見せる\", \"style_family\": \"業務向けセミプレミアム・マット紙質＋シャープライン\", \"why_specific\": \"帳票処理から分析可視化へ移るこのアプリの性格が一目で伝わり、PDF変換/整形ツールではなく“起動して処理を進める”印象を作れる\", \"avoid_elements\": [\"文字やロゴ風の表現\", \"抽象的な線だけの構図\", \"歯車\", \"チェックマーク単独\", \"画面スクリーンショット風\", \"過密なUI\"]}\n\nEnglish rendering guidance: Create a distinctive 1024x1024 PNG app icon for a desktop launcher.\nStyle preset:\n- preset: user_prompt\n- visual material: derive the visual material from the user's icon prompt; do not add an unrelated house style\n- color behavior: derive color, mood, and contrast from the user's icon prompt\n- line/edge treatment: keep the user's requested style while preserving small-icon readability\n- lighting: derive lighting and depth from the user's icon prompt\n- style-specific forbidden elements: do not add a separate preset style that conflicts with the user's prompt\n- custom style override: none\nDo not introduce a style preset that conflicts with the user's prompt.\nUse generous safe margins and a strong app-specific silhouette.\nIf the user specified a central object, keep it central. If the user specified transformation, motion, material, or style, make that visibly dominant.\nPrimary action: launch\nInput objects: pdf/document\nOutput objects: pdf/document\nApp composition hint: Show a clear before-to-after workflow with 2 to 4 objects connected by one visible action path.\nCandidate direction: c1\n左に入力PDF 1束、中央に開いた帳票と上向きの発光カーブ、右に出力PDF 1束を置き、弧を描く光の流れで launch を見せる\nDo not repeat the same composition as previous candidates: none yet.\nUse a small number of readable visual elements. Prioritize the user's requested subject over generated metadata.\nForbidden unless explicitly requested by the user: generic abstract shapes only, tiny unreadable text, full-photo scenes, screenshots, crowded UI panels, gear-only icons, check-only icons, nodes-only icons, or initial-letter-only icons.\nReadable at 32px, attractive at 256px and above, no watermark, no mockup frame, transparent or clean icon background acceptable.\n\nGenerated prompt context for audit - lower priority than USER ICON REQUEST:\nnone",
+      "model": "gpt-image-1.5",
+      "status": "success",
+      "resolution": "1024x1024",
+      "fallback": false,
+      "file_name": "icon_candidate_1.png",
+      "url_file_name": "",
+      "url": "",
+      "notes": "c1: API returned b64 image data. It will be saved as icon_candidate_1.png.",
+      "revision_of": "",
+      "api": "images.generate",
+      "content_type": "b64_png",
+      "fallback_reason": "",
+      "error_category": "",
+      "failure_class": "",
+      "failure_message": "",
+      "admin_next_action": "",
+      "ai_payload_secret_scan_status": "passed",
+      "ai_submission_blocked": false,
+      "ai_submission_block_reason": "",
+      "concept_id": "c1",
+      "concept": {
+        "id": "c1",
+        "direction": "c1",
+        "concept": "Document ignition arc",
+        "primary_motif": "インディゴのPDF帳票が中央で扇状に開き、上方へアンバーの分析チャートが立ち上がる",
+        "secondary_motif": "右上に小さな確認済みデータバー、左下に入力PDFの束",
+        "composition": "左に入力PDF 1束、中央に開いた帳票と上向きの発光カーブ、右に出力PDF 1束を置き、弧を描く光の流れで launch を見せる",
+        "style_family": "業務向けセミプレミアム・マット紙質＋シャープライン",
+        "why_specific": "帳票処理から分析可視化へ移るこのアプリの性格が一目で伝わり、PDF変換/整形ツールではなく“起動して処理を進める”印象を作れる",
+        "avoid_elements": [
+          "文字やロゴ風の表現",
+          "抽象的な線だけの構図",
+          "歯車",
+          "チェックマーク単独",
+          "画面スクリーンショット風",
+          "過密なUI"
+        ]
+      },
+      "scores": {
+        "semantic_clarity": 5.0,
+        "specificity": 4.0,
+        "small_size_legibility": 5.0,
+        "aesthetics": 5.0,
+        "diversity": 8.0
+      },
+      "score_total": 27.0,
+      "score_basis": "rule_based_pixels_and_prompt",
+      "semantic_score": 5.0,
+      "specificity_score": 4.0,
+      "small_size_score": 9.33,
+      "aesthetic_score": 10.0,
+      "revision_follow_score": 9.0,
+      "generic_risk_score": 8.5,
+      "quality_total": 64.71,
+      "quality_label": "usable",
+      "quality_reasons": [
+        "Contrast is sufficient for small-size review.",
+        "Visible motif uses the canvas with reasonable margins."
+      ],
+      "quality_warnings": [
+        "Candidate may be too generic for this app purpose."
+      ],
+      "image_evaluation_status": "deterministic_png_check",
+      "image_evaluation_note": "PNG pixels inspected with deterministic small-size and contrast checks (1024x1024)."
+    },
+    {
+      "candidate_id": "icon_candidate_2",
+      "number": 2,
+      "source": "api_generate",
+      "prompt": "USER ICON REQUEST - HIGHEST PRIORITY:\nToolHub向けの高精細な業務用アプリアイコン。中央に、インディゴとスレートの落ち着いた帳票PDFを立体的に配置し、そこからアンバーの分析チャートが上向きに浮かび上がる様子を表現する。左側に入力PDF、右側に出力PDFを2〜4枚の意味のあるオブジェクトで示し、中央の「起動」を感じさせる明確な矢印や光の流れで、pdf/document → launch → pdf/document の関係が一目で分かる構図にする。補助モチーフとして、ページ端の折り返しではなく固有の指標マークと、確認済みのデータバーをさりげなく加える。マットな紙質とシャープなチャートの対比を強調し、角丸の余白を十分に取った整然としたレイアウトにする。32pxでも主役モチーフの輪郭が判別できるように簡潔で読みやすく、256px以上では輪郭、光沢、余白、素材感が美しく見える洗練された仕上げ。写真風や画面キャプチャ風にはせず、読めない文字やロゴ風文字は入れない。\n\nFollow the user request above as the source of truth for motif, composition, style, color, material, and mood.\nDo not replace the user's requested image with a generic workflow metaphor.\nUse app context only as a secondary guardrail so the icon still belongs to this app.\n\nSTYLE SOURCE:\nNo separate style preset is selected. Derive the style from the user request.\n\nGenerated concept JSON - optional support only, never an override:\n{\"id\": \"c2\", \"direction\": \"c2\", \"concept\": \"Split-to-chart gateway\", \"primary_motif\": \"2枚のPDFページがゲートのように開き、その間からアンバーの棒グラフが立ち上がる\", \"secondary_motif\": \"ゲート脇に固有の指標マーク、下部に整列した確認済みバー\", \"composition\": \"中央に半開きのPDF 2枚を門型に配置し、左の入力文書から右の出力文書へ通る動線を、中央の上昇バーで橋渡しする\", \"style_family\": \"モダン業務アイコン・対称構図\", \"why_specific\": \"“ファイルを通して処理が始まる”意味が強く、結合・分割・変換などのPDFワークフロー基盤アプリらしさを持たせつつ起動アイコンとしても成立する\", \"avoid_elements\": [\"文書だけで完結する見た目\", \"ノードネットワーク\", \"初期文字\", \"歯車のみ\", \"チェックのみ\", \"写真風の紙束\"]}\n\nEnglish rendering guidance: Create a distinctive 1024x1024 PNG app icon for a desktop launcher.\nStyle preset:\n- preset: user_prompt\n- visual material: derive the visual material from the user's icon prompt; do not add an unrelated house style\n- color behavior: derive color, mood, and contrast from the user's icon prompt\n- line/edge treatment: keep the user's requested style while preserving small-icon readability\n- lighting: derive lighting and depth from the user's icon prompt\n- style-specific forbidden elements: do not add a separate preset style that conflicts with the user's prompt\n- custom style override: none\nDo not introduce a style preset that conflicts with the user's prompt.\nUse generous safe margins and a strong app-specific silhouette.\nIf the user specified a central object, keep it central. If the user specified transformation, motion, material, or style, make that visibly dominant.\nPrimary action: launch\nInput objects: pdf/document\nOutput objects: pdf/document\nApp composition hint: Show a clear before-to-after workflow with 2 to 4 objects connected by one visible action path.\nCandidate direction: c2\n中央に半開きのPDF 2枚を門型に配置し、左の入力文書から右の出力文書へ通る動線を、中央の上昇バーで橋渡しする\nDo not repeat the same composition as previous candidates: icon_candidate_1.\nUse a small number of readable visual elements. Prioritize the user's requested subject over generated metadata.\nForbidden unless explicitly requested by the user: generic abstract shapes only, tiny unreadable text, full-photo scenes, screenshots, crowded UI panels, gear-only icons, check-only icons, nodes-only icons, or initial-letter-only icons.\nReadable at 32px, attractive at 256px and above, no watermark, no mockup frame, transparent or clean icon background acceptable.\n\nGenerated prompt context for audit - lower priority than USER ICON REQUEST:\nnone",
+      "model": "gpt-image-1.5",
+      "status": "success",
+      "resolution": "1024x1024",
+      "fallback": false,
+      "file_name": "icon_candidate_2.png",
+      "url_file_name": "",
+      "url": "",
+      "notes": "c2: API returned b64 image data. It will be saved as icon_candidate_2.png.",
+      "revision_of": "",
+      "api": "images.generate",
+      "content_type": "b64_png",
+      "fallback_reason": "",
+      "error_category": "",
+      "failure_class": "",
+      "failure_message": "",
+      "admin_next_action": "",
+      "ai_payload_secret_scan_status": "passed",
+      "ai_submission_blocked": false,
+      "ai_submission_block_reason": "",
+      "concept_id": "c2",
+      "concept": {
+        "id": "c2",
+        "direction": "c2",
+        "concept": "Split-to-chart gateway",
+        "primary_motif": "2枚のPDFページがゲートのように開き、その間からアンバーの棒グラフが立ち上がる",
+        "secondary_motif": "ゲート脇に固有の指標マーク、下部に整列した確認済みバー",
+        "composition": "中央に半開きのPDF 2枚を門型に配置し、左の入力文書から右の出力文書へ通る動線を、中央の上昇バーで橋渡しする",
+        "style_family": "モダン業務アイコン・対称構図",
+        "why_specific": "“ファイルを通して処理が始まる”意味が強く、結合・分割・変換などのPDFワークフロー基盤アプリらしさを持たせつつ起動アイコンとしても成立する",
+        "avoid_elements": [
+          "文書だけで完結する見た目",
+          "ノードネットワーク",
+          "初期文字",
+          "歯車のみ",
+          "チェックのみ",
+          "写真風の紙束"
+        ]
+      },
+      "scores": {
+        "semantic_clarity": 3.0,
+        "specificity": 4.0,
+        "small_size_legibility": 5.0,
+        "aesthetics": 5.0,
+        "diversity": 8.0
+      },
+      "score_total": 25.0,
+      "score_basis": "rule_based_pixels_and_prompt",
+      "semantic_score": 3.0,
+      "specificity_score": 4.0,
+      "small_size_score": 9.26,
+      "aesthetic_score": 10.0,
+      "revision_follow_score": 9.0,
+      "generic_risk_score": 8.5,
+      "quality_total": 61.26,
+      "quality_label": "usable",
+      "quality_reasons": [
+        "Contrast is sufficient for small-size review.",
+        "Visible motif uses the canvas with reasonable margins."
+      ],
+      "quality_warnings": [
+        "16px downsample loses too much shape information.",
+        "Candidate may be too generic for this app purpose."
+      ],
+      "image_evaluation_status": "deterministic_png_check",
+      "image_evaluation_note": "PNG pixels inspected with deterministic small-size and contrast checks (1024x1024)."
+    },
+    {
+      "candidate_id": "icon_candidate_3",
+      "number": 3,
+      "source": "api_generate",
+      "prompt": "USER ICON REQUEST - HIGHEST PRIORITY:\nToolHub向けの高精細な業務用アプリアイコン。中央に、インディゴとスレートの落ち着いた帳票PDFを立体的に配置し、そこからアンバーの分析チャートが上向きに浮かび上がる様子を表現する。左側に入力PDF、右側に出力PDFを2〜4枚の意味のあるオブジェクトで示し、中央の「起動」を感じさせる明確な矢印や光の流れで、pdf/document → launch → pdf/document の関係が一目で分かる構図にする。補助モチーフとして、ページ端の折り返しではなく固有の指標マークと、確認済みのデータバーをさりげなく加える。マットな紙質とシャープなチャートの対比を強調し、角丸の余白を十分に取った整然としたレイアウトにする。32pxでも主役モチーフの輪郭が判別できるように簡潔で読みやすく、256px以上では輪郭、光沢、余白、素材感が美しく見える洗練された仕上げ。写真風や画面キャプチャ風にはせず、読めない文字やロゴ風文字は入れない。\n\nFollow the user request above as the source of truth for motif, composition, style, color, material, and mood.\nDo not replace the user's requested image with a generic workflow metaphor.\nUse app context only as a secondary guardrail so the icon still belongs to this app.\n\nSTYLE SOURCE:\nNo separate style preset is selected. Derive the style from the user request.\n\nGenerated concept JSON - optional support only, never an override:\n{\"id\": \"c3\", \"direction\": \"c3\", \"concept\": \"Workflow lift badge\", \"primary_motif\": \"PDFカードが台座から持ち上がり、上部でチャートが花開くように展開する\", \"secondary_motif\": \"台座側面に小さなデータバー、上昇途中の光帯\", \"composition\": \"下段に入力PDF、中央に持ち上がるPDFカード、上段に出力PDFと分析チャートを重ね、縦方向の上昇で launch を表現する\", \"style_family\": \"プレミアム・縦型シルエット、落ち着いた素材感\", \"why_specific\": \"起動＝立ち上がりの感覚が明快で、Legacy 系の堅牢さと業務ツールの信頼感を出しやすい。32pxでも縦の動きが読める\", \"avoid_elements\": [\"横一直線だけの平板構図\", \"小さすぎる注釈要素\", \"UIパネルの羅列\", \"文字入りラベル\", \"抽象球体\", \"機械歯車\"]}\n\nEnglish rendering guidance: Create a distinctive 1024x1024 PNG app icon for a desktop launcher.\nStyle preset:\n- preset: user_prompt\n- visual material: derive the visual material from the user's icon prompt; do not add an unrelated house style\n- color behavior: derive color, mood, and contrast from the user's icon prompt\n- line/edge treatment: keep the user's requested style while preserving small-icon readability\n- lighting: derive lighting and depth from the user's icon prompt\n- style-specific forbidden elements: do not add a separate preset style that conflicts with the user's prompt\n- custom style override: none\nDo not introduce a style preset that conflicts with the user's prompt.\nUse generous safe margins and a strong app-specific silhouette.\nIf the user specified a central object, keep it central. If the user specified transformation, motion, material, or style, make that visibly dominant.\nPrimary action: launch\nInput objects: pdf/document\nOutput objects: pdf/document\nApp composition hint: Show a clear before-to-after workflow with 2 to 4 objects connected by one visible action path.\nCandidate direction: c3\n下段に入力PDF、中央に持ち上がるPDFカード、上段に出力PDFと分析チャートを重ね、縦方向の上昇で launch を表現する\nDo not repeat the same composition as previous candidates: icon_candidate_1, icon_candidate_2.\nUse a small number of readable visual elements. Prioritize the user's requested subject over generated metadata.\nForbidden unless explicitly requested by the user: generic abstract shapes only, tiny unreadable text, full-photo scenes, screenshots, crowded UI panels, gear-only icons, check-only icons, nodes-only icons, or initial-letter-only icons.\nReadable at 32px, attractive at 256px and above, no watermark, no mockup frame, transparent or clean icon background acceptable.\n\nGenerated prompt context for audit - lower priority than USER ICON REQUEST:\nnone",
+      "model": "gpt-image-1.5",
+      "status": "success",
+      "resolution": "1024x1024",
+      "fallback": false,
+      "file_name": "icon_candidate_3.png",
+      "url_file_name": "",
+      "url": "",
+      "notes": "c3: API returned b64 image data. It will be saved as icon_candidate_3.png.",
+      "revision_of": "",
+      "api": "images.generate",
+      "content_type": "b64_png",
+      "fallback_reason": "",
+      "error_category": "",
+      "failure_class": "",
+      "failure_message": "",
+      "admin_next_action": "",
+      "ai_payload_secret_scan_status": "passed",
+      "ai_submission_blocked": false,
+      "ai_submission_block_reason": "",
+      "concept_id": "c3",
+      "concept": {
+        "id": "c3",
+        "direction": "c3",
+        "concept": "Workflow lift badge",
+        "primary_motif": "PDFカードが台座から持ち上がり、上部でチャートが花開くように展開する",
+        "secondary_motif": "台座側面に小さなデータバー、上昇途中の光帯",
+        "composition": "下段に入力PDF、中央に持ち上がるPDFカード、上段に出力PDFと分析チャートを重ね、縦方向の上昇で launch を表現する",
+        "style_family": "プレミアム・縦型シルエット、落ち着いた素材感",
+        "why_specific": "起動＝立ち上がりの感覚が明快で、Legacy 系の堅牢さと業務ツールの信頼感を出しやすい。32pxでも縦の動きが読める",
+        "avoid_elements": [
+          "横一直線だけの平板構図",
+          "小さすぎる注釈要素",
+          "UIパネルの羅列",
+          "文字入りラベル",
+          "抽象球体",
+          "機械歯車"
+        ]
+      },
+      "scores": {
+        "semantic_clarity": 5.0,
+        "specificity": 4.0,
+        "small_size_legibility": 5.0,
+        "aesthetics": 5.0,
+        "diversity": 8.0
+      },
+      "score_total": 27.0,
+      "score_basis": "rule_based_pixels_and_prompt",
+      "semantic_score": 5.0,
+      "specificity_score": 4.0,
+      "small_size_score": 9.38,
+      "aesthetic_score": 10.0,
+      "revision_follow_score": 9.0,
+      "generic_risk_score": 8.5,
+      "quality_total": 64.81,
+      "quality_label": "usable",
+      "quality_reasons": [
+        "Contrast is sufficient for small-size review.",
+        "Visible motif uses the canvas with reasonable margins."
+      ],
+      "quality_warnings": [
+        "Candidate may be too generic for this app purpose."
+      ],
+      "image_evaluation_status": "deterministic_png_check",
+      "image_evaluation_note": "PNG pixels inspected with deterministic small-size and contrast checks (1024x1024)."
+    }
+  ]
+}

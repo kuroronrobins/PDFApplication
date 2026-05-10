@@ -1,0 +1,33 @@
+{
+  "source": "requirements.txt",
+  "requirements": [
+    "flet>=0.23.2",
+    "pypdf>=4.2.0",
+    "PyMuPDF>=1.24.0",
+    "pywin32>=306"
+  ],
+  "import_roots": [
+    "__future__",
+    "base64",
+    "dataclasses",
+    "datetime",
+    "fitz",
+    "flet",
+    "importlib",
+    "json",
+    "os",
+    "pathlib",
+    "pdf_app",
+    "pypdf",
+    "socket",
+    "threading",
+    "time",
+    "typing",
+    "urllib",
+    "uuid"
+  ],
+  "third_party_candidates": [],
+  "notes": [
+    "requirements.txt was copied as the proposed requirements file."
+  ]
+}

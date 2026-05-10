@@ -1,0 +1,31 @@
+﻿{
+    "files.watcherExclude": {
+        "**/.git/objects/**": true,
+        "**/.git/subtree-cache/**": true,
+        "**/node_modules/**": true,
+        "**/src-tauri/target/**": true,
+        "**/target/**": true,
+        "**/archive/**": true,
+        "**/__pycache__/**": true,
+        "**/.pytest_cache/**": true,
+        "**/.mypy_cache/**": true,
+        "**/.ruff_cache/**": true,
+        "**/dist/**": true,
+        "**/*.pyc": true,
+        "**/*.pyo": true
+    },
+    "search.exclude": {
+        "**/node_modules": true,
+        "**/src-tauri/target": true,
+        "**/target": true,
+        "**/archive": true,
+        "**/__pycache__": true,
+        "**/.pytest_cache": true,
+        "**/.mypy_cache": true,
+        "**/.ruff_cache": true,
+        "**/dist": true,
+        "**/*.pyc": true,
+        "**/*.pyo": true
+    },
+    "cSpell.enabled": false
+}

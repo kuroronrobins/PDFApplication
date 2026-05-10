@@ -1,0 +1,65 @@
+{
+  "app_id": "app_20260215_pdfapplication",
+  "action": "apply",
+  "generated_at": "2026-05-10T20:53:49",
+  "estimated_total_seconds": 86,
+  "actual_total_seconds": 74.3,
+  "prediction_error_seconds": -11.7,
+  "prediction_source": "history",
+  "wall_clock_total_seconds": 74.3,
+  "cli_measured_total_seconds": 74.196,
+  "unmeasured_overhead_seconds": 0.104,
+  "total_duration_seconds": 74.196,
+  "phases": [
+    {
+      "phase": "preflight",
+      "label": "事前確認",
+      "status": "pass",
+      "started_at": "2026-05-10T20:53:49",
+      "duration_seconds": 0.0,
+      "detail": "CLI options and normal registration policy were validated."
+    },
+    {
+      "phase": "file_inventory",
+      "label": "ファイル棚卸し",
+      "status": "pass",
+      "started_at": "2026-05-10T20:53:49",
+      "duration_seconds": 0.08
+    },
+    {
+      "phase": "secret_scan",
+      "label": "秘密情報検査",
+      "status": "pass",
+      "started_at": "2026-05-10T20:53:49",
+      "duration_seconds": 0.016
+    },
+    {
+      "phase": "dependency_analysis",
+      "label": "依存関係解析",
+      "status": "pass",
+      "started_at": "2026-05-10T20:53:49",
+      "duration_seconds": 0.0
+    },
+    {
+      "phase": "metadata_ai",
+      "label": "メタデータ生成",
+      "status": "pass",
+      "started_at": "2026-05-10T20:53:49",
+      "duration_seconds": 0.0
+    },
+    {
+      "phase": "icon_generation",
+      "label": "アイコン生成",
+      "status": "pass",
+      "started_at": "2026-05-10T20:53:49",
+      "duration_seconds": 74.046
+    },
+    {
+      "phase": "export_suggestion",
+      "label": "登録成果物の作成",
+      "status": "pass",
+      "started_at": "2026-05-10T20:55:03",
+      "duration_seconds": 0.054
+    }
+  ]
+}

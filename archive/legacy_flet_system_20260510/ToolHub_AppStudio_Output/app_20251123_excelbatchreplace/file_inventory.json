@@ -1,0 +1,1191 @@
+{
+  "files": [
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\.git\\config",
+      "relative_path": ".git/config",
+      "size": 343,
+      "include": false,
+      "reason": "excluded directory",
+      "category": "other"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\.git\\description",
+      "relative_path": ".git/description",
+      "size": 73,
+      "include": false,
+      "reason": "excluded directory",
+      "category": "other"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\.git\\FETCH_HEAD",
+      "relative_path": ".git/FETCH_HEAD",
+      "size": 596,
+      "include": false,
+      "reason": "excluded directory",
+      "category": "other"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\.git\\HEAD",
+      "relative_path": ".git/HEAD",
+      "size": 21,
+      "include": false,
+      "reason": "excluded directory",
+      "category": "other"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\.git\\hooks\\applypatch-msg.sample",
+      "relative_path": ".git/hooks/applypatch-msg.sample",
+      "size": 478,
+      "include": false,
+      "reason": "excluded directory",
+      "category": "other"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\.git\\hooks\\commit-msg.sample",
+      "relative_path": ".git/hooks/commit-msg.sample",
+      "size": 896,
+      "include": false,
+      "reason": "excluded directory",
+      "category": "other"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\.git\\hooks\\fsmonitor-watchman.sample",
+      "relative_path": ".git/hooks/fsmonitor-watchman.sample",
+      "size": 4726,
+      "include": false,
+      "reason": "excluded directory",
+      "category": "other"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\.git\\hooks\\post-update.sample",
+      "relative_path": ".git/hooks/post-update.sample",
+      "size": 189,
+      "include": false,
+      "reason": "excluded directory",
+      "category": "other"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\.git\\hooks\\pre-applypatch.sample",
+      "relative_path": ".git/hooks/pre-applypatch.sample",
+      "size": 424,
+      "include": false,
+      "reason": "excluded directory",
+      "category": "other"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\.git\\hooks\\pre-commit.sample",
+      "relative_path": ".git/hooks/pre-commit.sample",
+      "size": 1649,
+      "include": false,
+      "reason": "excluded directory",
+      "category": "other"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\.git\\hooks\\pre-merge-commit.sample",
+      "relative_path": ".git/hooks/pre-merge-commit.sample",
+      "size": 416,
+      "include": false,
+      "reason": "excluded directory",
+      "category": "other"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\.git\\hooks\\pre-push.sample",
+      "relative_path": ".git/hooks/pre-push.sample",
+      "size": 1374,
+      "include": false,
+      "reason": "excluded directory",
+      "category": "other"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\.git\\hooks\\pre-rebase.sample",
+      "relative_path": ".git/hooks/pre-rebase.sample",
+      "size": 4898,
+      "include": false,
+      "reason": "excluded directory",
+      "category": "other"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\.git\\hooks\\pre-receive.sample",
+      "relative_path": ".git/hooks/pre-receive.sample",
+      "size": 544,
+      "include": false,
+      "reason": "excluded directory",
+      "category": "other"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\.git\\hooks\\prepare-commit-msg.sample",
+      "relative_path": ".git/hooks/prepare-commit-msg.sample",
+      "size": 1492,
+      "include": false,
+      "reason": "excluded directory",
+      "category": "other"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\.git\\hooks\\push-to-checkout.sample",
+      "relative_path": ".git/hooks/push-to-checkout.sample",
+      "size": 2783,
+      "include": false,
+      "reason": "excluded directory",
+      "category": "other"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\.git\\hooks\\sendemail-validate.sample",
+      "relative_path": ".git/hooks/sendemail-validate.sample",
+      "size": 2308,
+      "include": false,
+      "reason": "excluded directory",
+      "category": "other"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\.git\\hooks\\update.sample",
+      "relative_path": ".git/hooks/update.sample",
+      "size": 3650,
+      "include": false,
+      "reason": "excluded directory",
+      "category": "other"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\.git\\index",
+      "relative_path": ".git/index",
+      "size": 1701,
+      "include": false,
+      "reason": "excluded directory",
+      "category": "other"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\.git\\info\\exclude",
+      "relative_path": ".git/info/exclude",
+      "size": 240,
+      "include": false,
+      "reason": "excluded directory",
+      "category": "other"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\.git\\logs\\HEAD",
+      "relative_path": ".git/logs/HEAD",
+      "size": 334,
+      "include": false,
+      "reason": "excluded directory",
+      "category": "other"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\.git\\logs\\refs\\heads\\main",
+      "relative_path": ".git/logs/refs/heads/main",
+      "size": 166,
+      "include": false,
+      "reason": "excluded directory",
+      "category": "other"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\.git\\logs\\refs\\remotes\\origin\\codex\\create-pdf-editing-application-with-flet",
+      "relative_path": ".git/logs/refs/remotes/origin/codex/create-pdf-editing-application-with-flet",
+      "size": 160,
+      "include": false,
+      "reason": "excluded directory",
+      "category": "other"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\.git\\logs\\refs\\remotes\\origin\\codex\\implement-logging-system-for-efficiency-analysis",
+      "relative_path": ".git/logs/refs/remotes/origin/codex/implement-logging-system-for-efficiency-analysis",
+      "size": 160,
+      "include": false,
+      "reason": "excluded directory",
+      "category": "other"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\.git\\logs\\refs\\remotes\\origin\\codex\\improve-code-efficiency-and-clarity",
+      "relative_path": ".git/logs/refs/remotes/origin/codex/improve-code-efficiency-and-clarity",
+      "size": 160,
+      "include": false,
+      "reason": "excluded directory",
+      "category": "other"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\.git\\logs\\refs\\remotes\\origin\\HEAD",
+      "relative_path": ".git/logs/refs/remotes/origin/HEAD",
+      "size": 139,
+      "include": false,
+      "reason": "excluded directory",
+      "category": "other"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\.git\\logs\\refs\\remotes\\origin\\main",
+      "relative_path": ".git/logs/refs/remotes/origin/main",
+      "size": 160,
+      "include": false,
+      "reason": "excluded directory",
+      "category": "other"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\.git\\objects\\05\\f1e957e3877421d74612d35a57d3fd9dd2090d",
+      "relative_path": ".git/objects/05/f1e957e3877421d74612d35a57d3fd9dd2090d",
+      "size": 122,
+      "include": false,
+      "reason": "excluded directory",
+      "category": "other"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\.git\\objects\\06\\60117e4b7a095564aed6f85b43b731feb12ce3",
+      "relative_path": ".git/objects/06/60117e4b7a095564aed6f85b43b731feb12ce3",
+      "size": 594,
+      "include": false,
+      "reason": "excluded directory",
+      "category": "other"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\.git\\objects\\11\\73aa0956953bdc3fa20c963dd38aa76b54e79a",
+      "relative_path": ".git/objects/11/73aa0956953bdc3fa20c963dd38aa76b54e79a",
+      "size": 123,
+      "include": false,
+      "reason": "excluded directory",
+      "category": "other"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\.git\\objects\\12\\9bf33f3d3c26301b3615a8bf5e0a1712d6a612",
+      "relative_path": ".git/objects/12/9bf33f3d3c26301b3615a8bf5e0a1712d6a612",
+      "size": 193,
+      "include": false,
+      "reason": "excluded directory",
+      "category": "other"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\.git\\objects\\12\\9e8cdda01eada6d08efacf481b4609b2cc699e",
+      "relative_path": ".git/objects/12/9e8cdda01eada6d08efacf481b4609b2cc699e",
+      "size": 190,
+      "include": false,
+      "reason": "excluded directory",
+      "category": "other"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\.git\\objects\\15\\84948a113bd09c7c1dd336a7925bf03cff6838",
+      "relative_path": ".git/objects/15/84948a113bd09c7c1dd336a7925bf03cff6838",
+      "size": 134,
+      "include": false,
+      "reason": "excluded directory",
+      "category": "other"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\.git\\objects\\17\\7eff83b2a2918a7432e652b9ba49a821c3639f",
+      "relative_path": ".git/objects/17/7eff83b2a2918a7432e652b9ba49a821c3639f",
+      "size": 611,
+      "include": false,
+      "reason": "excluded directory",
+      "category": "other"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\.git\\objects\\1e\\e4b94ef096cb6e8fdc222686dc28454e53a146",
+      "relative_path": ".git/objects/1e/e4b94ef096cb6e8fdc222686dc28454e53a146",
+      "size": 292,
+      "include": false,
+      "reason": "excluded directory",
+      "category": "other"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\.git\\objects\\37\\4d278d94d77de3dde0e49fac11ba4935725f80",
+      "relative_path": ".git/objects/37/4d278d94d77de3dde0e49fac11ba4935725f80",
+      "size": 1171,
+      "include": false,
+      "reason": "excluded directory",
+      "category": "other"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\.git\\objects\\3a\\f6e9bfaf71b1b07023df1657c6d2e9539c1188",
+      "relative_path": ".git/objects/3a/f6e9bfaf71b1b07023df1657c6d2e9539c1188",
+      "size": 291,
+      "include": false,
+      "reason": "excluded directory",
+      "category": "other"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\.git\\objects\\41\\709226953ac3cf3fc825d7f86d50d1fa3c53eb",
+      "relative_path": ".git/objects/41/709226953ac3cf3fc825d7f86d50d1fa3c53eb",
+      "size": 859,
+      "include": false,
+      "reason": "excluded directory",
+      "category": "other"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\.git\\objects\\42\\97ed0ba4032cde9c1810161dabf870efde5d3a",
+      "relative_path": ".git/objects/42/97ed0ba4032cde9c1810161dabf870efde5d3a",
+      "size": 221,
+      "include": false,
+      "reason": "excluded directory",
+      "category": "other"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\.git\\objects\\42\\c25bf69ada67249cf3cb30c4ec3393379b465d",
+      "relative_path": ".git/objects/42/c25bf69ada67249cf3cb30c4ec3393379b465d",
+      "size": 190,
+      "include": false,
+      "reason": "excluded directory",
+      "category": "other"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\.git\\objects\\49\\756e8c96ea2d43e51434e8fb5b0f9d648d7eff",
+      "relative_path": ".git/objects/49/756e8c96ea2d43e51434e8fb5b0f9d648d7eff",
+      "size": 196,
+      "include": false,
+      "reason": "excluded directory",
+      "category": "other"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\.git\\objects\\57\\9d75d958ba030bca026bf8136a77c6d8921ef8",
+      "relative_path": ".git/objects/57/9d75d958ba030bca026bf8136a77c6d8921ef8",
+      "size": 919,
+      "include": false,
+      "reason": "excluded directory",
+      "category": "other"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\.git\\objects\\59\\9f952ddccedf917f83afa4f01f6927a5ec5ca4",
+      "relative_path": ".git/objects/59/9f952ddccedf917f83afa4f01f6927a5ec5ca4",
+      "size": 807,
+      "include": false,
+      "reason": "excluded directory",
+      "category": "other"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\.git\\objects\\5d\\2edc8c154dfaabf71e7ab6b7544b07cc8bf607",
+      "relative_path": ".git/objects/5d/2edc8c154dfaabf71e7ab6b7544b07cc8bf607",
+      "size": 191,
+      "include": false,
+      "reason": "excluded directory",
+      "category": "other"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\.git\\objects\\5d\\4e439eb43023d78fa8400b12ff5edc9375f900",
+      "relative_path": ".git/objects/5d/4e439eb43023d78fa8400b12ff5edc9375f900",
+      "size": 560,
+      "include": false,
+      "reason": "excluded directory",
+      "category": "other"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\.git\\objects\\64\\2d55538b14ffcf63c5e37e04dec1e33b39f14e",
+      "relative_path": ".git/objects/64/2d55538b14ffcf63c5e37e04dec1e33b39f14e",
+      "size": 4950,
+      "include": false,
+      "reason": "excluded directory",
+      "category": "other"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\.git\\objects\\69\\6f7c5d0fb34da225776765cf812553ba634ef4",
+      "relative_path": ".git/objects/69/6f7c5d0fb34da225776765cf812553ba634ef4",
+      "size": 1829,
+      "include": false,
+      "reason": "excluded directory",
+      "category": "other"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\.git\\objects\\70\\b3c79996ce64e7f6edb1c8c6ad444daed8ffd1",
+      "relative_path": ".git/objects/70/b3c79996ce64e7f6edb1c8c6ad444daed8ffd1",
+      "size": 575,
+      "include": false,
+      "reason": "excluded directory",
+      "category": "other"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\.git\\objects\\73\\8e27ee22f349433d21450c41d854e3d95966f6",
+      "relative_path": ".git/objects/73/8e27ee22f349433d21450c41d854e3d95966f6",
+      "size": 190,
+      "include": false,
+      "reason": "excluded directory",
+      "category": "other"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\.git\\objects\\74\\2099098698c4f89f3558dc519b28c5a193cd21",
+      "relative_path": ".git/objects/74/2099098698c4f89f3558dc519b28c5a193cd21",
+      "size": 1658,
+      "include": false,
+      "reason": "excluded directory",
+      "category": "other"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\.git\\objects\\79\\24423919dff5e493f6d7af932180edde86641a",
+      "relative_path": ".git/objects/79/24423919dff5e493f6d7af932180edde86641a",
+      "size": 5222,
+      "include": false,
+      "reason": "excluded directory",
+      "category": "other"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\.git\\objects\\82\\e2365e5c8418d44b277a29628c961bf61c8494",
+      "relative_path": ".git/objects/82/e2365e5c8418d44b277a29628c961bf61c8494",
+      "size": 122,
+      "include": false,
+      "reason": "excluded directory",
+      "category": "other"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\.git\\objects\\8e\\85e2f24b54804ee1c02423cd1a6c8a535635e8",
+      "relative_path": ".git/objects/8e/85e2f24b54804ee1c02423cd1a6c8a535635e8",
+      "size": 579,
+      "include": false,
+      "reason": "excluded directory",
+      "category": "other"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\.git\\objects\\9f\\92871139c4b82bf905d5244b6754db5bb47021",
+      "relative_path": ".git/objects/9f/92871139c4b82bf905d5244b6754db5bb47021",
+      "size": 191,
+      "include": false,
+      "reason": "excluded directory",
+      "category": "other"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\.git\\objects\\a5\\4a0d2c6d59868262f77a43850a0e1a25073724",
+      "relative_path": ".git/objects/a5/4a0d2c6d59868262f77a43850a0e1a25073724",
+      "size": 420,
+      "include": false,
+      "reason": "excluded directory",
+      "category": "other"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\.git\\objects\\ab\\27a33f237436eeeb7b92c1ce9dfa6687f4f5ee",
+      "relative_path": ".git/objects/ab/27a33f237436eeeb7b92c1ce9dfa6687f4f5ee",
+      "size": 972,
+      "include": false,
+      "reason": "excluded directory",
+      "category": "other"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\.git\\objects\\ac\\75b96210d3c8683a37a467ecfbb78e78242c86",
+      "relative_path": ".git/objects/ac/75b96210d3c8683a37a467ecfbb78e78242c86",
+      "size": 346,
+      "include": false,
+      "reason": "excluded directory",
+      "category": "other"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\.git\\objects\\ad\\11f9c660583bcd279583d66ff7e4a4dae3ac80",
+      "relative_path": ".git/objects/ad/11f9c660583bcd279583d66ff7e4a4dae3ac80",
+      "size": 725,
+      "include": false,
+      "reason": "excluded directory",
+      "category": "other"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\.git\\objects\\b1\\0723f71615bbe7142b403dbf94e15b0bec2f35",
+      "relative_path": ".git/objects/b1/0723f71615bbe7142b403dbf94e15b0bec2f35",
+      "size": 936,
+      "include": false,
+      "reason": "excluded directory",
+      "category": "other"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\.git\\objects\\b3\\1da612bda92d5a58bb7d58cfb4e24e93bff412",
+      "relative_path": ".git/objects/b3/1da612bda92d5a58bb7d58cfb4e24e93bff412",
+      "size": 490,
+      "include": false,
+      "reason": "excluded directory",
+      "category": "other"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\.git\\objects\\b8\\e8eb05cae4d81f5b11d08c4176f8266cf53638",
+      "relative_path": ".git/objects/b8/e8eb05cae4d81f5b11d08c4176f8266cf53638",
+      "size": 122,
+      "include": false,
+      "reason": "excluded directory",
+      "category": "other"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\.git\\objects\\be\\cdc907607f646cefef1e990f8fb3d36cb267dd",
+      "relative_path": ".git/objects/be/cdc907607f646cefef1e990f8fb3d36cb267dd",
+      "size": 1428,
+      "include": false,
+      "reason": "excluded directory",
+      "category": "other"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\.git\\objects\\bf\\886b7fb97e1dcc6ff2d367f43811032f388cdc",
+      "relative_path": ".git/objects/bf/886b7fb97e1dcc6ff2d367f43811032f388cdc",
+      "size": 66,
+      "include": false,
+      "reason": "excluded directory",
+      "category": "other"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\.git\\objects\\c5\\090838442fd5c010922c772bbbe3cb42bbcf76",
+      "relative_path": ".git/objects/c5/090838442fd5c010922c772bbbe3cb42bbcf76",
+      "size": 185,
+      "include": false,
+      "reason": "excluded directory",
+      "category": "other"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\.git\\objects\\c8\\7965c9fa2361dc6624437444429bf3af3fd3a6",
+      "relative_path": ".git/objects/c8/7965c9fa2361dc6624437444429bf3af3fd3a6",
+      "size": 825,
+      "include": false,
+      "reason": "excluded directory",
+      "category": "other"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\.git\\objects\\c9\\69e0ba57ff306d2723f9161a707cfd00a141d5",
+      "relative_path": ".git/objects/c9/69e0ba57ff306d2723f9161a707cfd00a141d5",
+      "size": 294,
+      "include": false,
+      "reason": "excluded directory",
+      "category": "other"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\.git\\objects\\ca\\7cbf9d8365a4e88f9c04d74065dec9d6b9f24c",
+      "relative_path": ".git/objects/ca/7cbf9d8365a4e88f9c04d74065dec9d6b9f24c",
+      "size": 365,
+      "include": false,
+      "reason": "excluded directory",
+      "category": "other"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\.git\\objects\\ce\\7b2477d2b15be4d045e7ceeb975731cda85cd3",
+      "relative_path": ".git/objects/ce/7b2477d2b15be4d045e7ceeb975731cda85cd3",
+      "size": 1529,
+      "include": false,
+      "reason": "excluded directory",
+      "category": "other"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\.git\\objects\\d5\\64d0bc3dd917926892c55e3706cc116d5b165e",
+      "relative_path": ".git/objects/d5/64d0bc3dd917926892c55e3706cc116d5b165e",
+      "size": 53,
+      "include": false,
+      "reason": "excluded directory",
+      "category": "other"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\.git\\objects\\d8\\f069f725e5b7eaf2de266ae494368efd544a65",
+      "relative_path": ".git/objects/d8/f069f725e5b7eaf2de266ae494368efd544a65",
+      "size": 1003,
+      "include": false,
+      "reason": "excluded directory",
+      "category": "other"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\.git\\objects\\df\\206d7e9b98d2df7c2aca8260ed947dfc51c2d8",
+      "relative_path": ".git/objects/df/206d7e9b98d2df7c2aca8260ed947dfc51c2d8",
+      "size": 957,
+      "include": false,
+      "reason": "excluded directory",
+      "category": "other"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\.git\\objects\\df\\2f7597fa9e513523a5dd2dc84c85947674f361",
+      "relative_path": ".git/objects/df/2f7597fa9e513523a5dd2dc84c85947674f361",
+      "size": 258,
+      "include": false,
+      "reason": "excluded directory",
+      "category": "other"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\.git\\objects\\df\\bb555bc39d7fb9eb4d52a5bf8526f39645cf46",
+      "relative_path": ".git/objects/df/bb555bc39d7fb9eb4d52a5bf8526f39645cf46",
+      "size": 866,
+      "include": false,
+      "reason": "excluded directory",
+      "category": "other"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\.git\\objects\\df\\f2d583486cf885ec67110b92041e77b3594d2e",
+      "relative_path": ".git/objects/df/f2d583486cf885ec67110b92041e77b3594d2e",
+      "size": 945,
+      "include": false,
+      "reason": "excluded directory",
+      "category": "other"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\.git\\objects\\e0\\f46a410a637e3e1aefa249e5c0f74a77c3dbcd",
+      "relative_path": ".git/objects/e0/f46a410a637e3e1aefa249e5c0f74a77c3dbcd",
+      "size": 56,
+      "include": false,
+      "reason": "excluded directory",
+      "category": "other"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\.git\\objects\\e3\\87103f415b32039506aa760a4235a19567499d",
+      "relative_path": ".git/objects/e3/87103f415b32039506aa760a4235a19567499d",
+      "size": 781,
+      "include": false,
+      "reason": "excluded directory",
+      "category": "other"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\.git\\objects\\e6\\9de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "relative_path": ".git/objects/e6/9de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "size": 15,
+      "include": false,
+      "reason": "excluded directory",
+      "category": "other"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\.git\\objects\\ed\\153d19804eb0943714e3838f9907c380d862a0",
+      "relative_path": ".git/objects/ed/153d19804eb0943714e3838f9907c380d862a0",
+      "size": 4136,
+      "include": false,
+      "reason": "excluded directory",
+      "category": "other"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\.git\\objects\\f3\\797e0c17f824eee2ce0ff2ab30752e207d1cea",
+      "relative_path": ".git/objects/f3/797e0c17f824eee2ce0ff2ab30752e207d1cea",
+      "size": 1012,
+      "include": false,
+      "reason": "excluded directory",
+      "category": "other"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\.git\\objects\\f5\\c9a9f6c0b430e5e2eac96ce6a29cc4879b0cfa",
+      "relative_path": ".git/objects/f5/c9a9f6c0b430e5e2eac96ce6a29cc4879b0cfa",
+      "size": 221,
+      "include": false,
+      "reason": "excluded directory",
+      "category": "other"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\.git\\objects\\f9\\66d7c35d7941ffd72b51040f433498bac55395",
+      "relative_path": ".git/objects/f9/66d7c35d7941ffd72b51040f433498bac55395",
+      "size": 45,
+      "include": false,
+      "reason": "excluded directory",
+      "category": "other"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\.git\\objects\\f9\\99ffbb2cbc40f6a75af6c2ff2e7c0d52fe2587",
+      "relative_path": ".git/objects/f9/99ffbb2cbc40f6a75af6c2ff2e7c0d52fe2587",
+      "size": 5335,
+      "include": false,
+      "reason": "excluded directory",
+      "category": "other"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\.git\\ORIG_HEAD",
+      "relative_path": ".git/ORIG_HEAD",
+      "size": 41,
+      "include": false,
+      "reason": "excluded directory",
+      "category": "other"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\.git\\refs\\heads\\main",
+      "relative_path": ".git/refs/heads/main",
+      "size": 41,
+      "include": false,
+      "reason": "excluded directory",
+      "category": "other"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\.git\\refs\\remotes\\origin\\codex\\create-pdf-editing-application-with-flet",
+      "relative_path": ".git/refs/remotes/origin/codex/create-pdf-editing-application-with-flet",
+      "size": 41,
+      "include": false,
+      "reason": "excluded directory",
+      "category": "other"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\.git\\refs\\remotes\\origin\\codex\\implement-logging-system-for-efficiency-analysis",
+      "relative_path": ".git/refs/remotes/origin/codex/implement-logging-system-for-efficiency-analysis",
+      "size": 41,
+      "include": false,
+      "reason": "excluded directory",
+      "category": "other"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\.git\\refs\\remotes\\origin\\codex\\improve-code-efficiency-and-clarity",
+      "relative_path": ".git/refs/remotes/origin/codex/improve-code-efficiency-and-clarity",
+      "size": 41,
+      "include": false,
+      "reason": "excluded directory",
+      "category": "other"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\.git\\refs\\remotes\\origin\\HEAD",
+      "relative_path": ".git/refs/remotes/origin/HEAD",
+      "size": 30,
+      "include": false,
+      "reason": "excluded directory",
+      "category": "other"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\.git\\refs\\remotes\\origin\\main",
+      "relative_path": ".git/refs/remotes/origin/main",
+      "size": 41,
+      "include": false,
+      "reason": "excluded directory",
+      "category": "other"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\.gitkeep",
+      "relative_path": ".gitkeep",
+      "size": 0,
+      "include": false,
+      "reason": "not selected for App Studio package",
+      "category": "other"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\.vscode\\settings.json",
+      "relative_path": ".vscode/settings.json",
+      "size": 39,
+      "include": false,
+      "reason": "not selected for App Studio package",
+      "category": "other"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\_app_data.json",
+      "relative_path": "_app_data.json",
+      "size": 3143,
+      "include": false,
+      "reason": "not selected for App Studio package",
+      "category": "other"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\_bootstrap.py",
+      "relative_path": "_bootstrap.py",
+      "size": 11275,
+      "include": false,
+      "reason": "not selected for App Studio package",
+      "category": "other"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\_gitup.py",
+      "relative_path": "_gitup.py",
+      "size": 15593,
+      "include": false,
+      "reason": "not selected for App Studio package",
+      "category": "other"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\app.py",
+      "relative_path": "app.py",
+      "size": 55156,
+      "include": true,
+      "reason": "entry file",
+      "category": "entry"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\logs\\usage_events.jsonl",
+      "relative_path": "logs/usage_events.jsonl",
+      "size": 9007,
+      "include": false,
+      "reason": "not selected for App Studio package",
+      "category": "other"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\pdf_app\\__init__.py",
+      "relative_path": "pdf_app/__init__.py",
+      "size": 31,
+      "include": true,
+      "reason": "project source package",
+      "category": "source"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\pdf_app\\models.py",
+      "relative_path": "pdf_app/models.py",
+      "size": 927,
+      "include": true,
+      "reason": "local import dependency",
+      "category": "source"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\pdf_app\\services\\__init__.py",
+      "relative_path": "pdf_app/services/__init__.py",
+      "size": 1288,
+      "include": true,
+      "reason": "local import dependency",
+      "category": "source"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\pdf_app\\services\\business.py",
+      "relative_path": "pdf_app/services/business.py",
+      "size": 1933,
+      "include": true,
+      "reason": "project source package",
+      "category": "source"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\pdf_app\\services\\common.py",
+      "relative_path": "pdf_app/services/common.py",
+      "size": 1564,
+      "include": true,
+      "reason": "local import dependency",
+      "category": "source"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\pdf_app\\services\\convert.py",
+      "relative_path": "pdf_app/services/convert.py",
+      "size": 4891,
+      "include": true,
+      "reason": "project source package",
+      "category": "source"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\pdf_app\\services\\github_log_sink.py",
+      "relative_path": "pdf_app/services/github_log_sink.py",
+      "size": 2937,
+      "include": true,
+      "reason": "local import dependency",
+      "category": "source"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\pdf_app\\services\\header_footer.py",
+      "relative_path": "pdf_app/services/header_footer.py",
+      "size": 1263,
+      "include": true,
+      "reason": "project source package",
+      "category": "source"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\pdf_app\\services\\page_workspace.py",
+      "relative_path": "pdf_app/services/page_workspace.py",
+      "size": 2380,
+      "include": true,
+      "reason": "project source package",
+      "category": "source"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\pdf_app\\services\\pdf_ops.py",
+      "relative_path": "pdf_app/services/pdf_ops.py",
+      "size": 4352,
+      "include": true,
+      "reason": "project source package",
+      "category": "source"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\pdf_app\\services\\text_edit.py",
+      "relative_path": "pdf_app/services/text_edit.py",
+      "size": 1226,
+      "include": true,
+      "reason": "project source package",
+      "category": "source"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\pdf_app\\services\\usage_log.py",
+      "relative_path": "pdf_app/services/usage_log.py",
+      "size": 4770,
+      "include": true,
+      "reason": "local import dependency",
+      "category": "source"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\README.md",
+      "relative_path": "README.md",
+      "size": 3195,
+      "include": true,
+      "reason": "project metadata",
+      "category": "metadata"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\requirements.txt",
+      "relative_path": "requirements.txt",
+      "size": 55,
+      "include": true,
+      "reason": "project metadata",
+      "category": "metadata"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\scripts\\analyze_efficiency.py",
+      "relative_path": "scripts/analyze_efficiency.py",
+      "size": 4184,
+      "include": false,
+      "reason": "not selected for App Studio package",
+      "category": "other"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\ToolHub_AppStudio_Output\\app_20251123_excelbatchreplace\\approval_record.md",
+      "relative_path": "ToolHub_AppStudio_Output/app_20251123_excelbatchreplace/approval_record.md",
+      "size": 37,
+      "include": false,
+      "reason": "excluded directory",
+      "category": "other"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\ToolHub_AppStudio_Output\\app_20251123_excelbatchreplace\\build_plan.md",
+      "relative_path": "ToolHub_AppStudio_Output/app_20251123_excelbatchreplace/build_plan.md",
+      "size": 716,
+      "include": false,
+      "reason": "excluded directory",
+      "category": "other"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\ToolHub_AppStudio_Output\\app_20251123_excelbatchreplace\\dependency_report.json",
+      "relative_path": "ToolHub_AppStudio_Output/app_20251123_excelbatchreplace/dependency_report.json",
+      "size": 541,
+      "include": false,
+      "reason": "excluded directory",
+      "category": "other"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\ToolHub_AppStudio_Output\\app_20251123_excelbatchreplace\\execution_test_report.md",
+      "relative_path": "ToolHub_AppStudio_Output/app_20251123_excelbatchreplace/execution_test_report.md",
+      "size": 71,
+      "include": false,
+      "reason": "excluded directory",
+      "category": "other"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\ToolHub_AppStudio_Output\\app_20251123_excelbatchreplace\\file_inventory.json",
+      "relative_path": "ToolHub_AppStudio_Output/app_20251123_excelbatchreplace/file_inventory.json",
+      "size": 35471,
+      "include": false,
+      "reason": "excluded directory",
+      "category": "other"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\ToolHub_AppStudio_Output\\app_20251123_excelbatchreplace\\file_inventory.md",
+      "relative_path": "ToolHub_AppStudio_Output/app_20251123_excelbatchreplace/file_inventory.md",
+      "size": 10451,
+      "include": false,
+      "reason": "excluded directory",
+      "category": "other"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\ToolHub_AppStudio_Output\\app_20251123_excelbatchreplace\\final_app\\app.yaml",
+      "relative_path": "ToolHub_AppStudio_Output/app_20251123_excelbatchreplace/final_app/app.yaml",
+      "size": 1488,
+      "include": false,
+      "reason": "excluded directory",
+      "category": "other"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\ToolHub_AppStudio_Output\\app_20251123_excelbatchreplace\\final_app\\bin\\BUILD_REQUIRED.txt",
+      "relative_path": "ToolHub_AppStudio_Output/app_20251123_excelbatchreplace/final_app/bin/BUILD_REQUIRED.txt",
+      "size": 140,
+      "include": false,
+      "reason": "excluded directory",
+      "category": "other"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\ToolHub_AppStudio_Output\\app_20251123_excelbatchreplace\\final_app\\icon.svg",
+      "relative_path": "ToolHub_AppStudio_Output/app_20251123_excelbatchreplace/final_app/icon.svg",
+      "size": 552,
+      "include": false,
+      "reason": "excluded directory",
+      "category": "other"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\ToolHub_AppStudio_Output\\app_20251123_excelbatchreplace\\final_app\\README.md",
+      "relative_path": "ToolHub_AppStudio_Output/app_20251123_excelbatchreplace/final_app/README.md",
+      "size": 638,
+      "include": false,
+      "reason": "excluded directory",
+      "category": "other"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\ToolHub_AppStudio_Output\\app_20251123_excelbatchreplace\\final_app\\requirements.txt",
+      "relative_path": "ToolHub_AppStudio_Output/app_20251123_excelbatchreplace/final_app/requirements.txt",
+      "size": 55,
+      "include": false,
+      "reason": "excluded directory",
+      "category": "other"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\ToolHub_AppStudio_Output\\app_20251123_excelbatchreplace\\final_app\\src\\app.py",
+      "relative_path": "ToolHub_AppStudio_Output/app_20251123_excelbatchreplace/final_app/src/app.py",
+      "size": 55156,
+      "include": false,
+      "reason": "excluded directory",
+      "category": "other"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\ToolHub_AppStudio_Output\\app_20251123_excelbatchreplace\\final_app\\src\\pdf_app\\__init__.py",
+      "relative_path": "ToolHub_AppStudio_Output/app_20251123_excelbatchreplace/final_app/src/pdf_app/__init__.py",
+      "size": 31,
+      "include": false,
+      "reason": "excluded directory",
+      "category": "other"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\ToolHub_AppStudio_Output\\app_20251123_excelbatchreplace\\final_app\\src\\pdf_app\\models.py",
+      "relative_path": "ToolHub_AppStudio_Output/app_20251123_excelbatchreplace/final_app/src/pdf_app/models.py",
+      "size": 927,
+      "include": false,
+      "reason": "excluded directory",
+      "category": "other"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\ToolHub_AppStudio_Output\\app_20251123_excelbatchreplace\\final_app\\src\\pdf_app\\services\\__init__.py",
+      "relative_path": "ToolHub_AppStudio_Output/app_20251123_excelbatchreplace/final_app/src/pdf_app/services/__init__.py",
+      "size": 1288,
+      "include": false,
+      "reason": "excluded directory",
+      "category": "other"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\ToolHub_AppStudio_Output\\app_20251123_excelbatchreplace\\final_app\\src\\pdf_app\\services\\business.py",
+      "relative_path": "ToolHub_AppStudio_Output/app_20251123_excelbatchreplace/final_app/src/pdf_app/services/business.py",
+      "size": 1933,
+      "include": false,
+      "reason": "excluded directory",
+      "category": "other"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\ToolHub_AppStudio_Output\\app_20251123_excelbatchreplace\\final_app\\src\\pdf_app\\services\\common.py",
+      "relative_path": "ToolHub_AppStudio_Output/app_20251123_excelbatchreplace/final_app/src/pdf_app/services/common.py",
+      "size": 1564,
+      "include": false,
+      "reason": "excluded directory",
+      "category": "other"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\ToolHub_AppStudio_Output\\app_20251123_excelbatchreplace\\final_app\\src\\pdf_app\\services\\convert.py",
+      "relative_path": "ToolHub_AppStudio_Output/app_20251123_excelbatchreplace/final_app/src/pdf_app/services/convert.py",
+      "size": 4891,
+      "include": false,
+      "reason": "excluded directory",
+      "category": "other"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\ToolHub_AppStudio_Output\\app_20251123_excelbatchreplace\\final_app\\src\\pdf_app\\services\\github_log_sink.py",
+      "relative_path": "ToolHub_AppStudio_Output/app_20251123_excelbatchreplace/final_app/src/pdf_app/services/github_log_sink.py",
+      "size": 2937,
+      "include": false,
+      "reason": "excluded directory",
+      "category": "other"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\ToolHub_AppStudio_Output\\app_20251123_excelbatchreplace\\final_app\\src\\pdf_app\\services\\header_footer.py",
+      "relative_path": "ToolHub_AppStudio_Output/app_20251123_excelbatchreplace/final_app/src/pdf_app/services/header_footer.py",
+      "size": 1263,
+      "include": false,
+      "reason": "excluded directory",
+      "category": "other"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\ToolHub_AppStudio_Output\\app_20251123_excelbatchreplace\\final_app\\src\\pdf_app\\services\\page_workspace.py",
+      "relative_path": "ToolHub_AppStudio_Output/app_20251123_excelbatchreplace/final_app/src/pdf_app/services/page_workspace.py",
+      "size": 2380,
+      "include": false,
+      "reason": "excluded directory",
+      "category": "other"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\ToolHub_AppStudio_Output\\app_20251123_excelbatchreplace\\final_app\\src\\pdf_app\\services\\pdf_ops.py",
+      "relative_path": "ToolHub_AppStudio_Output/app_20251123_excelbatchreplace/final_app/src/pdf_app/services/pdf_ops.py",
+      "size": 4352,
+      "include": false,
+      "reason": "excluded directory",
+      "category": "other"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\ToolHub_AppStudio_Output\\app_20251123_excelbatchreplace\\final_app\\src\\pdf_app\\services\\text_edit.py",
+      "relative_path": "ToolHub_AppStudio_Output/app_20251123_excelbatchreplace/final_app/src/pdf_app/services/text_edit.py",
+      "size": 1226,
+      "include": false,
+      "reason": "excluded directory",
+      "category": "other"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\ToolHub_AppStudio_Output\\app_20251123_excelbatchreplace\\final_app\\src\\pdf_app\\services\\usage_log.py",
+      "relative_path": "ToolHub_AppStudio_Output/app_20251123_excelbatchreplace/final_app/src/pdf_app/services/usage_log.py",
+      "size": 4770,
+      "include": false,
+      "reason": "excluded directory",
+      "category": "other"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\ToolHub_AppStudio_Output\\app_20251123_excelbatchreplace\\icon_work\\ai_generation_report.md",
+      "relative_path": "ToolHub_AppStudio_Output/app_20251123_excelbatchreplace/icon_work/ai_generation_report.md",
+      "size": 366,
+      "include": false,
+      "reason": "excluded directory",
+      "category": "other"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\ToolHub_AppStudio_Output\\app_20251123_excelbatchreplace\\icon_work\\icon_candidate_1.svg",
+      "relative_path": "ToolHub_AppStudio_Output/app_20251123_excelbatchreplace/icon_work/icon_candidate_1.svg",
+      "size": 552,
+      "include": false,
+      "reason": "excluded directory",
+      "category": "other"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\ToolHub_AppStudio_Output\\app_20251123_excelbatchreplace\\icon_work\\icon_final.svg",
+      "relative_path": "ToolHub_AppStudio_Output/app_20251123_excelbatchreplace/icon_work/icon_final.svg",
+      "size": 552,
+      "include": false,
+      "reason": "excluded directory",
+      "category": "other"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\ToolHub_AppStudio_Output\\app_20251123_excelbatchreplace\\icon_work\\icon_prompt_initial.md",
+      "relative_path": "ToolHub_AppStudio_Output/app_20251123_excelbatchreplace/icon_work/icon_prompt_initial.md",
+      "size": 167,
+      "include": false,
+      "reason": "excluded directory",
+      "category": "other"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\ToolHub_AppStudio_Output\\app_20251123_excelbatchreplace\\icon_work\\icon_prompt_revision.md",
+      "relative_path": "ToolHub_AppStudio_Output/app_20251123_excelbatchreplace/icon_work/icon_prompt_revision.md",
+      "size": 32,
+      "include": false,
+      "reason": "excluded directory",
+      "category": "other"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\ToolHub_AppStudio_Output\\app_20251123_excelbatchreplace\\import_plan.json",
+      "relative_path": "ToolHub_AppStudio_Output/app_20251123_excelbatchreplace/import_plan.json",
+      "size": 986,
+      "include": false,
+      "reason": "excluded directory",
+      "category": "other"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\ToolHub_AppStudio_Output\\app_20251123_excelbatchreplace\\proposed_app.yaml",
+      "relative_path": "ToolHub_AppStudio_Output/app_20251123_excelbatchreplace/proposed_app.yaml",
+      "size": 1488,
+      "include": false,
+      "reason": "excluded directory",
+      "category": "other"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\ToolHub_AppStudio_Output\\app_20251123_excelbatchreplace\\proposed_README.md",
+      "relative_path": "ToolHub_AppStudio_Output/app_20251123_excelbatchreplace/proposed_README.md",
+      "size": 638,
+      "include": false,
+      "reason": "excluded directory",
+      "category": "other"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\ToolHub_AppStudio_Output\\app_20251123_excelbatchreplace\\proposed_requirements.txt",
+      "relative_path": "ToolHub_AppStudio_Output/app_20251123_excelbatchreplace/proposed_requirements.txt",
+      "size": 55,
+      "include": false,
+      "reason": "excluded directory",
+      "category": "other"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\ToolHub_AppStudio_Output\\app_20251123_excelbatchreplace\\secret_scan_report.md",
+      "relative_path": "ToolHub_AppStudio_Output/app_20251123_excelbatchreplace/secret_scan_report.md",
+      "size": 885,
+      "include": false,
+      "reason": "excluded directory",
+      "category": "other"
+    }
+  ],
+  "local_import_files": [
+    "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\pdf_app\\models.py",
+    "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\pdf_app\\services\\__init__.py",
+    "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\pdf_app\\services\\common.py",
+    "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\pdf_app\\services\\github_log_sink.py",
+    "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\pdf_app\\services\\usage_log.py"
+  ],
+  "import_roots": [
+    "__future__",
+    "base64",
+    "dataclasses",
+    "datetime",
+    "fitz",
+    "flet",
+    "importlib",
+    "json",
+    "os",
+    "pathlib",
+    "pdf_app",
+    "pypdf",
+    "socket",
+    "threading",
+    "time",
+    "typing",
+    "urllib",
+    "uuid"
+  ]
+}

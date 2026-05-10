@@ -1,0 +1,436 @@
+{
+  "summary": {
+    "source_root": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication",
+    "source_root_origin": "entry_parent",
+    "entry_relative": "app.py",
+    "included_count": 15,
+    "excluded_count": 7,
+    "blocked_count": 0,
+    "manual_check_count": 11,
+    "excluded_directory_count": 5,
+    "sensitive_excluded_directory_count": 0,
+    "sensitive_excluded_file_count": 0,
+    "source_root_warnings": [
+      "auto source_root contains a .git directory; use --source-root if only a subdirectory should be packaged."
+    ],
+    "toolhubignore_pattern_count": 0
+  },
+  "files": [
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\.gitkeep",
+      "relative_path": ".gitkeep",
+      "size": 0,
+      "include": false,
+      "status": "exclude",
+      "reason": "not selected for App Studio package",
+      "category": "other",
+      "detected_from": "",
+      "code_reference_file": "",
+      "detection_pattern": "",
+      "secret_scan": "not_scanned"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\.vscode\\settings.json",
+      "relative_path": ".vscode/settings.json",
+      "size": 39,
+      "include": false,
+      "status": "exclude",
+      "reason": "not selected for App Studio package",
+      "category": "other",
+      "detected_from": "",
+      "code_reference_file": "",
+      "detection_pattern": "",
+      "secret_scan": "not_scanned"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\_app_data.json",
+      "relative_path": "_app_data.json",
+      "size": 3143,
+      "include": false,
+      "status": "exclude",
+      "reason": "not selected for App Studio package",
+      "category": "other",
+      "detected_from": "",
+      "code_reference_file": "",
+      "detection_pattern": "",
+      "secret_scan": "not_scanned"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\_bootstrap.py",
+      "relative_path": "_bootstrap.py",
+      "size": 11275,
+      "include": false,
+      "status": "exclude",
+      "reason": "not selected for App Studio package",
+      "category": "other",
+      "detected_from": "",
+      "code_reference_file": "",
+      "detection_pattern": "",
+      "secret_scan": "not_scanned"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\_gitup.py",
+      "relative_path": "_gitup.py",
+      "size": 15593,
+      "include": false,
+      "status": "exclude",
+      "reason": "not selected for App Studio package",
+      "category": "other",
+      "detected_from": "",
+      "code_reference_file": "",
+      "detection_pattern": "",
+      "secret_scan": "not_scanned"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\app.py",
+      "relative_path": "app.py",
+      "size": 55156,
+      "include": true,
+      "status": "include",
+      "reason": "entry file",
+      "category": "entry",
+      "detected_from": "entry",
+      "code_reference_file": "",
+      "detection_pattern": "",
+      "secret_scan": "warning"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\docs\\tauri_ui_redesign_plan.md",
+      "relative_path": "docs/tauri_ui_redesign_plan.md",
+      "size": 8974,
+      "include": false,
+      "status": "exclude",
+      "reason": "not selected for App Studio package",
+      "category": "other",
+      "detected_from": "",
+      "code_reference_file": "",
+      "detection_pattern": "",
+      "secret_scan": "not_scanned"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\pdf_app\\__init__.py",
+      "relative_path": "pdf_app/__init__.py",
+      "size": 31,
+      "include": true,
+      "status": "include",
+      "reason": "project source package",
+      "category": "source",
+      "detected_from": "package_source",
+      "code_reference_file": "",
+      "detection_pattern": "",
+      "secret_scan": "not_scanned"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\pdf_app\\models.py",
+      "relative_path": "pdf_app/models.py",
+      "size": 927,
+      "include": true,
+      "status": "include",
+      "reason": "local import dependency",
+      "category": "source",
+      "detected_from": "import",
+      "code_reference_file": "",
+      "detection_pattern": "",
+      "secret_scan": "not_scanned"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\pdf_app\\services\\__init__.py",
+      "relative_path": "pdf_app/services/__init__.py",
+      "size": 1288,
+      "include": true,
+      "status": "include",
+      "reason": "local import dependency",
+      "category": "source",
+      "detected_from": "import",
+      "code_reference_file": "",
+      "detection_pattern": "",
+      "secret_scan": "not_scanned"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\pdf_app\\services\\business.py",
+      "relative_path": "pdf_app/services/business.py",
+      "size": 1933,
+      "include": true,
+      "status": "include",
+      "reason": "project source package",
+      "category": "source",
+      "detected_from": "package_source",
+      "code_reference_file": "",
+      "detection_pattern": "",
+      "secret_scan": "not_scanned"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\pdf_app\\services\\common.py",
+      "relative_path": "pdf_app/services/common.py",
+      "size": 1564,
+      "include": true,
+      "status": "include",
+      "reason": "local import dependency",
+      "category": "source",
+      "detected_from": "import",
+      "code_reference_file": "",
+      "detection_pattern": "",
+      "secret_scan": "not_scanned"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\pdf_app\\services\\convert.py",
+      "relative_path": "pdf_app/services/convert.py",
+      "size": 4891,
+      "include": true,
+      "status": "include",
+      "reason": "project source package",
+      "category": "source",
+      "detected_from": "package_source",
+      "code_reference_file": "",
+      "detection_pattern": "",
+      "secret_scan": "not_scanned"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\pdf_app\\services\\github_log_sink.py",
+      "relative_path": "pdf_app/services/github_log_sink.py",
+      "size": 2937,
+      "include": true,
+      "status": "include",
+      "reason": "local import dependency",
+      "category": "source",
+      "detected_from": "import",
+      "code_reference_file": "",
+      "detection_pattern": "",
+      "secret_scan": "not_scanned"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\pdf_app\\services\\header_footer.py",
+      "relative_path": "pdf_app/services/header_footer.py",
+      "size": 1263,
+      "include": true,
+      "status": "include",
+      "reason": "project source package",
+      "category": "source",
+      "detected_from": "package_source",
+      "code_reference_file": "",
+      "detection_pattern": "",
+      "secret_scan": "warning"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\pdf_app\\services\\page_workspace.py",
+      "relative_path": "pdf_app/services/page_workspace.py",
+      "size": 2380,
+      "include": true,
+      "status": "include",
+      "reason": "project source package",
+      "category": "source",
+      "detected_from": "package_source",
+      "code_reference_file": "",
+      "detection_pattern": "",
+      "secret_scan": "warning"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\pdf_app\\services\\pdf_ops.py",
+      "relative_path": "pdf_app/services/pdf_ops.py",
+      "size": 4352,
+      "include": true,
+      "status": "include",
+      "reason": "project source package",
+      "category": "source",
+      "detected_from": "package_source",
+      "code_reference_file": "",
+      "detection_pattern": "",
+      "secret_scan": "warning"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\pdf_app\\services\\text_edit.py",
+      "relative_path": "pdf_app/services/text_edit.py",
+      "size": 1226,
+      "include": true,
+      "status": "include",
+      "reason": "project source package",
+      "category": "source",
+      "detected_from": "package_source",
+      "code_reference_file": "",
+      "detection_pattern": "",
+      "secret_scan": "warning"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\pdf_app\\services\\usage_log.py",
+      "relative_path": "pdf_app/services/usage_log.py",
+      "size": 4770,
+      "include": true,
+      "status": "include",
+      "reason": "local import dependency",
+      "category": "source",
+      "detected_from": "import",
+      "code_reference_file": "",
+      "detection_pattern": "",
+      "secret_scan": "warning"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\README.md",
+      "relative_path": "README.md",
+      "size": 3195,
+      "include": true,
+      "status": "include",
+      "reason": "project metadata",
+      "category": "metadata",
+      "detected_from": "metadata",
+      "code_reference_file": "",
+      "detection_pattern": "",
+      "secret_scan": "not_scanned"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\requirements.txt",
+      "relative_path": "requirements.txt",
+      "size": 55,
+      "include": true,
+      "status": "include",
+      "reason": "project metadata",
+      "category": "metadata",
+      "detected_from": "metadata",
+      "code_reference_file": "",
+      "detection_pattern": "",
+      "secret_scan": "not_scanned"
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\scripts\\analyze_efficiency.py",
+      "relative_path": "scripts/analyze_efficiency.py",
+      "size": 4184,
+      "include": false,
+      "status": "exclude",
+      "reason": "not selected for App Studio package",
+      "category": "other",
+      "detected_from": "",
+      "code_reference_file": "",
+      "detection_pattern": "",
+      "secret_scan": "not_scanned"
+    }
+  ],
+  "local_import_files": [
+    "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\pdf_app\\models.py",
+    "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\pdf_app\\services\\__init__.py",
+    "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\pdf_app\\services\\common.py",
+    "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\pdf_app\\services\\github_log_sink.py",
+    "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\pdf_app\\services\\usage_log.py"
+  ],
+  "import_roots": [
+    "__future__",
+    "base64",
+    "dataclasses",
+    "datetime",
+    "fitz",
+    "flet",
+    "importlib",
+    "json",
+    "os",
+    "pathlib",
+    "pdf_app",
+    "pypdf",
+    "socket",
+    "threading",
+    "time",
+    "typing",
+    "urllib",
+    "uuid"
+  ],
+  "manual_checks": [
+    {
+      "status": "manual_check",
+      "reason": "call uses a dynamic path expression",
+      "source_file": "app.py",
+      "pattern": "Path"
+    },
+    {
+      "status": "manual_check",
+      "reason": "call uses a dynamic path expression",
+      "source_file": "app.py",
+      "pattern": "Path"
+    },
+    {
+      "status": "manual_check",
+      "reason": "call uses a dynamic path expression",
+      "source_file": "app.py",
+      "pattern": "Path"
+    },
+    {
+      "status": "manual_check",
+      "reason": "call uses a dynamic path expression",
+      "source_file": "app.py",
+      "pattern": "Path"
+    },
+    {
+      "status": "manual_check",
+      "reason": "call uses a dynamic path expression",
+      "source_file": "app.py",
+      "pattern": "Path"
+    },
+    {
+      "status": "manual_check",
+      "reason": "call uses a dynamic path expression",
+      "source_file": "app.py",
+      "pattern": "Path"
+    },
+    {
+      "status": "manual_check",
+      "reason": "call uses a dynamic path expression",
+      "source_file": "app.py",
+      "pattern": "Path"
+    },
+    {
+      "status": "manual_check",
+      "reason": "call uses a dynamic path expression",
+      "source_file": "pdf_app/services/usage_log.py",
+      "pattern": "Path"
+    },
+    {
+      "status": "manual_check",
+      "reason": "Path read call uses a dynamic path expression",
+      "source_file": "pdf_app/services/usage_log.py",
+      "pattern": "read_text"
+    },
+    {
+      "status": "manual_check",
+      "reason": "call uses a dynamic path expression",
+      "source_file": "pdf_app/services/usage_log.py",
+      "pattern": "Path"
+    },
+    {
+      "status": "manual_check",
+      "reason": "call uses a dynamic path expression",
+      "source_file": "pdf_app/services/usage_log.py",
+      "pattern": "Path"
+    }
+  ],
+  "excluded_directories": [
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\.git",
+      "relative_path": ".git",
+      "reason": "excluded generated or external-work directory",
+      "pattern": ""
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\logs",
+      "relative_path": "logs",
+      "reason": "excluded runtime/user-output directory",
+      "pattern": ""
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\pdf_app\\__pycache__",
+      "relative_path": "pdf_app/__pycache__",
+      "reason": "excluded generated or external-work directory",
+      "pattern": ""
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\pdf_app\\services\\__pycache__",
+      "relative_path": "pdf_app/services/__pycache__",
+      "reason": "excluded generated or external-work directory",
+      "pattern": ""
+    },
+    {
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\ToolHub_AppStudio_Output",
+      "relative_path": "ToolHub_AppStudio_Output",
+      "reason": "excluded generated or external-work directory",
+      "pattern": ""
+    }
+  ],
+  "sensitive_excluded_directories": [],
+  "sensitive_excluded_files": [],
+  "toolhubignore_patterns": []
+}

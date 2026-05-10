@@ -1,0 +1,20 @@
+{
+  "app_id": "app_20251123_excelbatchreplace",
+  "name": "20251123 ExcelBatchReplace",
+  "version": "0.1.0",
+  "entry": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\app.py",
+  "source_root": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication",
+  "output_dir": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\ToolHub_AppStudio_Output\\app_20251123_excelbatchreplace",
+  "requested_build_mode": "auto",
+  "selected_build_mode": "frozen-folder",
+  "runner": "exe",
+  "run_entry": "bin/app_20251123_excelbatchreplace/app_20251123_excelbatchreplace.exe",
+  "required_runtime": null,
+  "secret_high_findings": true,
+  "icon_style_reference": "Existing ToolHub icon references: sample_cli_app, sample_gui_app, sample_playwright_app",
+  "metadata_ai_report": "OpenAI metadata generation skipped because high severity secret findings exist.",
+  "create_app_env": false,
+  "generate_lock": false,
+  "build_frozen_folder": false,
+  "verify_runtime": false
+}
