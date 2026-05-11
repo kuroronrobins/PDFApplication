@@ -1,14 +1,5 @@
 import { create } from "zustand";
 import { buildOutputPlan } from "./outputPlan";
-import {
-  initialDecorations,
-  initialExportJob,
-  initialFiles,
-  initialLogs,
-  initialPagesByFile,
-  initialSearchReplace,
-  initialSecurity,
-} from "./sampleData";
 import type {
   CacheState,
   CacheSession,
@@ -300,13 +291,29 @@ function commitSnapshot(
 }
 
 const initialSnapshot: WorkbenchSnapshot = {
-  files: initialFiles,
-  pagesByFile: initialPagesByFile,
+  files: [],
+  pagesByFile: {},
   activeTool: "select",
-  decorations: initialDecorations,
+  decorations: [],
   selectedDecorationId: undefined,
-  searchReplace: initialSearchReplace,
-  security: initialSecurity,
+  searchReplace: {
+    query: "",
+    replacement: "",
+    target: "all",
+    matchCount: 0,
+    appliedCount: 0,
+  },
+  security: {
+    inputPasswordRequired: false,
+    outputEncrypted: false,
+  },
+};
+
+const initialExportJob: ExportJobState = {
+  status: "idle",
+  progress: 0,
+  cancellable: false,
+  message: "待機中",
 };
 
 export const useWorkbenchStore = create<WorkbenchState>((set, get) => ({
@@ -316,7 +323,7 @@ export const useWorkbenchStore = create<WorkbenchState>((set, get) => ({
     initialized: false,
   },
   exportJob: initialExportJob,
-  logs: initialLogs,
+  logs: [],
   history: [],
   future: [],
   canUndo: false,
@@ -482,8 +489,11 @@ export const useWorkbenchStore = create<WorkbenchState>((set, get) => ({
       pagesByFile[fileId] = createPages(fileId, target.pageCount || estimatePageCount(target));
     }
 
+    const nextExpanded = !target.expanded;
     const files = current.files.map((file) =>
-      file.id === fileId ? { ...file, expanded: !file.expanded } : { ...file },
+      file.id === fileId
+        ? { ...file, expanded: nextExpanded }
+        : { ...file, expanded: false },
     );
     commitSnapshot(set, current, {
       files,
@@ -518,7 +528,9 @@ export const useWorkbenchStore = create<WorkbenchState>((set, get) => ({
     if (index < 0) {
       return;
     }
-    get().moveFileToIndex(fileId, index + direction);
+
+    const insertionIndex = direction > 0 ? index + 2 : index - 1;
+    get().moveFileToIndex(fileId, insertionIndex);
   },
 
   moveFileToIndex: (fileId, insertionIndex) => {

@@ -326,3 +326,20 @@ COM変換が失敗した場合は、対象ファイル、Officeアプリ名、�
 
 - `docs/reports/screenshots/2026-05-11-workbench-complete-1366x768.png`
 - `docs/reports/screenshots/2026-05-11-workbench-complete-1920x1080.png`
+
+## 10. 2026-05-12 操作性補強の反映
+
+今回のUI方針補強:
+
+- Explorer からのファイル投入は、Tauri 実行時に webview drag/drop event を正規経路として扱う。HTML5 の `dataTransfer.files` はブラウザ検証用の補助経路とする。
+- ファイル追加は複数選択を標準とする。複数PDF/Officeを一括追加し、中央ワークスペース上で結合順を組み立てる。
+- 浮動設定パネルは常設しない。装飾、検索、鍵、情報の各パネルは右上の閉じる操作で隠せ、必要時だけ小さな「設定」ボタンから再表示する。
+- ファイル単位カードは横幅を広げすぎず、サムネイル紙面を大きくして内容確認性を上げる。1366x768で横に複数カードが並ぶ密度は維持する。
+- 書き出しは直接実行せず、出力プレビューを経由できる。プレビューでは出力ファイル数、ページ数、分割、除外、装飾、暗号化状態、出力ごとのページ並びを確認する。
+
+今回の実装後スクリーンショット:
+
+- `docs/reports/screenshots/2026-05-12-empty-workbench-1366x768.png`
+- `docs/reports/screenshots/2026-05-12-file-card-thumbnail-density-1366x768.png`
+- `docs/reports/screenshots/2026-05-12-export-preview-modal-1366x768.png`
+- `docs/reports/screenshots/2026-05-12-floating-panel-hidden-1366x768.png`

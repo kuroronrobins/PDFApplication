@@ -120,7 +120,7 @@ No revision prompt was provided.
     "typing"
   ],
   "readme_excerpt": "# PDFApplication\n\nFlet を使った PDF 統合ユーティリティです。業務利用を想定し、操作性（UX）と堅牢性を両立しています。\n\n## 主な機能\n\n- PDF 結合・分割（ページ数指定 / ファイルサイズ上限指定を選択可能）\n- ページ入れ替え（ドラッグ操作）\n- Office / PDF の PDF 変換（変換のみ・結合）\n- ヘッダー/フッター/ページ番号の追記\n- PDF 文字置換\n- 透かし追加、パスワード暗号化、PDF情報表示\n- 暗号化PDFの入力パスワード対応（対応機能で共通利用）\n\n## UX強化ポイント\n\n- 入力PDFをサムネイルタイルとして表示\n- ドラッグ&ドロップでページ順を直感的に変更\n- 右上 × でページ除外（復帰も可）\n- 「このページの後で分割」スイッチで分割位置を視覚設定\n- 共通設定 + タブ構成で画面バランスを改善\n\n## セットアップ\n\n```bash\npython -m venv .venv\nsource .venv/bin/activate\npip install -r requirements.txt\n```\n\n## 起動\n\n```bash\npython app.py\n```\n\n## 変換機能について\n\nOffice 変換は Microsoft Office (Word / Excel / PowerPoint) のインストールを前提としています。 \nWindows 環境で COM 経由で PDF 出力を実行します。\n\n## 構成\n\n- `app.py`: Flet UI（共通設定、ページ編集ワークスペース、標準機能、セキュリティ機能）\n- `pdf_app/models.py`: 共通ジョブモデル\n- `pdf_app/services/common.py`: 入力検証・暗号化PDFオープン共通処理\n- `pdf_app/services/`: PDF 操作のサービス群\n\n## 利用ログ収集と効率化分析\n\n本アプリは実行イベントを JSONL で記録し、任意で GitHub 上の JSONL に追記できます。\n\n### ローカルログ\n\n- 既定ログパス: `.[local path]\n- 1行1イベントで、`action`, `status`, `duration_ms`, `baseline_",
-  "style_reference": "Existing ToolHub icon references: app_20260201_agendasnap, legacy_flet_system_20260510, run_xcgate_upload, sample_gui_app, sample_playwright_app"
+  "style_reference": "Existing ToolHub icon references: app_20260201_agendasnap, sample_gui_app, sample_playwright_app"
 }
 
 ## Image Generation

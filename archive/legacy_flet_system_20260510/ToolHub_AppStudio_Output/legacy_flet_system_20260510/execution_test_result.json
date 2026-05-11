@@ -1,6 +1,6 @@
 {
   "app_id": "legacy_flet_system_20260510",
-  "generated_at": "2026-05-11T06:27:30",
+  "generated_at": "2026-05-11T23:33:27",
   "overall_status": "warn",
   "approval_allowed": true,
   "checks": [
@@ -98,7 +98,7 @@
     "app_studio_policy_id": "normal_python_source_to_frozen_folder_build_env_v3",
     "registration_policy": "user-distribution",
     "repo_root": "C:\\Users\\kuroron\\Documents\\RD\\20260426_Toolhub\\launcher\\src-tauri\\target\\release",
-    "git_commit": "ba7f326",
+    "git_commit": "237cb05",
     "main_py_hash": "ab3f8cc4599d07d19888c93aa253e43ba7bd6978b49923cc590f0a33452a3c82",
     "frozen_folder_builder_hash": "013fd7b68cfb7622a8f4166e34f7885e08b8cb18051d3d98ae034416bdc1f237",
     "argv": [
@@ -141,38 +141,38 @@
     "frozen_build_report": {
       "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\archive\\legacy_flet_system_20260510\\ToolHub_AppStudio_Output\\legacy_flet_system_20260510\\frozen_folder_build_report.md",
       "exists": true,
-      "last_write_time": "2026-05-11T06:27:23",
+      "last_write_time": "2026-05-11T23:33:19",
       "size": 11143
     },
     "frozen_exe": {
       "path": "C:\\Users\\kuroron\\Documents\\RD\\20260426_Toolhub\\launcher\\src-tauri\\target\\release\\apps\\legacy_flet_system_20260510\\bin\\legacy_flet_system_20260510\\legacy_flet_system_20260510.exe",
       "exists": true,
-      "last_write_time": "2026-05-11T06:27:22",
+      "last_write_time": "2026-05-11T23:33:18",
       "size": 8109507
     },
     "output_frozen_exe": {
       "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\archive\\legacy_flet_system_20260510\\ToolHub_AppStudio_Output\\legacy_flet_system_20260510\\final_app\\bin\\legacy_flet_system_20260510\\legacy_flet_system_20260510.exe",
       "exists": true,
-      "last_write_time": "2026-05-11T06:27:22",
+      "last_write_time": "2026-05-11T23:33:18",
       "size": 8109507
     },
     "app_yaml": {
       "path": "C:\\Users\\kuroron\\Documents\\RD\\20260426_Toolhub\\launcher\\src-tauri\\target\\release\\apps\\legacy_flet_system_20260510\\app.yaml",
       "exists": true,
-      "last_write_time": "2026-05-11T06:26:48",
+      "last_write_time": "2026-05-11T23:32:24",
       "size": 1577
     },
     "build_profile": {
       "path": "C:\\Users\\kuroron\\Documents\\RD\\20260426_Toolhub\\launcher\\src-tauri\\target\\release\\apps\\legacy_flet_system_20260510\\build_profile.json",
       "exists": true,
-      "last_write_time": "2026-05-11T06:26:48",
+      "last_write_time": "2026-05-11T23:32:24",
       "size": 2449
     },
     "timing_report": {
       "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\archive\\legacy_flet_system_20260510\\ToolHub_AppStudio_Output\\legacy_flet_system_20260510\\timing_report.json",
       "exists": true,
-      "last_write_time": "2026-05-11T06:26:48",
-      "size": 1769
+      "last_write_time": "2026-05-11T23:32:24",
+      "size": 1770
     }
   },
   "approval_blocking_warnings_count": 0,

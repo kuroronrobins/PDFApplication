@@ -1,21 +1,21 @@
 {
   "app_id": "legacy_flet_system_20260510",
   "action": "apply",
-  "generated_at": "2026-05-11T06:25:30",
-  "estimated_total_seconds": 72,
-  "actual_total_seconds": 119.693,
-  "prediction_error_seconds": 47.693,
+  "generated_at": "2026-05-11T23:30:46",
+  "estimated_total_seconds": 82,
+  "actual_total_seconds": 160.305,
+  "prediction_error_seconds": 78.305,
   "prediction_source": "history",
-  "wall_clock_total_seconds": 119.693,
-  "cli_measured_total_seconds": 119.105,
-  "unmeasured_overhead_seconds": 0.588,
-  "total_duration_seconds": 119.105,
+  "wall_clock_total_seconds": 160.305,
+  "cli_measured_total_seconds": 159.856,
+  "unmeasured_overhead_seconds": 0.449,
+  "total_duration_seconds": 159.856,
   "phases": [
     {
       "phase": "preflight",
       "label": "事前確認",
       "status": "pass",
-      "started_at": "2026-05-11T06:25:30",
+      "started_at": "2026-05-11T23:30:46",
       "duration_seconds": 0.0,
       "detail": "CLI options and normal registration policy were validated."
     },
@@ -23,56 +23,56 @@
       "phase": "file_inventory",
       "label": "ファイル棚卸し",
       "status": "pass",
-      "started_at": "2026-05-11T06:25:30",
-      "duration_seconds": 0.154
+      "started_at": "2026-05-11T23:30:46",
+      "duration_seconds": 0.077
     },
     {
       "phase": "secret_scan",
       "label": "秘密情報検査",
       "status": "pass",
-      "started_at": "2026-05-11T06:25:31",
-      "duration_seconds": 0.024
+      "started_at": "2026-05-11T23:30:47",
+      "duration_seconds": 0.013
     },
     {
       "phase": "dependency_analysis",
       "label": "依存関係解析",
       "status": "pass",
-      "started_at": "2026-05-11T06:25:31",
+      "started_at": "2026-05-11T23:30:47",
       "duration_seconds": 0.0
     },
     {
       "phase": "metadata_ai",
       "label": "メタデータ生成",
       "status": "pass",
-      "started_at": "2026-05-11T06:25:31",
+      "started_at": "2026-05-11T23:30:47",
       "duration_seconds": 0.0
     },
     {
       "phase": "icon_generation",
       "label": "アイコン生成",
       "status": "pass",
-      "started_at": "2026-05-11T06:25:31",
-      "duration_seconds": 76.907
+      "started_at": "2026-05-11T23:30:47",
+      "duration_seconds": 97.614
     },
     {
       "phase": "export_suggestion",
       "label": "登録成果物の作成",
       "status": "pass",
-      "started_at": "2026-05-11T06:26:48",
-      "duration_seconds": 0.116
+      "started_at": "2026-05-11T23:32:24",
+      "duration_seconds": 0.094
     },
     {
       "phase": "build_env_creation",
       "label": "ビルド用環境の作成と依存インストール",
       "status": "pass",
-      "started_at": "2026-05-11T06:26:48",
-      "duration_seconds": 1.192
+      "started_at": "2026-05-11T23:32:24",
+      "duration_seconds": 1.023
     },
     {
       "phase": "build_env_cache",
       "label": "build_env_cache",
       "status": "hit",
-      "started_at": "2026-05-11T06:26:49",
+      "started_at": "2026-05-11T23:32:25",
       "duration_seconds": 0.0,
       "detail": "cache_hit=True; cache_miss_reason=none; cache_key=0baf5ac840363007fc657747ab91a3a583f2679f77c0d3dcf2409bab016c6e25; pip_cache_dir=C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\archive\\legacy_flet_system_20260510\\ToolHub_AppStudio_Output\\legacy_flet_system_20260510\\bt\\pip"
     },
@@ -80,7 +80,7 @@
       "phase": "dependency_install",
       "label": "依存関係インストール",
       "status": "skipped",
-      "started_at": "2026-05-11T06:26:49",
+      "started_at": "2026-05-11T23:32:25",
       "duration_seconds": 0.0,
       "detail": "Dependency install skipped because cached build_env was reused."
     },
@@ -88,21 +88,21 @@
       "phase": "requirements_lock_generation",
       "label": "requirements.lock 生成",
       "status": "pass",
-      "started_at": "2026-05-11T06:26:49",
-      "duration_seconds": 0.767
+      "started_at": "2026-05-11T23:32:26",
+      "duration_seconds": 2.01
     },
     {
       "phase": "build_tools_install",
       "label": "ビルドツールインストール",
       "status": "pass",
-      "started_at": "2026-05-11T06:26:50",
-      "duration_seconds": 0.541
+      "started_at": "2026-05-11T23:32:28",
+      "duration_seconds": 0.519
     },
     {
       "phase": "build_tools_cache",
       "label": "build_tools_cache",
       "status": "hit",
-      "started_at": "2026-05-11T06:26:51",
+      "started_at": "2026-05-11T23:32:28",
       "duration_seconds": 0.0,
       "detail": "Build tool install skipped because installed versions satisfy requested specs."
     },
@@ -110,7 +110,7 @@
       "phase": "pyinstaller_probe",
       "label": "PyInstaller 確認",
       "status": "included",
-      "started_at": "2026-05-11T06:26:51",
+      "started_at": "2026-05-11T23:32:28",
       "duration_seconds": 0.0,
       "detail": "PyInstaller probe is executed inside the frozen-folder build phase and reported in frozen_folder_build_report.md."
     },
@@ -118,52 +118,36 @@
       "phase": "pyinstaller_build",
       "label": "PyInstaller frozen-folder build",
       "status": "pass",
-      "started_at": "2026-05-11T06:26:51",
-      "duration_seconds": 31.918
+      "started_at": "2026-05-11T23:32:28",
+      "duration_seconds": 50.985
     },
     {
       "phase": "distribution_check",
       "label": "配布物検証",
       "status": "pass",
-      "started_at": "2026-05-11T06:27:23",
-      "duration_seconds": 4.708
+      "started_at": "2026-05-11T23:33:19",
+      "duration_seconds": 4.776
     },
     {
       "phase": "registration_copy",
       "label": "登録コピーと App Pack 作成",
       "status": "pass",
-      "started_at": "2026-05-11T06:27:27",
-      "duration_seconds": 2.668
-    },
-    {
-      "phase": "registration_copy.backup_existing_app_move",
-      "label": "registration_copy.backup_existing_app_move",
-      "status": "pass",
-      "started_at": "2026-05-11T06:27:30",
-      "duration_seconds": 0.0,
-      "detail": "measured_duration_seconds=0.003; strategy=move_existing_app_directory; backup_path=C:\\Users\\kuroron\\Documents\\RD\\20260426_Toolhub\\launcher\\src-tauri\\target\\release\\backups\\app_studio\\20260511_062727\\legacy_flet_system_20260510\\app; files=359; bytes=73307286 (69.9 MB)"
-    },
-    {
-      "phase": "registration_copy.backup_manifest",
-      "label": "registration_copy.backup_manifest",
-      "status": "pass",
-      "started_at": "2026-05-11T06:27:30",
-      "duration_seconds": 0.0,
-      "detail": "measured_duration_seconds=0.001; path=C:\\Users\\kuroron\\Documents\\RD\\20260426_Toolhub\\launcher\\src-tauri\\target\\release\\release\\app_manifest.json"
+      "started_at": "2026-05-11T23:33:24",
+      "duration_seconds": 2.641
     },
     {
       "phase": "registration_copy.backup_existing_total",
       "label": "registration_copy.backup_existing_total",
       "status": "pass",
-      "started_at": "2026-05-11T06:27:30",
+      "started_at": "2026-05-11T23:33:27",
       "duration_seconds": 0.0,
-      "detail": "measured_duration_seconds=0.025"
+      "detail": "measured_duration_seconds=0.000"
     },
     {
       "phase": "registration_copy.remove_existing_app",
       "label": "registration_copy.remove_existing_app",
       "status": "pass",
-      "started_at": "2026-05-11T06:27:30",
+      "started_at": "2026-05-11T23:33:27",
       "duration_seconds": 0.0,
       "detail": "measured_duration_seconds=0.000; path=C:\\Users\\kuroron\\Documents\\RD\\20260426_Toolhub\\launcher\\src-tauri\\target\\release\\apps\\legacy_flet_system_20260510"
     },
@@ -171,15 +155,15 @@
       "phase": "registration_copy.copy_final_app_to_apps",
       "label": "registration_copy.copy_final_app_to_apps",
       "status": "pass",
-      "started_at": "2026-05-11T06:27:30",
+      "started_at": "2026-05-11T23:33:27",
       "duration_seconds": 0.0,
-      "detail": "measured_duration_seconds=0.372; files=359; bytes=73307432 (69.9 MB)"
+      "detail": "measured_duration_seconds=0.389; files=359; bytes=73307432 (69.9 MB)"
     },
     {
       "phase": "registration_copy.manifest_update_before_pack",
       "label": "registration_copy.manifest_update_before_pack",
       "status": "pass",
-      "started_at": "2026-05-11T06:27:30",
+      "started_at": "2026-05-11T23:33:27",
       "duration_seconds": 0.0,
       "detail": "measured_duration_seconds=0.001; path=C:\\Users\\kuroron\\Documents\\RD\\20260426_Toolhub\\launcher\\src-tauri\\target\\release\\release\\app_manifest.json"
     },
@@ -187,7 +171,7 @@
       "phase": "registration_copy.load_manifest_for_pack",
       "label": "registration_copy.load_manifest_for_pack",
       "status": "pass",
-      "started_at": "2026-05-11T06:27:30",
+      "started_at": "2026-05-11T23:33:27",
       "duration_seconds": 0.0,
       "detail": "measured_duration_seconds=0.000; path=C:\\Users\\kuroron\\Documents\\RD\\20260426_Toolhub\\launcher\\src-tauri\\target\\release\\release\\app_manifest.json"
     },
@@ -195,7 +179,7 @@
       "phase": "registration_copy.validate_app_pack_inputs",
       "label": "registration_copy.validate_app_pack_inputs",
       "status": "pass",
-      "started_at": "2026-05-11T06:27:30",
+      "started_at": "2026-05-11T23:33:27",
       "duration_seconds": 0.0,
       "detail": "measured_duration_seconds=0.004; path=C:\\Users\\kuroron\\Documents\\RD\\20260426_Toolhub\\launcher\\src-tauri\\target\\release\\apps\\legacy_flet_system_20260510"
     },
@@ -203,23 +187,23 @@
       "phase": "registration_copy.remove_existing_app_pack",
       "label": "registration_copy.remove_existing_app_pack",
       "status": "pass",
-      "started_at": "2026-05-11T06:27:30",
+      "started_at": "2026-05-11T23:33:27",
       "duration_seconds": 0.0,
-      "detail": "measured_duration_seconds=0.006; path=C:\\Users\\kuroron\\Documents\\RD\\20260426_Toolhub\\launcher\\src-tauri\\target\\release\\release\\app_packs\\legacy_flet_system_20260510-0.1.0.zip"
+      "detail": "measured_duration_seconds=0.000; path=C:\\Users\\kuroron\\Documents\\RD\\20260426_Toolhub\\launcher\\src-tauri\\target\\release\\release\\app_packs\\legacy_flet_system_20260510-0.1.0.zip"
     },
     {
       "phase": "registration_copy.compress_app_pack",
       "label": "registration_copy.compress_app_pack",
       "status": "pass",
-      "started_at": "2026-05-11T06:27:30",
+      "started_at": "2026-05-11T23:33:27",
       "duration_seconds": 0.0,
-      "detail": "measured_duration_seconds=2.186; strategy=direct_zip_from_apps_dir; compression=ZIP_DEFLATED; compresslevel=1; policy=balanced_size_speed; entries=360; size_bytes=38357277 (36.6 MB); path=C:\\Users\\kuroron\\Documents\\RD\\20260426_Toolhub\\launcher\\src-tauri\\target\\release\\release\\app_packs\\legacy_flet_system_20260510-0.1.0.zip"
+      "detail": "measured_duration_seconds=2.177; strategy=direct_zip_from_apps_dir; compression=ZIP_DEFLATED; compresslevel=1; policy=balanced_size_speed; entries=360; size_bytes=38357020 (36.6 MB); path=C:\\Users\\kuroron\\Documents\\RD\\20260426_Toolhub\\launcher\\src-tauri\\target\\release\\release\\app_packs\\legacy_flet_system_20260510-0.1.0.zip"
     },
     {
       "phase": "registration_copy.inspect_app_pack_required_entries",
       "label": "registration_copy.inspect_app_pack_required_entries",
       "status": "pass",
-      "started_at": "2026-05-11T06:27:30",
+      "started_at": "2026-05-11T23:33:27",
       "duration_seconds": 0.0,
       "detail": "measured_duration_seconds=0.002; path=C:\\Users\\kuroron\\Documents\\RD\\20260426_Toolhub\\launcher\\src-tauri\\target\\release\\release\\app_packs\\legacy_flet_system_20260510-0.1.0.zip"
     },
@@ -227,15 +211,15 @@
       "phase": "registration_copy.sha256_app_pack",
       "label": "registration_copy.sha256_app_pack",
       "status": "pass",
-      "started_at": "2026-05-11T06:27:30",
+      "started_at": "2026-05-11T23:33:27",
       "duration_seconds": 0.0,
-      "detail": "measured_duration_seconds=0.034; path=C:\\Users\\kuroron\\Documents\\RD\\20260426_Toolhub\\launcher\\src-tauri\\target\\release\\release\\app_packs\\legacy_flet_system_20260510-0.1.0.zip"
+      "detail": "measured_duration_seconds=0.030; path=C:\\Users\\kuroron\\Documents\\RD\\20260426_Toolhub\\launcher\\src-tauri\\target\\release\\release\\app_packs\\legacy_flet_system_20260510-0.1.0.zip"
     },
     {
       "phase": "registration_copy.manifest_update_after_pack",
       "label": "registration_copy.manifest_update_after_pack",
       "status": "pass",
-      "started_at": "2026-05-11T06:27:30",
+      "started_at": "2026-05-11T23:33:27",
       "duration_seconds": 0.0,
       "detail": "measured_duration_seconds=0.001; path=C:\\Users\\kuroron\\Documents\\RD\\20260426_Toolhub\\launcher\\src-tauri\\target\\release\\release\\app_manifest.json"
     },
@@ -243,30 +227,30 @@
       "phase": "registration_copy.package_app_pack_total",
       "label": "registration_copy.package_app_pack_total",
       "status": "pass",
-      "started_at": "2026-05-11T06:27:30",
+      "started_at": "2026-05-11T23:33:27",
       "duration_seconds": 0.0,
-      "detail": "measured_duration_seconds=2.234"
+      "detail": "measured_duration_seconds=2.215"
     },
     {
       "phase": "registration_copy.copy_pack_to_output_mirror",
       "label": "registration_copy.copy_pack_to_output_mirror",
       "status": "pass",
-      "started_at": "2026-05-11T06:27:30",
+      "started_at": "2026-05-11T23:33:27",
       "duration_seconds": 0.0,
-      "detail": "measured_duration_seconds=0.016; path=C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\archive\\legacy_flet_system_20260510\\ToolHub_AppStudio_Output\\legacy_flet_system_20260510\\app_pack"
+      "detail": "measured_duration_seconds=0.013; path=C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\archive\\legacy_flet_system_20260510\\ToolHub_AppStudio_Output\\legacy_flet_system_20260510\\app_pack"
     },
     {
       "phase": "execution_checks",
       "label": "承認前チェック",
       "status": "pass",
-      "started_at": "2026-05-11T06:27:30",
-      "duration_seconds": 0.11
+      "started_at": "2026-05-11T23:33:27",
+      "duration_seconds": 0.104
     },
     {
       "phase": "result_refresh",
       "label": "結果再読み込み",
       "status": "not_applicable",
-      "started_at": "2026-05-11T06:27:30",
+      "started_at": "2026-05-11T23:33:27",
       "duration_seconds": 0.0,
       "detail": "GUI result refresh is measured in the launcher after CLI completion."
     }

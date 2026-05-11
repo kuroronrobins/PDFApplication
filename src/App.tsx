@@ -6,6 +6,7 @@ import {
   type DragEvent,
 } from "react";
 import { convertFileSrc } from "@tauri-apps/api/core";
+import { getCurrentWebview } from "@tauri-apps/api/webview";
 import {
   ArrowDown,
   ArrowUp,
@@ -52,6 +53,7 @@ import {
 } from "./features/workbench/engineWorkflow";
 import {
   browserFilesToInputInfo,
+  describeInputPaths,
   droppedFilesToInputInfo,
   isTauriRuntime,
   openInputFilesDialog,
@@ -64,6 +66,7 @@ import type {
   DecorationKind,
   DecorationPosition,
   FileKind,
+  OutputPlan,
   PageItem,
   ToolId,
   WorkbenchFile,
@@ -99,9 +102,43 @@ type FileDropTarget = {
   position: "before" | "after";
 };
 
+type FilePointerDragRef = {
+  fileId: string;
+  pointerId: number;
+  startX: number;
+  startY: number;
+  target: FileDropTarget | null;
+  active: boolean;
+};
+
+type FileDragPreview = {
+  fileId: string;
+  x: number;
+  y: number;
+};
+
 type PageDropTarget = {
   pageId: string;
   position: "before" | "after";
+};
+
+type PagePointerDragRef = {
+  pageId: string;
+  pointerId: number;
+  startX: number;
+  startY: number;
+  target: PageDropTarget | null;
+  active: boolean;
+};
+
+type ExportPreviewPage = PageItem & {
+  fileName: string;
+  fileKind: FileKind;
+};
+
+type ExportPreviewGroup = {
+  name: string;
+  pages: ExportPreviewPage[];
 };
 
 function kindLabel(kind: FileKind): string {
@@ -181,6 +218,43 @@ function localAssetSrc(path?: string): string | undefined {
   return isTauriRuntime() ? convertFileSrc(path) : path;
 }
 
+function buildExportPreviewGroups(
+  files: WorkbenchFile[],
+  pagesByFile: Record<string, PageItem[]>,
+  outputPlan: OutputPlan,
+): ExportPreviewGroup[] {
+  if (outputPlan.outputFiles.length === 0) {
+    return [];
+  }
+
+  const groups = outputPlan.outputFiles.map((name) => ({ name, pages: [] as ExportPreviewPage[] }));
+  let groupIndex = 0;
+
+  for (const file of files) {
+    if (file.excluded) {
+      continue;
+    }
+
+    for (const page of pagesByFile[file.id] ?? []) {
+      if (page.excluded) {
+        continue;
+      }
+
+      groups[groupIndex].pages.push({
+        ...page,
+        fileName: file.name,
+        fileKind: file.kind,
+      });
+
+      if (page.splitAfter && groupIndex < groups.length - 1) {
+        groupIndex += 1;
+      }
+    }
+  }
+
+  return groups;
+}
+
 function decorationLabel(kind: DecorationKind): string {
   switch (kind) {
     case "header":
@@ -214,6 +288,7 @@ function positionLabel(position: DecorationPosition): string {
 function AppBar() {
   const inputRef = useRef<HTMLInputElement>(null);
   const [selectingFiles, setSelectingFiles] = useState(false);
+  const [exportPreviewOpen, setExportPreviewOpen] = useState(false);
   const undo = useWorkbenchStore((state) => state.undo);
   const redo = useWorkbenchStore((state) => state.redo);
   const canUndo = useWorkbenchStore((state) => state.canUndo);
@@ -228,6 +303,7 @@ function AppBar() {
   const exportJob = useWorkbenchStore((state) => state.exportJob);
   const exportDirectory = useWorkbenchStore((state) => state.exportDirectory);
   const cacheSession = useWorkbenchStore((state) => state.cacheSession);
+  const outputPlan = useWorkbenchStore((state) => state.outputPlan);
 
   const handleAddFiles = async () => {
     if (selectingFiles) {
@@ -244,6 +320,8 @@ function AppBar() {
       const files = await openInputFilesDialog();
       if (files && files.length > 0) {
         addInputFiles(files);
+      } else {
+        addLog("info", "ファイル追加はキャンセルされました。");
       }
     } catch (error) {
       addLog("error", `ファイル選択に失敗しました: ${errorMessage(error)}`);
@@ -277,6 +355,11 @@ function AppBar() {
 
   const handleExport = async () => {
     if (exportJob.status === "running") {
+      return;
+    }
+
+    if (outputPlan.activePageCount === 0) {
+      addLog("warn", "書き出し対象のページがありません。ファイルを追加してください。");
       return;
     }
 
@@ -325,7 +408,21 @@ function AppBar() {
     }
   };
 
+  const requestExportPreview = () => {
+    if (exportJob.status === "running") {
+      return;
+    }
+
+    if (outputPlan.activePageCount === 0) {
+      addLog("warn", "書き出し対象のページがありません。ファイルを追加して展開してください。");
+      return;
+    }
+
+    setExportPreviewOpen(true);
+  };
+
   return (
+    <>
     <header className="app-bar">
       <div className="brand">
         <div className="brand-mark">PDF</div>
@@ -348,7 +445,7 @@ function AppBar() {
           ref={inputRef}
           className="visually-hidden"
           type="file"
-          multiple
+          multiple={true}
           accept={supportedExtensions.map((extension) => `.${extension}`).join(",")}
           onChange={handleFallbackChange}
         />
@@ -384,14 +481,23 @@ function AppBar() {
         </div>
         <button
           className="export-button"
-          disabled={exportJob.status === "running"}
-          onClick={handleExport}
+          disabled={exportJob.status === "running" || outputPlan.activePageCount === 0}
+          onClick={requestExportPreview}
         >
           <Upload size={17} />
           書き出し
         </button>
       </div>
     </header>
+    <ExportPreviewModal
+      open={exportPreviewOpen}
+      onClose={() => setExportPreviewOpen(false)}
+      onConfirm={() => {
+        setExportPreviewOpen(false);
+        void handleExport();
+      }}
+    />
+    </>
   );
 }
 
@@ -435,24 +541,27 @@ function FileCard({
   file,
   index,
   fileCount,
+  thumbnailPath,
   draggingFileId,
   dropTarget,
-  onDragStart,
-  onDragOver,
-  onDrop,
-  onDragEnd,
+  onPointerDragStart,
+  onPointerDragMove,
+  onPointerDragEnd,
+  onPointerDragCancel,
 }: {
   file: WorkbenchFile;
   index: number;
   fileCount: number;
+  thumbnailPath?: string;
   draggingFileId: string | null;
   dropTarget: FileDropTarget | null;
-  onDragStart: (event: DragEvent<HTMLElement>, fileId: string) => void;
-  onDragOver: (event: DragEvent<HTMLElement>, fileId: string) => void;
-  onDrop: (event: DragEvent<HTMLElement>, fileId: string) => void;
-  onDragEnd: () => void;
+  onPointerDragStart: (event: React.PointerEvent<HTMLElement>, fileId: string) => void;
+  onPointerDragMove: (event: React.PointerEvent<HTMLElement>, fileId: string) => boolean;
+  onPointerDragEnd: (event: React.PointerEvent<HTMLElement>, fileId: string) => boolean;
+  onPointerDragCancel: (event: React.PointerEvent<HTMLElement>, fileId: string) => void;
 }) {
   const ready = file.cacheState === "ready";
+  const thumbnailSrc = localAssetSrc(thumbnailPath);
   const toggleFileExpanded = useWorkbenchStore(
     (state) => state.toggleFileExpanded,
   );
@@ -463,6 +572,58 @@ function FileCard({
   );
   const dropClass =
     dropTarget?.fileId === file.id ? `is-drop-${dropTarget.position}` : "";
+  const clickGuardRef = useRef(false);
+  const activateFile = () => {
+    if (ready) {
+      toggleFileExpanded(file.id);
+      return;
+    }
+    prioritizeFileConversion(file.id);
+  };
+  const handleCardClick = (event: React.MouseEvent<HTMLElement>) => {
+    const target = event.target;
+    if (
+      clickGuardRef.current ||
+      (target instanceof HTMLElement && target.closest("button"))
+    ) {
+      return;
+    }
+    activateFile();
+  };
+  const handleCardKeyDown = (event: React.KeyboardEvent<HTMLElement>) => {
+    if (event.key !== "Enter" && event.key !== " ") {
+      return;
+    }
+    event.preventDefault();
+    activateFile();
+  };
+  const handleCardPointerDown = (event: React.PointerEvent<HTMLElement>) => {
+    const target = event.target;
+    if (
+      event.button !== 0 ||
+      isTextInputTarget(target) ||
+      (target instanceof HTMLElement && target.closest("button"))
+    ) {
+      return;
+    }
+    onPointerDragStart(event, file.id);
+  };
+  const handleCardPointerMove = (event: React.PointerEvent<HTMLElement>) => {
+    if (onPointerDragMove(event, file.id)) {
+      clickGuardRef.current = true;
+    }
+  };
+  const handleCardPointerUp = (event: React.PointerEvent<HTMLElement>) => {
+    if (onPointerDragEnd(event, file.id)) {
+      clickGuardRef.current = true;
+      window.setTimeout(() => {
+        clickGuardRef.current = false;
+      }, 0);
+    }
+  };
+  const handleCardPointerCancel = (event: React.PointerEvent<HTMLElement>) => {
+    onPointerDragCancel(event, file.id);
+  };
 
   return (
     <article
@@ -473,22 +634,54 @@ function FileCard({
         draggingFileId === file.id ? "is-dragging" : "",
         dropClass,
       ].join(" ")}
-      draggable
-      onDragStart={(event) => onDragStart(event, file.id)}
-      onDragOver={(event) => onDragOver(event, file.id)}
-      onDrop={(event) => onDrop(event, file.id)}
-      onDragEnd={onDragEnd}
+      tabIndex={0}
+      data-file-card-id={file.id}
+      onClick={handleCardClick}
+      onKeyDown={handleCardKeyDown}
+      onPointerDown={handleCardPointerDown}
+      onPointerMove={handleCardPointerMove}
+      onPointerUp={handleCardPointerUp}
+      onPointerCancel={handleCardPointerCancel}
+      title={
+        ready
+          ? file.expanded
+            ? "クリックでページタイムラインを閉じる"
+            : "クリックでページタイムラインを展開"
+          : "クリックでPDF化を優先"
+      }
     >
       <div className="file-card-topline">
         <span className={`kind-badge kind-${file.kind}`}>{kindLabel(file.kind)}</span>
-        <span className="drag-handle" title="ドラッグで順序変更">
-          <ArrowDown size={14} />
-          <ArrowUp size={14} />
-        </span>
+        <div className="file-order-controls" aria-label="ファイル順序">
+          <button
+            className="order-button"
+            disabled={index === 0}
+            onClick={() => moveFile(file.id, -1)}
+            title="前へ移動"
+            type="button"
+          >
+            <ArrowUp size={14} />
+          </button>
+          <button
+            className="order-button"
+            disabled={index === fileCount - 1}
+            onClick={() => moveFile(file.id, 1)}
+            title="後ろへ移動"
+            type="button"
+          >
+            <ArrowDown size={14} />
+          </button>
+        </div>
       </div>
       <div className="file-preview">
-        <div className="preview-paper">
-          {ready ? <FileText size={32} /> : <Loader2 size={32} />}
+        <div className={["preview-paper", thumbnailSrc ? "has-thumbnail" : ""].join(" ")}>
+          {thumbnailSrc ? (
+            <img className="file-thumbnail" src={thumbnailSrc} alt="" draggable={false} />
+          ) : ready ? (
+            <FileText size={32} />
+          ) : (
+            <Loader2 size={32} />
+          )}
           <span>{index + 1}</span>
         </div>
         {file.cacheState === "converting" && (
@@ -546,60 +739,164 @@ function FileCard({
 
 function FileStrip() {
   const files = useWorkbenchStore((state) => state.files);
+  const pagesByFile = useWorkbenchStore((state) => state.pagesByFile);
   const moveFileToIndex = useWorkbenchStore((state) => state.moveFileToIndex);
   const [draggingFileId, setDraggingFileId] = useState<string | null>(null);
   const [dropTarget, setDropTarget] = useState<FileDropTarget | null>(null);
+  const [dragPreview, setDragPreview] = useState<FileDragPreview | null>(null);
+  const pointerDragRef = useRef<FilePointerDragRef | null>(null);
 
-  const positionFromEvent = (
-    event: DragEvent<HTMLElement>,
-  ): FileDropTarget["position"] => {
-    const rect = event.currentTarget.getBoundingClientRect();
-    return event.clientX > rect.left + rect.width / 2 ? "after" : "before";
-  };
+  const firstThumbnailPath = (fileId: string) =>
+    pagesByFile[fileId]?.find((page) => Boolean(page.thumbnailPath))?.thumbnailPath;
 
-  const handleDragStart = (event: DragEvent<HTMLElement>, fileId: string) => {
-    setDraggingFileId(fileId);
-    event.dataTransfer.effectAllowed = "move";
-    event.dataTransfer.setData("application/pdf-workbench-file", fileId);
-    event.dataTransfer.setData("text/plain", fileId);
-  };
+  const fileDropTargetFromPoint = (
+    clientX: number,
+    clientY: number,
+  ): FileDropTarget | null => {
+    const cards = Array.from(
+      document.querySelectorAll<HTMLElement>("[data-file-card-id]"),
+    );
+    if (cards.length === 0) {
+      return null;
+    }
 
-  const handleDragOver = (event: DragEvent<HTMLElement>, fileId: string) => {
-    const hasWorkbenchFile =
-      draggingFileId ||
-      Array.from(event.dataTransfer.types).includes(
-        "application/pdf-workbench-file",
+    const hitCard = cards.find((card) => {
+      const rect = card.getBoundingClientRect();
+      return (
+        clientX >= rect.left &&
+        clientX <= rect.right &&
+        clientY >= rect.top &&
+        clientY <= rect.bottom
       );
-    if (!hasWorkbenchFile) {
-      return;
+    });
+
+    const targetCard =
+      hitCard ??
+      cards.reduce<HTMLElement | null>((closest, card) => {
+        const rect = card.getBoundingClientRect();
+        const centerX = rect.left + rect.width / 2;
+        const centerY = rect.top + rect.height / 2;
+        const distance = Math.hypot(clientX - centerX, clientY - centerY);
+        if (!closest) {
+          card.dataset.pointerDistance = String(distance);
+          return card;
+        }
+        const closestDistance = Number(closest.dataset.pointerDistance ?? Infinity);
+        if (distance < closestDistance) {
+          card.dataset.pointerDistance = String(distance);
+          return card;
+        }
+        return closest;
+      }, null);
+
+    cards.forEach((card) => {
+      delete card.dataset.pointerDistance;
+    });
+
+    if (!targetCard?.dataset.fileCardId) {
+      return null;
     }
-    event.preventDefault();
-    event.dataTransfer.dropEffect = "move";
-    setDropTarget({ fileId, position: positionFromEvent(event) });
+
+    const rect = targetCard.getBoundingClientRect();
+    return {
+      fileId: targetCard.dataset.fileCardId,
+      position: clientX > rect.left + rect.width / 2 ? "after" : "before",
+    };
   };
 
-  const handleDrop = (event: DragEvent<HTMLElement>, fileId: string) => {
-    const sourceFileId =
-      event.dataTransfer.getData("application/pdf-workbench-file") ||
-      draggingFileId;
-    if (!sourceFileId) {
-      return;
-    }
-    event.preventDefault();
-
-    const targetIndex = files.findIndex((file) => file.id === fileId);
-    if (targetIndex >= 0) {
-      const position = positionFromEvent(event);
-      moveFileToIndex(sourceFileId, targetIndex + (position === "after" ? 1 : 0));
-    }
+  const resetPointerDrag = () => {
+    pointerDragRef.current = null;
     setDraggingFileId(null);
     setDropTarget(null);
+    setDragPreview(null);
   };
 
-  const handleDragEnd = () => {
-    setDraggingFileId(null);
-    setDropTarget(null);
+  const handlePointerDragStart = (
+    event: React.PointerEvent<HTMLElement>,
+    fileId: string,
+  ) => {
+    pointerDragRef.current = {
+      fileId,
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      target: null,
+      active: false,
+    };
+    event.currentTarget.setPointerCapture(event.pointerId);
   };
+
+  const handlePointerDragMove = (
+    event: React.PointerEvent<HTMLElement>,
+    fileId: string,
+  ): boolean => {
+    const drag = pointerDragRef.current;
+    if (!drag || drag.fileId !== fileId || drag.pointerId !== event.pointerId) {
+      return false;
+    }
+
+    const distance = Math.hypot(event.clientX - drag.startX, event.clientY - drag.startY);
+    if (!drag.active && distance < 6) {
+      return false;
+    }
+
+    drag.active = true;
+    event.preventDefault();
+    const nextTarget = fileDropTargetFromPoint(event.clientX, event.clientY);
+    drag.target = nextTarget;
+    setDraggingFileId(drag.fileId);
+    setDropTarget(nextTarget);
+    setDragPreview({ fileId: drag.fileId, x: event.clientX, y: event.clientY });
+    return true;
+  };
+
+  const handlePointerDragEnd = (
+    event: React.PointerEvent<HTMLElement>,
+    fileId: string,
+  ): boolean => {
+    const drag = pointerDragRef.current;
+    if (!drag || drag.fileId !== fileId || drag.pointerId !== event.pointerId) {
+      return false;
+    }
+
+    const wasDragging = drag.active;
+    const target = drag.target;
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+
+    resetPointerDrag();
+
+    if (wasDragging && target) {
+      const targetIndex = files.findIndex((file) => file.id === target.fileId);
+      if (targetIndex >= 0) {
+        moveFileToIndex(drag.fileId, targetIndex + (target.position === "after" ? 1 : 0));
+      }
+    }
+
+    return wasDragging;
+  };
+
+  const handlePointerDragCancel = (
+    event: React.PointerEvent<HTMLElement>,
+    fileId: string,
+  ) => {
+    const drag = pointerDragRef.current;
+    if (!drag || drag.fileId !== fileId || drag.pointerId !== event.pointerId) {
+      return;
+    }
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+    resetPointerDrag();
+  };
+
+  const dragPreviewFile = dragPreview
+    ? files.find((file) => file.id === dragPreview.fileId)
+    : undefined;
+  const dragPreviewThumbnail = dragPreviewFile
+    ? localAssetSrc(firstThumbnailPath(dragPreviewFile.id))
+    : undefined;
 
   return (
     <section className="workspace-section">
@@ -611,21 +908,48 @@ function FileStrip() {
         <div className="hint-chip">D&amp;D対応</div>
       </div>
       <div className="file-strip">
-        {files.map((file, index) => (
-          <FileCard
-            file={file}
-            index={index}
-            fileCount={files.length}
-            draggingFileId={draggingFileId}
-            dropTarget={dropTarget}
-            onDragStart={handleDragStart}
-            onDragOver={handleDragOver}
-            onDrop={handleDrop}
-            onDragEnd={handleDragEnd}
-            key={file.id}
-          />
-        ))}
+        {files.length === 0 ? (
+          <div className="empty-file-strip">
+            <Upload size={28} />
+            <strong>PDF / Office ファイルを追加してください</strong>
+            <span>上部のファイル追加、またはこの画面へのドラッグ&ドロップで開始します。</span>
+          </div>
+        ) : (
+          files.map((file, index) => (
+            <FileCard
+              file={file}
+              index={index}
+              fileCount={files.length}
+              thumbnailPath={firstThumbnailPath(file.id)}
+              draggingFileId={draggingFileId}
+              dropTarget={dropTarget}
+              onPointerDragStart={handlePointerDragStart}
+              onPointerDragMove={handlePointerDragMove}
+              onPointerDragEnd={handlePointerDragEnd}
+              onPointerDragCancel={handlePointerDragCancel}
+              key={file.id}
+            />
+          ))
+        )}
       </div>
+      {dragPreview && dragPreviewFile && (
+        <div
+          className="file-drag-ghost"
+          style={{ left: dragPreview.x + 14, top: dragPreview.y + 14 }}
+        >
+          <span className={`kind-badge kind-${dragPreviewFile.kind}`}>
+            {kindLabel(dragPreviewFile.kind)}
+          </span>
+          <div className={["ghost-paper", dragPreviewThumbnail ? "has-thumbnail" : ""].join(" ")}>
+            {dragPreviewThumbnail ? (
+              <img src={dragPreviewThumbnail} alt="" draggable={false} />
+            ) : (
+              <FileText size={22} />
+            )}
+          </div>
+          <strong>{dragPreviewFile.name}</strong>
+        </div>
+      )}
     </section>
   );
 }
@@ -691,28 +1015,36 @@ function PageCard({
   decorations,
   draggingPageId,
   dropTarget,
-  onDragStart,
   onDragOver,
   onDrop,
-  onDragEnd,
+  onPointerDragStart,
+  onPointerDragMove,
+  onPointerDragEnd,
+  onPointerDragCancel,
 }: {
   page: PageItem;
   fileId: string;
   decorations: Decoration[];
   draggingPageId: string | null;
   dropTarget: PageDropTarget | null;
-  onDragStart: (event: DragEvent<HTMLButtonElement>, pageId: string) => void;
   onDragOver: (event: DragEvent<HTMLButtonElement>, pageId: string) => void;
   onDrop: (event: DragEvent<HTMLButtonElement>, pageId: string) => void;
-  onDragEnd: () => void;
+  onPointerDragStart: (event: React.PointerEvent<HTMLButtonElement>, pageId: string) => void;
+  onPointerDragMove: (event: React.PointerEvent<HTMLButtonElement>, pageId: string) => boolean;
+  onPointerDragEnd: (event: React.PointerEvent<HTMLButtonElement>, pageId: string) => boolean;
+  onPointerDragCancel: (event: React.PointerEvent<HTMLButtonElement>, pageId: string) => void;
 }) {
   const activeTool = useWorkbenchStore((state) => state.activeTool);
   const selectPage = useWorkbenchStore((state) => state.selectPage);
   const togglePageExcluded = useWorkbenchStore((state) => state.togglePageExcluded);
   const togglePageSplit = useWorkbenchStore((state) => state.togglePageSplit);
   const placeDecoration = useWorkbenchStore((state) => state.placeDecoration);
+  const clickGuardRef = useRef(false);
 
   const applyTool = (event?: React.MouseEvent) => {
+    if (clickGuardRef.current) {
+      return;
+    }
     if (activeTool === "trash") {
       togglePageExcluded(page.id);
       return;
@@ -727,6 +1059,28 @@ function PageCard({
     }
     selectPage(page.id, Boolean(event?.shiftKey || event?.ctrlKey || event?.metaKey));
   };
+  const handlePointerDown = (event: React.PointerEvent<HTMLButtonElement>) => {
+    if (activeTool !== "select" || event.button !== 0) {
+      return;
+    }
+    onPointerDragStart(event, page.id);
+  };
+  const handlePointerMove = (event: React.PointerEvent<HTMLButtonElement>) => {
+    if (onPointerDragMove(event, page.id)) {
+      clickGuardRef.current = true;
+    }
+  };
+  const handlePointerUp = (event: React.PointerEvent<HTMLButtonElement>) => {
+    if (onPointerDragEnd(event, page.id)) {
+      clickGuardRef.current = true;
+      window.setTimeout(() => {
+        clickGuardRef.current = false;
+      }, 0);
+    }
+  };
+  const handlePointerCancel = (event: React.PointerEvent<HTMLButtonElement>) => {
+    onPointerDragCancel(event, page.id);
+  };
 
   return (
     <button
@@ -738,14 +1092,16 @@ function PageCard({
         draggingPageId === page.id ? "is-dragging" : "",
         dropTarget?.pageId === page.id ? `is-drop-${dropTarget.position}` : "",
       ].join(" ")}
-      draggable
       onClick={applyTool}
-      onDragStart={(event) => onDragStart(event, page.id)}
       onDragOver={(event) => onDragOver(event, page.id)}
       onDrop={(event) => onDrop(event, page.id)}
-      onDragEnd={onDragEnd}
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}
+      onPointerCancel={handlePointerCancel}
       type="button"
       data-file-id={fileId}
+      data-page-id={page.id}
     >
       <div className={["page-sheet", page.thumbnailPath ? "has-thumbnail" : ""].join(" ")}>
         {page.thumbnailPath && (
@@ -775,7 +1131,13 @@ function PageCard({
   );
 }
 
-function DecorationPanel({ decoration }: { decoration?: Decoration }) {
+function DecorationPanel({
+  decoration,
+  onClose,
+}: {
+  decoration?: Decoration;
+  onClose: () => void;
+}) {
   const updateDecoration = useWorkbenchStore((state) => state.updateDecoration);
   const removeDecoration = useWorkbenchStore((state) => state.removeDecoration);
 
@@ -786,8 +1148,13 @@ function DecorationPanel({ decoration }: { decoration?: Decoration }) {
   return (
     <div className="floating-panel decoration-panel">
       <div className="floating-title">
-        <Hash size={16} />
-        {decorationLabel(decoration.kind)}
+        <span>
+          <Hash size={16} />
+          {decorationLabel(decoration.kind)}
+        </span>
+        <button className="panel-close" onClick={onClose} aria-label="設定を隠す">
+          <X size={14} />
+        </button>
       </div>
       <label>
         対象
@@ -870,13 +1237,16 @@ function DecorationPanel({ decoration }: { decoration?: Decoration }) {
   );
 }
 
-function SearchPanel() {
+function SearchPanel({ onClose }: { onClose: () => void }) {
   const searchReplace = useWorkbenchStore((state) => state.searchReplace);
   const updateSearchReplace = useWorkbenchStore((state) => state.updateSearchReplace);
   const applySearchReplace = useWorkbenchStore((state) => state.applySearchReplace);
 
   return (
     <div className="floating-panel tool-panel">
+      <button className="panel-close panel-close-floating" onClick={onClose} aria-label="設定を隠す">
+        <X size={14} />
+      </button>
       <div className="floating-title">
         <FileSearch size={16} />
         検索置換
@@ -906,12 +1276,15 @@ function SearchPanel() {
   );
 }
 
-function SecurityPanel() {
+function SecurityPanel({ onClose }: { onClose: () => void }) {
   const security = useWorkbenchStore((state) => state.security);
   const updateSecurity = useWorkbenchStore((state) => state.updateSecurity);
 
   return (
     <div className="floating-panel tool-panel">
+      <button className="panel-close panel-close-floating" onClick={onClose} aria-label="設定を隠す">
+        <X size={14} />
+      </button>
       <div className="floating-title">
         <Shield size={16} />
         鍵
@@ -946,13 +1319,16 @@ function SecurityPanel() {
   );
 }
 
-function InfoPanel({ file }: { file?: WorkbenchFile }) {
+function InfoPanel({ file, onClose }: { file?: WorkbenchFile; onClose: () => void }) {
   if (!file) {
     return null;
   }
 
   return (
     <div className="floating-panel tool-panel">
+      <button className="panel-close panel-close-floating" onClick={onClose} aria-label="設定を隠す">
+        <X size={14} />
+      </button>
       <div className="floating-title">
         <Eye size={16} />
         情報
@@ -991,6 +1367,12 @@ function ExpandedTimeline() {
   );
   const [draggingPageId, setDraggingPageId] = useState<string | null>(null);
   const [dropTarget, setDropTarget] = useState<PageDropTarget | null>(null);
+  const [settingsPanelHidden, setSettingsPanelHidden] = useState(false);
+  const pagePointerDragRef = useRef<PagePointerDragRef | null>(null);
+
+  useEffect(() => {
+    setSettingsPanelHidden(false);
+  }, [activeTool, selectedDecorationId, expandedFile?.id]);
 
   const positionFromEvent = (
     event: DragEvent<HTMLButtonElement>,
@@ -999,24 +1381,133 @@ function ExpandedTimeline() {
     return event.clientX > rect.left + rect.width / 2 ? "after" : "before";
   };
 
-  const handlePageDragStart = (event: DragEvent<HTMLButtonElement>, pageId: string) => {
-    setDraggingPageId(pageId);
-    event.dataTransfer.effectAllowed = "move";
-    event.dataTransfer.setData("application/pdf-workbench-page", pageId);
+  const pageDropTargetFromPoint = (
+    clientX: number,
+    clientY: number,
+  ): PageDropTarget | null => {
+    const cards = Array.from(document.querySelectorAll<HTMLElement>("[data-page-id]"));
+    if (cards.length === 0) {
+      return null;
+    }
+
+    const hitCard = cards.find((card) => {
+      const rect = card.getBoundingClientRect();
+      return (
+        clientX >= rect.left &&
+        clientX <= rect.right &&
+        clientY >= rect.top &&
+        clientY <= rect.bottom
+      );
+    });
+    if (!hitCard?.dataset.pageId) {
+      return null;
+    }
+
+    const rect = hitCard.getBoundingClientRect();
+    return {
+      pageId: hitCard.dataset.pageId,
+      position: clientX > rect.left + rect.width / 2 ? "after" : "before",
+    };
+  };
+
+  const resetPagePointerDrag = () => {
+    pagePointerDragRef.current = null;
+    setDraggingPageId(null);
+    setDropTarget(null);
+  };
+
+  const handlePagePointerDragStart = (
+    event: React.PointerEvent<HTMLButtonElement>,
+    pageId: string,
+  ) => {
+    pagePointerDragRef.current = {
+      pageId,
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      target: null,
+      active: false,
+    };
+    event.currentTarget.setPointerCapture(event.pointerId);
+  };
+
+  const handlePagePointerDragMove = (
+    event: React.PointerEvent<HTMLButtonElement>,
+    pageId: string,
+  ): boolean => {
+    const drag = pagePointerDragRef.current;
+    if (!drag || drag.pageId !== pageId || drag.pointerId !== event.pointerId) {
+      return false;
+    }
+
+    const distance = Math.hypot(event.clientX - drag.startX, event.clientY - drag.startY);
+    if (!drag.active && distance < 6) {
+      return false;
+    }
+
+    drag.active = true;
+    event.preventDefault();
+    const nextTarget = pageDropTargetFromPoint(event.clientX, event.clientY);
+    drag.target = nextTarget;
+    setDraggingPageId(drag.pageId);
+    setDropTarget(nextTarget);
+    return true;
+  };
+
+  const handlePagePointerDragEnd = (
+    event: React.PointerEvent<HTMLButtonElement>,
+    pageId: string,
+  ): boolean => {
+    const drag = pagePointerDragRef.current;
+    if (!drag || drag.pageId !== pageId || drag.pointerId !== event.pointerId) {
+      return false;
+    }
+
+    const wasDragging = drag.active;
+    const target = drag.target;
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+
+    resetPagePointerDrag();
+
+    if (wasDragging && target && expandedFile) {
+      const targetIndex = pages.findIndex((page) => page.id === target.pageId);
+      if (targetIndex >= 0) {
+        movePageToIndex(
+          drag.pageId,
+          expandedFile.id,
+          targetIndex + (target.position === "after" ? 1 : 0),
+        );
+      }
+    }
+
+    return wasDragging;
+  };
+
+  const handlePagePointerDragCancel = (
+    event: React.PointerEvent<HTMLButtonElement>,
+    pageId: string,
+  ) => {
+    const drag = pagePointerDragRef.current;
+    if (!drag || drag.pageId !== pageId || drag.pointerId !== event.pointerId) {
+      return;
+    }
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+    resetPagePointerDrag();
   };
 
   const handlePageDragOver = (event: DragEvent<HTMLButtonElement>, pageId: string) => {
-    const hasPage = Array.from(event.dataTransfer.types).includes(
-      "application/pdf-workbench-page",
-    );
     const hasTool = Array.from(event.dataTransfer.types).includes(
       "application/pdf-workbench-tool",
     );
-    if (!hasPage && !hasTool) {
+    if (!hasTool) {
       return;
     }
     event.preventDefault();
-    event.dataTransfer.dropEffect = hasTool ? "copy" : "move";
+    event.dataTransfer.dropEffect = "copy";
     setDropTarget({ pageId, position: positionFromEvent(event) });
   };
 
@@ -1035,31 +1526,29 @@ function ExpandedTimeline() {
       return;
     }
 
-    const sourcePageId =
-      event.dataTransfer.getData("application/pdf-workbench-page") || draggingPageId;
-    if (sourcePageId && expandedFile) {
-      const targetIndex = pages.findIndex((page) => page.id === pageId);
-      const position = positionFromEvent(event);
-      movePageToIndex(
-        sourcePageId,
-        expandedFile.id,
-        targetIndex + (position === "after" ? 1 : 0),
-      );
-    }
     setDraggingPageId(null);
     setDropTarget(null);
   };
 
   const activePanel =
     activeTool === "search-replace" ? (
-      <SearchPanel />
+      <SearchPanel onClose={() => setSettingsPanelHidden(true)} />
     ) : activeTool === "lock" ? (
-      <SecurityPanel />
+      <SecurityPanel onClose={() => setSettingsPanelHidden(true)} />
     ) : activeTool === "info" ? (
-      <InfoPanel file={expandedFile ?? files[0]} />
+      <InfoPanel file={expandedFile ?? files[0]} onClose={() => setSettingsPanelHidden(true)} />
     ) : (
-      <DecorationPanel decoration={activeDecoration} />
+      <DecorationPanel
+        decoration={activeDecoration}
+        onClose={() => setSettingsPanelHidden(true)}
+      />
     );
+  const hasActivePanel = Boolean(
+    activeTool === "search-replace" ||
+      activeTool === "lock" ||
+      activeTool === "info" ||
+      activeDecoration,
+  );
 
   return (
     <section className="workspace-section page-editor">
@@ -1095,13 +1584,12 @@ function ExpandedTimeline() {
               decorations={decorations}
               draggingPageId={draggingPageId}
               dropTarget={dropTarget}
-              onDragStart={handlePageDragStart}
               onDragOver={handlePageDragOver}
               onDrop={handlePageDrop}
-              onDragEnd={() => {
-                setDraggingPageId(null);
-                setDropTarget(null);
-              }}
+              onPointerDragStart={handlePagePointerDragStart}
+              onPointerDragMove={handlePagePointerDragMove}
+              onPointerDragEnd={handlePagePointerDragEnd}
+              onPointerDragCancel={handlePagePointerDragCancel}
               key={page.id}
             />
           ))
@@ -1110,7 +1598,13 @@ function ExpandedTimeline() {
         )}
       </div>
 
-      {pages.length > 0 && activePanel}
+      {pages.length > 0 && !settingsPanelHidden && activePanel}
+      {pages.length > 0 && settingsPanelHidden && hasActivePanel && (
+        <button className="floating-panel-reopen" onClick={() => setSettingsPanelHidden(false)}>
+          <BadgeInfo size={15} />
+          設定
+        </button>
+      )}
     </section>
   );
 }
@@ -1141,7 +1635,8 @@ function OutputBar({
     cancelExportJob();
   };
   const pendingCount = files.filter((file) =>
-    ["queued", "converting", "stale"].includes(file.cacheState),
+    ["queued", "converting", "stale"].includes(file.cacheState) &&
+    !(file.sourcePath?.startsWith("sample://") || file.sourcePath?.startsWith("session://")),
   ).length;
   const progressWidth =
     exportJob.status === "running" || exportJob.status === "completed"
@@ -1194,6 +1689,109 @@ function OutputBar({
         </button>
       </div>
     </footer>
+  );
+}
+
+function ExportPreviewModal({
+  open,
+  onClose,
+  onConfirm,
+}: {
+  open: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+}) {
+  const files = useWorkbenchStore((state) => state.files);
+  const pagesByFile = useWorkbenchStore((state) => state.pagesByFile);
+  const outputPlan = useWorkbenchStore((state) => state.outputPlan);
+  const decorations = useWorkbenchStore((state) => state.decorations);
+  const exportJob = useWorkbenchStore((state) => state.exportJob);
+
+  if (!open) {
+    return null;
+  }
+
+  const groups = buildExportPreviewGroups(files, pagesByFile, outputPlan);
+  const pendingFiles = files.filter(
+    (file) =>
+      !file.excluded && ["queued", "converting", "stale"].includes(file.cacheState),
+  );
+
+  return (
+    <div className="modal-backdrop" role="presentation">
+      <section className="export-preview-modal" role="dialog" aria-modal="true" aria-label="書き出しプレビュー">
+        <div className="modal-heading">
+          <span>
+            <Eye size={18} />
+            書き出しプレビュー
+          </span>
+          <button className="icon-button" onClick={onClose} aria-label="プレビューを閉じる">
+            <X size={18} />
+          </button>
+        </div>
+
+        <div className="preview-summary-row">
+          <span>{outputPlan.outputCount}ファイル</span>
+          <span>{outputPlan.activePageCount}ページ</span>
+          <span>除外 {outputPlan.excludedPageCount}</span>
+          <span>分割 {outputPlan.splitCount}</span>
+          <span>装飾 {decorations.length}</span>
+          <span>{outputPlan.encrypted ? "暗号化あり" : "暗号化なし"}</span>
+        </div>
+
+        {pendingFiles.length > 0 && (
+          <div className="preview-warning">
+            未準備のファイルは、書き出し前にバックグラウンドでPDF化してから反映します。
+          </div>
+        )}
+
+        <div className="preview-output-list">
+          {groups.map((group, index) => (
+            <article className="preview-output-group" key={group.name}>
+              <div className="preview-output-heading">
+                <strong>{group.name}</strong>
+                <span>出力 {index + 1} / {group.pages.length}ページ</span>
+              </div>
+              <div className="preview-page-strip">
+                {group.pages.length > 0 ? (
+                  group.pages.map((page) => {
+                    const thumbnailSrc = localAssetSrc(page.thumbnailPath);
+                    return (
+                      <div className="preview-page-card" key={page.id} title={page.fileName}>
+                        <div className="preview-page-paper">
+                          {thumbnailSrc ? (
+                            <img src={thumbnailSrc} alt="" draggable={false} />
+                          ) : (
+                            <FileText size={26} />
+                          )}
+                        </div>
+                        <span>
+                          {kindLabel(page.fileKind)} p{page.pageNumber}
+                        </span>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div className="preview-empty">出力対象ページがありません</div>
+                )}
+              </div>
+            </article>
+          ))}
+        </div>
+
+        <div className="preview-actions">
+          <button onClick={onClose}>戻る</button>
+          <button
+            className="export-button"
+            disabled={exportJob.status === "running" || outputPlan.activePageCount === 0}
+            onClick={onConfirm}
+          >
+            <Upload size={17} />
+            この内容で書き出し
+          </button>
+        </div>
+      </section>
+    </div>
   );
 }
 
@@ -1321,6 +1919,63 @@ export function App() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [deleteSelectedPages, redo, setActiveTool, undo]);
 
+  useEffect(() => {
+    if (!isTauriRuntime()) {
+      return undefined;
+    }
+
+    let disposed = false;
+    let unlisten: (() => void) | undefined;
+
+    getCurrentWebview()
+      .onDragDropEvent((event) => {
+        const payload = event.payload;
+        if (payload.type === "enter" || payload.type === "over") {
+          setDropActive(true);
+          return;
+        }
+
+        if (payload.type === "leave") {
+          setDropActive(false);
+          return;
+        }
+
+        if (payload.type === "drop") {
+          setDropActive(false);
+          if (payload.paths.length === 0) {
+            return;
+          }
+
+          describeInputPaths(payload.paths)
+            .then((files) => addInputFiles(files))
+            .catch((error) =>
+              addLog(
+                "error",
+                `Explorerからドロップされたファイルを読み込めませんでした: ${errorMessage(error)}`,
+              ),
+            );
+        }
+      })
+      .then((unlistenFn) => {
+        if (disposed) {
+          unlistenFn();
+          return;
+        }
+        unlisten = unlistenFn;
+      })
+      .catch((error) =>
+        addLog(
+          "warn",
+          `OSドラッグ&ドロップの待ち受けを開始できませんでした: ${errorMessage(error)}`,
+        ),
+      );
+
+    return () => {
+      disposed = true;
+      unlisten?.();
+    };
+  }, [addInputFiles, addLog]);
+
   const hasFileDrag = (event: DragEvent<HTMLElement>) =>
     Array.from(event.dataTransfer.types).includes("Files");
 
@@ -1343,6 +1998,10 @@ export function App() {
 
   const handleWorkbenchDrop = async (event: DragEvent<HTMLElement>) => {
     if (!event.dataTransfer.files.length) {
+      if (hasFileDrag(event)) {
+        event.preventDefault();
+        setDropActive(false);
+      }
       return;
     }
     event.preventDefault();

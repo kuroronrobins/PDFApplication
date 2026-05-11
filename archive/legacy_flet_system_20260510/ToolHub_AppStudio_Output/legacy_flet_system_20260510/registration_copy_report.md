@@ -1,8 +1,8 @@
 # Registration Copy Report
 
 - app_id: `legacy_flet_system_20260510`
-- top_level_recorded_seconds: `2.648`
-- leaf_recorded_seconds: `2.626`
+- top_level_recorded_seconds: `2.618`
+- leaf_recorded_seconds: `2.617`
 - safety: App Pack structure, required-entry inspection, SHA256 calculation, and manifest update are preserved.
 - backup_strategy: `move_existing_app_directory`
 - backup_safety_note: Existing apps/<app_id> is moved under backups/app_studio before replacement; release/app_manifest.json is copied beside it for manual rollback.
@@ -17,18 +17,16 @@
 
 | Step | Status | Seconds | Detail |
 | --- | --- | ---: | --- |
-| `backup_existing_app_move` | `pass` | 0.003 | strategy=move_existing_app_directory; backup_path=C:\Users\kuroron\Documents\RD\20260426_Toolhub\launcher\src-tauri\target\release\backups\app_studio\20260511_062727\legacy_flet_system_20260510\app; files=359; bytes=73307286 (69.9 MB) |
-| `backup_manifest` | `pass` | 0.001 | path=C:\Users\kuroron\Documents\RD\20260426_Toolhub\launcher\src-tauri\target\release\release\app_manifest.json |
-| `backup_existing_total` | `pass` | 0.025 |  |
+| `backup_existing_total` | `pass` | 0.000 |  |
 | `remove_existing_app` | `pass` | 0.000 | path=C:\Users\kuroron\Documents\RD\20260426_Toolhub\launcher\src-tauri\target\release\apps\legacy_flet_system_20260510 |
-| `copy_final_app_to_apps` | `pass` | 0.372 | files=359; bytes=73307432 (69.9 MB) |
+| `copy_final_app_to_apps` | `pass` | 0.389 | files=359; bytes=73307432 (69.9 MB) |
 | `manifest_update_before_pack` | `pass` | 0.001 | path=C:\Users\kuroron\Documents\RD\20260426_Toolhub\launcher\src-tauri\target\release\release\app_manifest.json |
 | `load_manifest_for_pack` | `pass` | 0.000 | path=C:\Users\kuroron\Documents\RD\20260426_Toolhub\launcher\src-tauri\target\release\release\app_manifest.json |
 | `validate_app_pack_inputs` | `pass` | 0.004 | path=C:\Users\kuroron\Documents\RD\20260426_Toolhub\launcher\src-tauri\target\release\apps\legacy_flet_system_20260510 |
-| `remove_existing_app_pack` | `pass` | 0.006 | path=C:\Users\kuroron\Documents\RD\20260426_Toolhub\launcher\src-tauri\target\release\release\app_packs\legacy_flet_system_20260510-0.1.0.zip |
-| `compress_app_pack` | `pass` | 2.186 | strategy=direct_zip_from_apps_dir; compression=ZIP_DEFLATED; compresslevel=1; policy=balanced_size_speed; entries=360; size_bytes=38357277 (36.6 MB); path=C:\Users\kuroron\Documents\RD\20260426_Toolhub\launcher\src-tauri\target\release\release\app_packs\legacy_flet_system_20260510-0.1.0.zip |
+| `remove_existing_app_pack` | `pass` | 0.000 | path=C:\Users\kuroron\Documents\RD\20260426_Toolhub\launcher\src-tauri\target\release\release\app_packs\legacy_flet_system_20260510-0.1.0.zip |
+| `compress_app_pack` | `pass` | 2.177 | strategy=direct_zip_from_apps_dir; compression=ZIP_DEFLATED; compresslevel=1; policy=balanced_size_speed; entries=360; size_bytes=38357020 (36.6 MB); path=C:\Users\kuroron\Documents\RD\20260426_Toolhub\launcher\src-tauri\target\release\release\app_packs\legacy_flet_system_20260510-0.1.0.zip |
 | `inspect_app_pack_required_entries` | `pass` | 0.002 | path=C:\Users\kuroron\Documents\RD\20260426_Toolhub\launcher\src-tauri\target\release\release\app_packs\legacy_flet_system_20260510-0.1.0.zip |
-| `sha256_app_pack` | `pass` | 0.034 | path=C:\Users\kuroron\Documents\RD\20260426_Toolhub\launcher\src-tauri\target\release\release\app_packs\legacy_flet_system_20260510-0.1.0.zip |
+| `sha256_app_pack` | `pass` | 0.030 | path=C:\Users\kuroron\Documents\RD\20260426_Toolhub\launcher\src-tauri\target\release\release\app_packs\legacy_flet_system_20260510-0.1.0.zip |
 | `manifest_update_after_pack` | `pass` | 0.001 | path=C:\Users\kuroron\Documents\RD\20260426_Toolhub\launcher\src-tauri\target\release\release\app_manifest.json |
-| `package_app_pack_total` | `pass` | 2.234 |  |
-| `copy_pack_to_output_mirror` | `pass` | 0.016 | path=C:\Users\kuroron\Documents\RD\20260215_PDFApplication\archive\legacy_flet_system_20260510\ToolHub_AppStudio_Output\legacy_flet_system_20260510\app_pack |
+| `package_app_pack_total` | `pass` | 2.215 |  |
+| `copy_pack_to_output_mirror` | `pass` | 0.013 | path=C:\Users\kuroron\Documents\RD\20260215_PDFApplication\archive\legacy_flet_system_20260510\ToolHub_AppStudio_Output\legacy_flet_system_20260510\app_pack |

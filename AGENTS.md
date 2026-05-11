@@ -23,6 +23,8 @@ Do not mix old application files back into the new root. Do not build new featur
 - No permanent large right-side settings panel.
 - The app must be a one-screen central workbench.
 - Default workspace view is **one file = one grouped file card**.
+- Production startup workspace must be empty. Do not auto-load demo/sample files on app launch.
+- Demo/mock data may exist only as explicitly invoked development fixtures.
 - Page thumbnails are shown only after a file card is expanded.
 - File-card drag and drop changes merge order.
 - Expanded page drag and drop changes page order and may move pages across file boundaries.

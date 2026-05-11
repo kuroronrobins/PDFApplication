@@ -104,7 +104,7 @@
     "app_studio_policy_id": "normal_python_source_to_frozen_folder_build_env_v3",
     "registration_policy": "user-distribution",
     "repo_root": "C:\\Users\\kuroron\\Documents\\RD\\20260426_Toolhub\\launcher\\src-tauri\\target\\release",
-    "git_commit": "ba7f326",
+    "git_commit": "237cb05",
     "main_py_hash": "ab3f8cc4599d07d19888c93aa253e43ba7bd6978b49923cc590f0a33452a3c82",
     "frozen_folder_builder_hash": "013fd7b68cfb7622a8f4166e34f7885e08b8cb18051d3d98ae034416bdc1f237",
     "argv": [

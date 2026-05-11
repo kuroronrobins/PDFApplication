@@ -1,28 +1,13 @@
 {
   "app_id": "legacy_flet_system_20260510",
-  "top_level_recorded_seconds": 2.648,
-  "leaf_recorded_seconds": 2.626,
+  "top_level_recorded_seconds": 2.618,
+  "leaf_recorded_seconds": 2.617,
   "records": [
-    {
-      "name": "backup_existing_app_move",
-      "status": "pass",
-      "detail": "strategy=move_existing_app_directory; backup_path=C:\\Users\\kuroron\\Documents\\RD\\20260426_Toolhub\\launcher\\src-tauri\\target\\release\\backups\\app_studio\\20260511_062727\\legacy_flet_system_20260510\\app; files=359; bytes=73307286 (69.9 MB)",
-      "backup_path": "C:\\Users\\kuroron\\Documents\\RD\\20260426_Toolhub\\launcher\\src-tauri\\target\\release\\backups\\app_studio\\20260511_062727\\legacy_flet_system_20260510\\app",
-      "file_count": 359,
-      "size_bytes": 73307286,
-      "duration_seconds": 0.003
-    },
-    {
-      "name": "backup_manifest",
-      "status": "pass",
-      "detail": "path=C:\\Users\\kuroron\\Documents\\RD\\20260426_Toolhub\\launcher\\src-tauri\\target\\release\\release\\app_manifest.json",
-      "duration_seconds": 0.001
-    },
     {
       "name": "backup_existing_total",
       "status": "pass",
       "detail": "",
-      "duration_seconds": 0.025
+      "duration_seconds": 0.0
     },
     {
       "name": "remove_existing_app",
@@ -34,7 +19,7 @@
       "name": "copy_final_app_to_apps",
       "status": "pass",
       "detail": "files=359; bytes=73307432 (69.9 MB)",
-      "duration_seconds": 0.372
+      "duration_seconds": 0.389
     },
     {
       "name": "manifest_update_before_pack",
@@ -58,18 +43,18 @@
       "name": "remove_existing_app_pack",
       "status": "pass",
       "detail": "path=C:\\Users\\kuroron\\Documents\\RD\\20260426_Toolhub\\launcher\\src-tauri\\target\\release\\release\\app_packs\\legacy_flet_system_20260510-0.1.0.zip",
-      "duration_seconds": 0.006
+      "duration_seconds": 0.0
     },
     {
       "name": "compress_app_pack",
       "status": "pass",
-      "detail": "strategy=direct_zip_from_apps_dir; compression=ZIP_DEFLATED; compresslevel=1; policy=balanced_size_speed; entries=360; size_bytes=38357277 (36.6 MB); path=C:\\Users\\kuroron\\Documents\\RD\\20260426_Toolhub\\launcher\\src-tauri\\target\\release\\release\\app_packs\\legacy_flet_system_20260510-0.1.0.zip",
+      "detail": "strategy=direct_zip_from_apps_dir; compression=ZIP_DEFLATED; compresslevel=1; policy=balanced_size_speed; entries=360; size_bytes=38357020 (36.6 MB); path=C:\\Users\\kuroron\\Documents\\RD\\20260426_Toolhub\\launcher\\src-tauri\\target\\release\\release\\app_packs\\legacy_flet_system_20260510-0.1.0.zip",
       "entry_count": 360,
-      "size_bytes": 38357277,
+      "size_bytes": 38357020,
       "compression_policy": "balanced_size_speed",
       "compression": "ZIP_DEFLATED",
       "compresslevel": 1,
-      "duration_seconds": 2.186
+      "duration_seconds": 2.177
     },
     {
       "name": "inspect_app_pack_required_entries",
@@ -82,9 +67,9 @@
       "name": "sha256_app_pack",
       "status": "pass",
       "detail": "path=C:\\Users\\kuroron\\Documents\\RD\\20260426_Toolhub\\launcher\\src-tauri\\target\\release\\release\\app_packs\\legacy_flet_system_20260510-0.1.0.zip",
-      "sha256": "b991f1582296db0f0b274618033f35195229ac23ac168e5889b7ce2463007d12",
-      "size_bytes": 38357277,
-      "duration_seconds": 0.034
+      "sha256": "541805a84f648450857e3e68fcfca972323eb6fcb4c8ce1c49f9d1556181ea4f",
+      "size_bytes": 38357020,
+      "duration_seconds": 0.03
     },
     {
       "name": "manifest_update_after_pack",
@@ -96,13 +81,13 @@
       "name": "package_app_pack_total",
       "status": "pass",
       "detail": "",
-      "duration_seconds": 2.234
+      "duration_seconds": 2.215
     },
     {
       "name": "copy_pack_to_output_mirror",
       "status": "pass",
       "detail": "path=C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\archive\\legacy_flet_system_20260510\\ToolHub_AppStudio_Output\\legacy_flet_system_20260510\\app_pack",
-      "duration_seconds": 0.016
+      "duration_seconds": 0.013
     }
   ],
   "strategies": {

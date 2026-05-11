@@ -21,10 +21,12 @@ PDF Workbench は旧 Flet/Python システムを `archive/legacy_flet_system_202
 - Phase 10: 一括書き出しジョブの進捗、キャンセル、詳細ログ、下部バー接続
 - Phase 11: 1366x768/1920x1080スクリーンショット確認、Tauriリリースビルド、npm監査
 - Phase 12: `src-python/pdf_workbench_engine/` worker、Tauri command、UIからのPDF検査/Office変換/サムネイル生成/実PDF書き出し接続
+- Phase 13: 本番起動時の空ワークスペース化、デモデータ隔離、空状態の操作導線
 
 今回の重要な境界:
 
 - 実ファイル処理エンジンはactiveな `src-python/pdf_workbench_engine/` に接続済み。`archive/` 配下は参照専用であり、実行時には直接importしない。
+- 本番起動時にサンプルファイルを自動投入しない。見た目確認用デモデータは明示的に呼び出す開発fixtureとしてのみ扱う。
 - OfficeのPDF化は Microsoft Office COM のみを正式方針とし、LibreOffice fallback は採用しない。
 - 書き出しworkerはNDJSONイベントで進捗をストリーミングし、Tauri側でPython子プロセスを保持してキャンセル時にkillする。
 - 書き出し前のOffice/PDF準備処理はまだ個別同期worker呼び出しが残るため、完全キャンセル対象外である。
@@ -43,18 +45,48 @@ PDF Workbench は旧 Flet/Python システムを `archive/legacy_flet_system_202
 | 1920x1080 スクリーンショット | 成功 |
 | 実PDF worker smoke | 成功、結合/分割/ページ移動/装飾/検索上書き/暗号化を一時PDFで確認 |
 | worker streaming smoke | 成功、NDJSON進捗11イベントとresultを確認 |
+| 空ワークスペース起動確認 | 成功、サンプルファイル非表示、ファイル追加ボタン有効、書き出しボタン無効 |
 
 検証画像:
 
 - `docs/reports/screenshots/2026-05-11-workbench-complete-1366x768.png`
 - `docs/reports/screenshots/2026-05-11-workbench-complete-1920x1080.png`
 - `docs/reports/screenshots/2026-05-11-engine-ui-connected.png`
+- `docs/reports/screenshots/2026-05-11-empty-workspace-startup.png`
+- `docs/reports/screenshots/2026-05-11-file-card-interactions-empty-check.png`
+- `docs/reports/screenshots/2026-05-11-pointer-dnd-thumbnail-config-empty-check.png`
+- `docs/reports/screenshots/2026-05-12-empty-workbench-1366x768.png`
+- `docs/reports/screenshots/2026-05-12-file-card-thumbnail-density-1366x768.png`
+- `docs/reports/screenshots/2026-05-12-export-preview-modal-1366x768.png`
+- `docs/reports/screenshots/2026-05-12-floating-panel-hidden-1366x768.png`
 
 配布物:
 
 - `src-tauri/target/release/pdf-workbench.exe`
 - `src-tauri/target/release/bundle/msi/PDF Workbench_0.1.0_x64_en-US.msi`
 - `src-tauri/target/release/bundle/nsis/PDF Workbench_0.1.0_x64-setup.exe`
+
+## 2026-05-12 操作性補強
+
+実装済み:
+
+- Tauri v2 の `getCurrentWebview().onDragDropEvent` を利用し、Explorer からアプリへ落としたファイルパスを `describe_input_files` に渡す経路を追加。
+- ファイル追加の複数選択を明示し、ブラウザ検証時も複数ファイル投入を確認。
+- 装飾、検索、鍵、情報の浮動設定パネルに閉じる操作を追加。閉じた後は小さな「設定」ボタンで再表示できる。
+- ファイルカード幅は維持し、ファイル単位サムネイルを拡大して内容を確認しやすくした。
+- 書き出し前のプレビューモーダルを追加し、出力ファイル単位のページ並び、除外、分割、装飾、暗号化状態を確認してから実行できるようにした。
+
+検証:
+
+- `npm run typecheck`: 成功
+- `npm run build`: sandbox 内では `EPERM`、外部実行で成功
+- `npm run tauri build`: sandbox 内では `EPERM`、外部実行で成功
+- headless Chromium CDP で 1366x768 の空状態、複数ファイル追加後、書き出しプレビュー、設定パネル非表示を確認
+
+残る確認:
+
+- Tauri 実機上で Explorer からの手動ファイルドロップを確認する。
+- プレビューから実PDF書き出しまでのOffice混在E2Eを確認する。
 
 ## 実装方針
 
@@ -322,6 +354,26 @@ PDF Workbench は旧 Flet/Python システムを `archive/legacy_flet_system_202
 - Office COM実機変換検証
 - Python runtime/dependency同梱方式の確定
 - 大容量PDFでの遅延サムネイル生成
+
+### Phase 13: 空起動と操作導線
+
+状態: 完了
+
+目的: アプリ起動直後に見た目確認用サンプルが表示される状態をやめ、ユーザーが実ファイル追加から作業を開始できる状態にする。
+
+実装済み:
+
+- 本番初期状態を空のワークスペースへ変更
+- 初期ファイル、初期ページ、初期装飾、初期検索条件、初期ログの自動投入を停止
+- 空のファイル順序エリアに追加/ドロップ開始の空状態を表示
+- 書き出し対象ページが0件のとき、書き出しボタンを無効化
+- ファイル追加キャンセル時のログ表示
+- 起動直後にサンプルファイルが存在しないことをブラウザで確認
+
+残る改善:
+
+- Tauri実機でPDFファイル追加から書き出しまでの操作録画/E2E確認
+- 明示的な開発用デモ読み込みコマンドが必要かどうかの判断
 
 ## 次に着手する作業
 
