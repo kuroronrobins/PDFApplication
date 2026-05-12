@@ -62,6 +62,13 @@ export type AlphaLicenseStatus = {
   message?: string;
 };
 
+export type E2eBootstrapInfo = {
+  enabled: boolean;
+  files: string[];
+  outputPath?: string;
+  autoExport: boolean;
+};
+
 export type InspectPdfResult = {
   path: string;
   pageCount: number;
@@ -123,6 +130,26 @@ export async function checkAlphaLicense(): Promise<AlphaLicenseStatus> {
   }
 
   return invoke<AlphaLicenseStatus>("check_alpha_license");
+}
+
+export async function getE2eBootstrap(): Promise<E2eBootstrapInfo> {
+  if (!isTauriRuntime()) {
+    return {
+      enabled: false,
+      files: [],
+      autoExport: false,
+    };
+  }
+
+  return invoke<E2eBootstrapInfo>("get_e2e_bootstrap");
+}
+
+export async function writeE2eResult(payload: Record<string, unknown>): Promise<void> {
+  if (!isTauriRuntime()) {
+    return;
+  }
+
+  await invoke("write_e2e_result", { payload });
 }
 
 export async function runProcessingEngine(

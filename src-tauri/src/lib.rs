@@ -34,6 +34,15 @@ struct AlphaLicenseInfo {
     message: String,
 }
 
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct E2eBootstrapInfo {
+    enabled: bool,
+    files: Vec<String>,
+    output_path: Option<String>,
+    auto_export: bool,
+}
+
 const ALPHA_EXPIRES_ON: &str = "2026-06-30";
 const ALPHA_EXPIRY_UNIX_SECONDS: u64 = 1_782_831_600; // 2026-07-01 00:00:00 JST.
 
@@ -121,6 +130,61 @@ fn check_alpha_license() -> AlphaLicenseInfo {
             "Alpha license has expired.".to_string()
         },
     }
+}
+
+#[tauri::command]
+fn get_e2e_bootstrap() -> E2eBootstrapInfo {
+    let enabled = std::env::var("PDF_WORKBENCH_E2E")
+        .map(|value| value == "1" || value.eq_ignore_ascii_case("true"))
+        .unwrap_or(false);
+    if !enabled {
+        return E2eBootstrapInfo {
+            enabled: false,
+            files: Vec::new(),
+            output_path: None,
+            auto_export: false,
+        };
+    }
+
+    let files = std::env::var("PDF_WORKBENCH_E2E_FILES")
+        .unwrap_or_default()
+        .split('|')
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(ToString::to_string)
+        .collect();
+    let output_path = std::env::var("PDF_WORKBENCH_E2E_OUTPUT")
+        .ok()
+        .filter(|value| !value.trim().is_empty());
+    let auto_export = std::env::var("PDF_WORKBENCH_E2E_AUTORUN")
+        .map(|value| value == "1" || value.eq_ignore_ascii_case("true"))
+        .unwrap_or(false);
+
+    E2eBootstrapInfo {
+        enabled,
+        files,
+        output_path,
+        auto_export,
+    }
+}
+
+#[tauri::command]
+fn write_e2e_result(payload: Value) -> Result<(), String> {
+    let enabled = std::env::var("PDF_WORKBENCH_E2E")
+        .map(|value| value == "1" || value.eq_ignore_ascii_case("true"))
+        .unwrap_or(false);
+    if !enabled {
+        return Err("E2E bootstrap is not enabled.".to_string());
+    }
+
+    let path = std::env::var("PDF_WORKBENCH_E2E_DONE")
+        .map_err(|_| "PDF_WORKBENCH_E2E_DONE is not set.".to_string())?;
+    let target = PathBuf::from(path);
+    if let Some(parent) = target.parent() {
+        std::fs::create_dir_all(parent).map_err(|error| error.to_string())?;
+    }
+    let text = serde_json::to_string_pretty(&payload).map_err(|error| error.to_string())?;
+    std::fs::write(target, text).map_err(|error| error.to_string())
 }
 
 #[tauri::command]
@@ -278,6 +342,8 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             describe_input_files,
             check_alpha_license,
+            get_e2e_bootstrap,
+            write_e2e_result,
             prepare_cache_session,
             cleanup_cache_session,
             run_processing_engine,

@@ -46,10 +46,13 @@ import {
   checkAlphaLicense,
   cleanupCacheSession,
   completeStartup,
+  getE2eBootstrap,
   openOutputPath,
   prepareCacheSession,
   revealOutputPath,
+  writeE2eResult,
   type AlphaLicenseStatus,
+  type E2eBootstrapInfo,
 } from "./features/workbench/backend";
 import {
   cancelCurrentExportWithEngine,
@@ -2395,6 +2398,8 @@ export function App() {
   const [dropActive, setDropActive] = useState(false);
   const [logOpen, setLogOpen] = useState(false);
   const [alphaLicense, setAlphaLicense] = useState<AlphaLicenseStatus | null>(null);
+  const [e2eBootstrap, setE2eBootstrap] = useState<E2eBootstrapInfo | null>(null);
+  const e2eStartedRef = useRef(false);
   const addInputFiles = useWorkbenchStore((state) => state.addInputFiles);
   const addLog = useWorkbenchStore((state) => state.addLog);
   const undo = useWorkbenchStore((state) => state.undo);
@@ -2445,6 +2450,29 @@ export function App() {
   }, [addLog]);
 
   useEffect(() => {
+    let disposed = false;
+    getE2eBootstrap()
+      .then((bootstrap) => {
+        if (!disposed) {
+          setE2eBootstrap(bootstrap);
+          if (bootstrap.enabled) {
+            addLog("info", "E2E起動設定を検出しました。");
+          }
+        }
+      })
+      .catch((error) => {
+        addLog("warn", `E2E起動設定を確認できませんでした: ${errorMessage(error)}`);
+        if (!disposed) {
+          setE2eBootstrap({ enabled: false, files: [], autoExport: false });
+        }
+      });
+
+    return () => {
+      disposed = true;
+    };
+  }, [addLog]);
+
+  useEffect(() => {
     if (!alphaLicense) {
       return undefined;
     }
@@ -2475,6 +2503,119 @@ export function App() {
       }
     };
   }, [addLog, alphaLicense, setCacheSession]);
+
+  useEffect(() => {
+    if (
+      !alphaLicense?.valid ||
+      !e2eBootstrap?.enabled ||
+      !e2eBootstrap.autoExport ||
+      !cacheSession.path ||
+      e2eStartedRef.current
+    ) {
+      return;
+    }
+
+    const sessionPath = cacheSession.path;
+    e2eStartedRef.current = true;
+
+    const serializeE2eState = () => {
+      const state = useWorkbenchStore.getState();
+      return {
+        files: state.files.map((file) => ({
+          id: file.id,
+          name: file.name,
+          kind: file.kind,
+          pageCount: file.pageCount,
+          cacheState: file.cacheState,
+          engineState: file.engineState,
+          errorMessage: file.errorMessage,
+        })),
+        outputPlan: state.outputPlan,
+        exportJob: state.exportJob,
+        lastOutputFiles: state.lastOutputFiles,
+        logs: state.logs.slice(0, 80),
+      };
+    };
+
+    const reportE2e = async (payload: Record<string, unknown>) => {
+      try {
+        await writeE2eResult(payload);
+      } catch (error) {
+        addLog("warn", `E2E結果を書き込めませんでした: ${errorMessage(error)}`);
+      }
+    };
+
+    const runE2e = async () => {
+      const outputPath = e2eBootstrap.outputPath;
+      if (!outputPath) {
+        const message = "PDF_WORKBENCH_E2E_OUTPUT が未設定です。";
+        useWorkbenchStore.getState().failExportJob(message);
+        await reportE2e({ status: "error", message, snapshot: serializeE2eState() });
+        return;
+      }
+
+      try {
+        addLog("info", `E2Eファイル投入を開始します: ${e2eBootstrap.files.length}件`);
+        const inputFiles = await describeInputPaths(e2eBootstrap.files);
+        useWorkbenchStore.getState().addInputFiles(inputFiles);
+        useWorkbenchStore.getState().setExportPath(outputPath);
+
+        await processAllPendingEngineFiles(sessionPath);
+
+        const readyState = useWorkbenchStore.getState();
+        const firstFile = readyState.files[0];
+        const firstFilePages = firstFile ? readyState.pagesByFile[firstFile.id] ?? [] : [];
+        const splitTarget = firstFilePages[firstFilePages.length - 1];
+        if (splitTarget && !splitTarget.splitAfter) {
+          useWorkbenchStore.getState().togglePageSplit(splitTarget.id);
+        }
+
+        useWorkbenchStore
+          .getState()
+          .updateDecorationDraft("header", {
+            text: "PDF Workbench E2E",
+            position: "top-left",
+            fontSize: 9,
+          });
+        useWorkbenchStore
+          .getState()
+          .updateDecorationDraft("footer", {
+            text: "{page} / {total}",
+            position: "bottom-right",
+            fontSize: 9,
+          });
+        useWorkbenchStore
+          .getState()
+          .updateDecorationDraft("watermark", {
+            text: "E2E CHECK",
+            position: "center",
+            color: "#d16b6b",
+          });
+        useWorkbenchStore.getState().placeDecoration("header");
+        useWorkbenchStore.getState().placeDecoration("footer");
+        useWorkbenchStore.getState().placeDecoration("watermark");
+
+        resetCurrentExportCancellation();
+        useWorkbenchStore.getState().startExportJob();
+        useWorkbenchStore
+          .getState()
+          .setExportJobProgress(66, "結合", "E2E書き出しを実行中");
+        const result = await exportCurrentWorkspaceWithEngine(outputPath);
+        useWorkbenchStore.getState().completeExportJob(result.outputFiles);
+        await reportE2e({
+          status: "completed",
+          outputFiles: result.outputFiles,
+          snapshot: serializeE2eState(),
+        });
+      } catch (error) {
+        const message = errorMessage(error);
+        useWorkbenchStore.getState().failExportJob(message);
+        await reportE2e({ status: "error", message, snapshot: serializeE2eState() });
+      }
+    };
+
+    void runE2e();
+  }, [addLog, alphaLicense?.valid, cacheSession.path, e2eBootstrap]);
 
   useEffect(() => {
     const timer = window.setInterval(() => {

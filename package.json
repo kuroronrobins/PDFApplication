@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
+    "build:python-runtime": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build-python-runtime.ps1",
+    "build:release": "npm run build:python-runtime && npm run build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "tauri": "tauri"

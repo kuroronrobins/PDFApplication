@@ -1,0 +1,207 @@
+{
+  "outputFiles": [
+    "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\docs\\reports\\e2e\\2026-05-13-small-window-runtime\\outputs\\small-runtime-e2e_001.pdf",
+    "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\docs\\reports\\e2e\\2026-05-13-small-window-runtime\\outputs\\small-runtime-e2e_002.pdf"
+  ],
+  "snapshot": {
+    "exportJob": {
+      "cancellable": false,
+      "completedAt": 1778624787596,
+      "currentStep": "保存",
+      "message": "書き出し完了",
+      "progress": 100,
+      "startedAt": 1778624785310,
+      "status": "completed"
+    },
+    "files": [
+      {
+        "cacheState": "ready",
+        "engineState": "cached",
+        "id": "job_history-mp378w73-0",
+        "kind": "excel",
+        "name": "job_history.xlsx",
+        "pageCount": 7
+      },
+      {
+        "cacheState": "ready",
+        "engineState": "cached",
+        "id": "-003--mp378w73-2",
+        "kind": "powerpoint",
+        "name": "プレゼン資料 (003).pptx",
+        "pageCount": 27
+      },
+      {
+        "cacheState": "ready",
+        "engineState": "cached",
+        "id": "--mp378w73-4",
+        "kind": "word",
+        "name": "生体機械力学１.docx",
+        "pageCount": 7
+      }
+    ],
+    "lastOutputFiles": [
+      "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\docs\\reports\\e2e\\2026-05-13-small-window-runtime\\outputs\\small-runtime-e2e_001.pdf",
+      "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\docs\\reports\\e2e\\2026-05-13-small-window-runtime\\outputs\\small-runtime-e2e_002.pdf"
+    ],
+    "logs": [
+      {
+        "id": "log-1e4c4f0a-ab66-4313-897e-21e42cff401f",
+        "level": "info",
+        "message": "書き出しが完了しました: small-runtime-e2e_001.pdf, small-runtime-e2e_002.pdf",
+        "time": "07:26:27"
+      },
+      {
+        "id": "log-2d7727eb-bec5-4289-a483-8ad2bd4e247a",
+        "level": "info",
+        "message": "一括書き出しジョブを開始しました。出力予定 2ファイル。",
+        "time": "07:26:25"
+      },
+      {
+        "id": "log-5555d5ed-ef97-4b70-beb9-27872ad9f3c3",
+        "level": "info",
+        "message": "E2E CHECK をページへ配置しました。",
+        "time": "07:26:25"
+      },
+      {
+        "id": "log-8cda05ba-c651-4295-8eac-8913b20b725e",
+        "level": "info",
+        "message": "{page} / {total} をページへ配置しました。",
+        "time": "07:26:25"
+      },
+      {
+        "id": "log-24d06072-f6c4-4bb1-b660-26e24defd9c8",
+        "level": "info",
+        "message": "PDF Workbench E2E をページへ配置しました。",
+        "time": "07:26:25"
+      },
+      {
+        "id": "log-31d3b724-84f6-420a-98e6-96dd40262dcc",
+        "level": "info",
+        "message": "生体機械力学１.docx を実PDFとして準備しました。7ページ。",
+        "time": "07:26:25"
+      },
+      {
+        "id": "log-815b5442-c4aa-4138-9bfa-73e0e2a63f2a",
+        "level": "info",
+        "message": "job_history.xlsx を実PDFとして準備しました。7ページ。",
+        "time": "07:26:25"
+      },
+      {
+        "id": "log-5429499c-b202-48c0-b045-b517ad8feec1",
+        "level": "info",
+        "message": "プレゼン資料 (003).pptx を実PDFとして準備しました。27ページ。",
+        "time": "07:26:23"
+      },
+      {
+        "id": "log-e427cd0a-96e2-4770-b715-1c2586015625",
+        "level": "info",
+        "message": "生体機械力学１.docx のサムネイルを生成しています。",
+        "time": "07:26:23"
+      },
+      {
+        "id": "log-e6369939-d7de-4cca-a26c-f6499c0c25fe",
+        "level": "info",
+        "message": "プレゼン資料 (003).pptx のサムネイルを生成しています。",
+        "time": "07:26:20"
+      },
+      {
+        "id": "log-9de82cb7-972a-46ad-8ec7-179d08d00c5b",
+        "level": "info",
+        "message": "job_history.xlsx のサムネイルを生成しています。",
+        "time": "07:26:20"
+      },
+      {
+        "id": "log-ecb22efe-b8ee-4c15-a11f-c151f38da52d",
+        "level": "info",
+        "message": "生体機械力学１.docx のPDF化が完了しました。ページ解析中です。",
+        "time": "07:26:20"
+      },
+      {
+        "id": "log-c53523f6-377c-4a91-82ce-2b607a5c1927",
+        "level": "info",
+        "message": "プレゼン資料 (003).pptx のPDF化が完了しました。ページ解析中です。",
+        "time": "07:26:12"
+      },
+      {
+        "id": "log-f50addd0-a8ea-44e1-a448-b51e090db16c",
+        "level": "info",
+        "message": "job_history.xlsx のPDF化が完了しました。ページ解析中です。",
+        "time": "07:26:12"
+      },
+      {
+        "id": "log-46e33ec1-f5c2-4b4a-a8e8-0e5ec8ed0008",
+        "level": "info",
+        "message": "生体機械力学１.docx のOffice PDF化を開始しました。",
+        "time": "07:25:53"
+      },
+      {
+        "id": "log-57c7faed-5a04-4929-9146-4e73b8e1e4af",
+        "level": "info",
+        "message": "プレゼン資料 (003).pptx のOffice PDF化を開始しました。",
+        "time": "07:25:40"
+      },
+      {
+        "id": "log-951e3410-f581-430c-bb7b-941f6877a684",
+        "level": "info",
+        "message": "job_history.xlsx のOffice PDF化を開始しました。",
+        "time": "07:25:39"
+      },
+      {
+        "id": "log-c51d323b-ea1b-4a25-b5db-ea2d32a24660",
+        "level": "info",
+        "message": "出力先を設定しました: C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\docs\\reports\\e2e\\2026-05-13-small-window-runtime\\outputs\\small-runtime-e2e.pdf",
+        "time": "07:25:39"
+      },
+      {
+        "id": "log-6437baed-46d1-4e5e-bf18-c97fe5c27f3d",
+        "level": "info",
+        "message": "生体機械力学１.docx を追加しました。PDF 化はバックグラウンドで待機します。",
+        "time": "07:25:39"
+      },
+      {
+        "id": "log-7ebc4405-0c41-43c4-99d1-e45511dd79be",
+        "level": "info",
+        "message": "プレゼン資料 (003).pptx を追加しました。PDF 化はバックグラウンドで待機します。",
+        "time": "07:25:39"
+      },
+      {
+        "id": "log-c2ffb569-c745-4ffe-ba2d-cb2ec88d21ca",
+        "level": "info",
+        "message": "job_history.xlsx を追加しました。PDF 化はバックグラウンドで待機します。",
+        "time": "07:25:39"
+      },
+      {
+        "id": "log-ebfe69ce-a2c7-472f-b72a-5c81b20444c9",
+        "level": "info",
+        "message": "E2Eファイル投入を開始します: 3件",
+        "time": "07:25:39"
+      },
+      {
+        "id": "log-d2640b15-bc81-4eff-a0b2-dfabeb309f6e",
+        "level": "info",
+        "message": "セッション一時キャッシュを準備しました: C:\\Users\\kuroron\\AppData\\Local\\Temp\\pdf-workbench-sessions\\session-1778624739285",
+        "time": "07:25:39"
+      },
+      {
+        "id": "log-b32a5e6f-69af-47b6-9d36-62983f406633",
+        "level": "info",
+        "message": "E2E起動設定を検出しました。",
+        "time": "07:25:39"
+      }
+    ],
+    "outputPlan": {
+      "activePageCount": 41,
+      "decorationCount": 3,
+      "encrypted": false,
+      "excludedPageCount": 0,
+      "outputCount": 2,
+      "outputFiles": [
+        "result_001.pdf",
+        "result_002.pdf"
+      ],
+      "searchReplaceCount": 0,
+      "splitCount": 1
+    }
+  },
+  "status": "completed"
+}

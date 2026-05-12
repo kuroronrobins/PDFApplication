@@ -30,7 +30,7 @@ PDF Workbench は旧 Flet/Python システムを `archive/legacy_flet_system_202
 - OfficeのPDF化は Microsoft Office COM のみを正式方針とし、LibreOffice fallback は採用しない。
 - 書き出しworkerはNDJSONイベントで進捗をストリーミングし、Tauri側でPython子プロセスを保持してキャンセル時にkillする。
 - 書き出し前のOffice/PDF準備処理はまだ個別同期worker呼び出しが残るため、完全キャンセル対象外である。
-- Python workerソースはTauri bundle resourceへ含める。Python実行環境と依存ライブラリの完全同梱方式は未確定。
+- Python workerソースとPython実行環境はTauri bundle resourceへ含める。`npm run build:release` が `build/python-runtime/python` を生成し、release exeは外部Python fallbackなしでも動く経路を持つ。
 
 ## 検証結果
 
@@ -392,8 +392,7 @@ PDF Workbench は旧 Flet/Python システムを `archive/legacy_flet_system_202
 残る改善:
 
 - 書き出し前のOffice/PDF準備処理まで含む完全キャンセル
-- Office COM実機変換検証
-- Python runtime/dependency同梱方式の確定
+- 別PCへのNSIS/MSIインストール後のクリーン環境検証
 - 大容量PDFでの遅延サムネイル生成
 
 ### Phase 13: 空起動と操作導線
@@ -422,13 +421,11 @@ PDF Workbench は旧 Flet/Python システムを `archive/legacy_flet_system_202
 
 推奨順:
 
-1. Tauri側にジョブマネージャを作り、workerの進捗/ログをフロントエンドへイベント配信する。
-2. キャンセル時にPython子プロセスを停止し、途中生成ファイルを破棄する。
-3. Microsoft Office COM実機で Word/Excel/PowerPoint 変換を検証する。
-4. Python実行環境と `pypdf` / PyMuPDF / pywin32 の配布方式を決める。
-5. 暗号化PDFの入力パスワード解除フローをUIとして仕上げる。
-6. 大容量PDFでサムネイル生成を遅延/ページ単位にする。
-7. サンプルPDF/OfficeセットでE2E検証を作る。
+1. 書き出し前のOffice/PDF準備処理まで含む完全キャンセルを実装する。
+2. 別PCへNSIS/MSIをインストールし、Officeあり・Python/Node/Rustなしの環境で起動/変換/書き出しを検証する。
+3. Explorerからのドラッグ&ドロップを手動スモークし、必要ならOS D&Dのログと権限を追加調整する。
+4. 暗号化PDFの入力パスワード解除フローをUIとして仕上げる。
+5. 大容量PDFでサムネイル生成を遅延/ページ単位にする。
 
 ### 実処理エンジン方針
 
@@ -652,3 +649,65 @@ Remaining:
 
 - Repeat the same scenario from the Tauri UI/release executable with Explorer drag-and-drop and visible UI logs.
 - Package or document the Python runtime and Office dependency expectations for alpha distribution PCs.
+
+## 2026-05-13 Tauri release UI E2E
+
+Implemented during verification:
+
+- Added an environment-gated E2E bootstrap for the Tauri release executable.
+- `PDF_WORKBENCH_E2E=1` allows a controlled file list, output path, auto-export flag, and result JSON path to be provided by the test harness.
+- Normal startup remains an empty workspace because the bootstrap is inactive unless the explicit E2E environment variable is set.
+
+E2E result:
+
+- `src-tauri/target/release/pdf-workbench.exe` launched successfully.
+- The release UI loaded the three user-provided Office files, converted them through Microsoft Office COM, generated thumbnails, applied header/footer/watermark decorations, inserted one split marker, and exported two PDFs.
+- Final output inspection confirmed 7 pages in output 1 and 34 pages in output 2.
+
+Verification:
+
+- `npm run typecheck`: passed.
+- `cargo check`: passed.
+- `python -m compileall src-python\pdf_workbench_engine`: passed.
+- `npm run tauri build`: passed outside the sandbox.
+- Release executable E2E: passed.
+- Evidence report: `docs/reports/2026-05-13-tauri-release-ui-e2e.md`
+- Screenshot: `docs/reports/screenshots/2026-05-13-tauri-release-ui-e2e.png`
+
+Remaining:
+
+- Manual Explorer drag-and-drop smoke test on the target machine.
+- Clean-machine installer validation on an Office-equipped PC outside this development workspace.
+
+## 2026-05-13 Small-window release build and bundled runtime
+
+Implemented:
+
+- Lowered the main Tauri window minimum from 1180x700 to 860x560.
+- Added responsive compression for the header, tool bar, workbench rows, file cards, page timeline, and bottom output bar so the app stays operable at the smaller minimum.
+- Added `scripts/build-python-runtime.ps1` and `npm run build:release`.
+- Changed the Tauri build resource set to include both `src-python` and `build/python-runtime/python`.
+- Updated the Rust worker launcher so release builds prefer the bundled Python runtime and can disable system-Python fallback with `PDF_WORKBENCH_DISABLE_PYTHON_FALLBACK=1`.
+
+Verification:
+
+- Bundled runtime smoke: `build\python-runtime\python\python.exe -E -s -c "import pypdf,fitz,win32com.client,pythoncom"` passed.
+- Headless Edge layout screenshots were captured at 860x560 and 1366x768.
+- `npm run tauri build` passed and produced:
+  - `src-tauri/target/release/pdf-workbench.exe`
+  - `src-tauri/target/release/bundle/nsis/PDF Workbench_0.1.0_x64-setup.exe`
+  - `src-tauri/target/release/bundle/msi/PDF Workbench_0.1.0_x64_en-US.msi`
+- Release exe E2E passed with `PDF_WORKBENCH_DISABLE_PYTHON_FALLBACK=1` and no `PDF_WORKBENCH_PROJECT_ROOT`, using the three user-provided Office files. The output was split into 7-page and 34-page PDFs.
+
+Evidence:
+
+- Report: `docs/reports/2026-05-13-small-window-runtime-bundle.md`
+- Screenshots:
+  - `docs/reports/screenshots/2026-05-13-small-window-860x560.png`
+  - `docs/reports/screenshots/2026-05-13-small-window-1366x768.png`
+- E2E JSON: `docs/reports/e2e/2026-05-13-small-window-runtime/ui-result.json`
+- E2E output PDFs: `docs/reports/e2e/2026-05-13-small-window-runtime/outputs/`
+
+Remaining:
+
+- Validate the NSIS/MSI installer on a separate clean Windows PC that has Microsoft Office installed but no development Python, Node, or Rust toolchains.

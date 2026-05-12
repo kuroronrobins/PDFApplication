@@ -79,7 +79,7 @@ button:disabled {
   display: grid;
   grid-template-rows: 64px 48px minmax(0, 1fr) 72px;
   height: 100vh;
-  min-width: 1120px;
+  min-width: 0;
   overflow: hidden;
   background:
     linear-gradient(180deg, #f8fafc 0%, #eef2f5 42%),
@@ -195,7 +195,8 @@ button:disabled {
   align-items: center;
   gap: 6px;
   padding: 7px 18px;
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: hidden;
   border-bottom: 1px solid var(--line);
   background: #fbfcfe;
 }
@@ -231,7 +232,7 @@ button:disabled {
 .workbench {
   position: relative;
   display: grid;
-  grid-template-rows: 302px minmax(0, 1fr);
+  grid-template-rows: clamp(212px, 39vh, 302px) minmax(130px, 1fr);
   gap: 12px;
   min-height: 0;
   padding: 12px 16px;
@@ -1874,7 +1875,7 @@ button:disabled {
 
 .output-bar {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(460px, 520px);
+  grid-template-columns: minmax(0, 1fr) minmax(360px, 520px);
   gap: 16px;
   align-items: center;
   padding: 10px 16px;
@@ -2104,8 +2105,45 @@ button:disabled {
 }
 
 @media (max-width: 1240px) {
+  .app-shell {
+    grid-template-rows: 58px 46px minmax(0, 1fr) 66px;
+  }
+
+  .app-bar {
+    gap: 10px;
+    padding-inline: 12px;
+  }
+
+  .brand {
+    min-width: 0;
+  }
+
+  .brand-mark {
+    width: 36px;
+    height: 36px;
+    font-size: 12px;
+  }
+
+  .brand h1 {
+    font-size: 17px;
+  }
+
   .brand p {
     display: none;
+  }
+
+  .app-actions {
+    overflow-x: auto;
+    overflow-y: hidden;
+    justify-content: flex-start;
+    scrollbar-width: thin;
+  }
+
+  .app-actions button,
+  .job-pill {
+    min-height: 32px;
+    padding-inline: 10px;
+    font-size: 12px;
   }
 
   .tool-button span {
@@ -2125,5 +2163,116 @@ button:disabled {
   .tool-panel,
   .decoration-panel {
     width: 198px;
+  }
+}
+
+@media (max-width: 980px), (max-height: 620px) {
+  .app-shell {
+    grid-template-rows: 54px 42px minmax(0, 1fr) 60px;
+  }
+
+  .workbench {
+    grid-template-rows: clamp(184px, 36vh, 238px) minmax(118px, 1fr);
+    gap: 8px;
+    padding: 8px 10px;
+  }
+
+  .workspace-section {
+    border-radius: 8px;
+  }
+
+  .section-heading {
+    gap: 10px;
+    padding: 8px 10px 6px;
+  }
+
+  .section-heading h2 {
+    font-size: 14px;
+  }
+
+  .section-heading p,
+  .hint-chip,
+  .editor-summary span {
+    font-size: 11px;
+  }
+
+  .file-strip {
+    grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+    gap: 8px;
+    padding: 0 10px 10px;
+  }
+
+  .file-card {
+    grid-template-rows: 22px 78px 20px 14px 12px 26px;
+    row-gap: 4px;
+    min-height: 202px;
+    padding: 7px;
+  }
+
+  .file-preview {
+    grid-template-columns: minmax(64px, 1fr) minmax(0, 76px);
+    height: 78px;
+  }
+
+  .preview-paper {
+    width: 64px;
+    height: 76px;
+  }
+
+  .file-preview-side {
+    width: 76px;
+  }
+
+  .file-name {
+    font-size: 13px;
+  }
+
+  .file-card-actions button,
+  .expand-button {
+    height: 26px;
+    font-size: 12px;
+  }
+
+  .page-timeline {
+    grid-template-columns: repeat(12, minmax(64px, 1fr));
+    gap: 7px;
+    margin: 0 12px 12px;
+    padding: 8px 12px 6px;
+  }
+
+  .output-bar {
+    grid-template-columns: minmax(0, 1fr) minmax(280px, 360px);
+    gap: 10px;
+    padding: 8px 10px;
+  }
+
+  .output-title {
+    font-size: 13px;
+  }
+
+  .output-files {
+    gap: 5px;
+    margin-top: 4px;
+    font-size: 11px;
+  }
+
+  .output-files span {
+    height: 22px;
+    padding-inline: 6px;
+  }
+
+  .job-status {
+    gap: 7px;
+  }
+
+  .job-track {
+    width: 120px;
+  }
+
+  .log-drawer-preview {
+    right: 10px;
+    bottom: 68px;
+    width: min(420px, calc(100vw - 20px));
+    max-height: min(420px, calc(100vh - 96px));
   }
 }

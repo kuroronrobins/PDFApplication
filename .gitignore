@@ -17,3 +17,7 @@ __pycache__/
 *.pyc
 src-python/.venv/
 src-python/.pytest_cache/
+build/python-runtime/
+build/python-worker/
+build/python-worker-tmp/
+build/python-worker-spec/

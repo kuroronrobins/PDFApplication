@@ -1,6 +1,6 @@
 # Processing Engine Implementation Plan
 
-更新日: 2026-05-11
+更新日: 2026-05-13
 
 ## 1. 決定事項
 
@@ -35,15 +35,17 @@
 - 書き出しボタンから `export_workspace` を呼び、実PDFの結合/分割/ページ移動/除外/装飾/検索上書き/暗号化を反映する初期経路
 - ページ移動後も元PDFページを参照できる `sourceFileId` の状態保持
 - Tauri bundle resourceとして `src-python` を同梱する設定
+- Tauri bundle resourceとしてリリース用Python runtime/dependency treeを同梱する設定
 - `stream: true` 要求時のNDJSON進捗/結果イベント出力
 - Tauri command `start_processing_engine_job` / `cancel_processing_engine_job`
 - Tauri側のPython子プロセス保持、イベント配信、キャンセル時kill
 - 書き出しUIへのworker進捗反映
+- Tauri UI/リリースexe経由のMicrosoft Office COM実機E2E
+- 外部Python fallback無効時のリリースexe E2E
 
 未完了:
 
-- Tauri UI/リリースexe経由のMicrosoft Office COM実機E2E
-- Python実行環境と依存ライブラリの同梱/インストール方式の確定
+- 別PCへのNSIS/MSIインストール後のクリーン環境検証
 - 大容量PDFでのサムネイル生成負荷対策
 - 書き出し前のOffice/PDF準備処理まで含む完全キャンセル
 
@@ -83,6 +85,42 @@ Office COM変換のactive worker経路を、通常のPDF検査/サムネイル/�
 
 - Office COMはCodexサンドボックス内ではExcelが誤ったメモリ/ディスク不足エラーを返した。実Office変換E2Eはサンドボックス外で実行する必要がある。
 - Tauri UIからのExplorer D&D、UIログ、リリースexe経由の同一E2Eは次の確認対象とする。
+
+### 2026-05-13 Tauri release UI E2E result
+
+The same Office COM scenario was repeated through the generated Tauri release executable with an environment-gated UI bootstrap.
+
+- `job_history.xlsx`: converted through Excel COM and exported through the UI path.
+- User-provided PowerPoint sample: converted through PowerPoint COM and exported through the UI path.
+- User-provided Word sample: converted through Word COM and exported through the UI path.
+- The 41-page workspace exported with one split marker into two PDFs: 7 pages and 34 pages.
+- Final exported PDFs were inspected by `inspect_pdf` and rendered by `render_thumbnails`.
+
+Evidence:
+
+- `docs/reports/2026-05-13-tauri-release-ui-e2e.md`
+- `docs/reports/e2e/2026-05-13-tauri-release-ui/ui-result.json`
+- `docs/reports/e2e/2026-05-13-tauri-release-ui/outputs/`
+
+Remaining notes:
+
+- Manual Explorer drag-and-drop smoke testing is still separate from the controlled release UI E2E bootstrap.
+- A bundled Python runtime path has been added for release builds. Clean-machine installer validation on an Office-equipped PC remains separate from the current development-workspace E2E.
+
+### 2026-05-13 Bundled Python runtime release result
+
+The release build now packages the active Python worker and a copied Python runtime/dependency tree as Tauri resources.
+
+- `npm run build:release` builds `build/python-runtime/python` before the frontend build.
+- The bundled runtime includes Python, `pypdf`, PyMuPDF, and pywin32 modules required for PDF byte processing and Microsoft Office COM conversion.
+- `python_worker.rs` prefers the bundled runtime and supports `PDF_WORKBENCH_DISABLE_PYTHON_FALLBACK=1` to prove the release path is not using a developer-installed Python.
+- The generated release executable completed the Office COM E2E with system-Python fallback disabled and without `PDF_WORKBENCH_PROJECT_ROOT`.
+
+Evidence:
+
+- `docs/reports/2026-05-13-small-window-runtime-bundle.md`
+- `docs/reports/e2e/2026-05-13-small-window-runtime/ui-result.json`
+- `docs/reports/e2e/2026-05-13-small-window-runtime/outputs/`
 
 ## 2. 採用理由
 

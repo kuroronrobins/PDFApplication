@@ -6,7 +6,7 @@
   "build": {
     "beforeDevCommand": "npm run dev",
     "devUrl": "http://localhost:1420",
-    "beforeBuildCommand": "npm run build",
+    "beforeBuildCommand": "npm run build:release",
     "frontendDist": "../dist"
   },
   "app": {
@@ -16,8 +16,8 @@
         "title": "PDF Workbench",
         "width": 1366,
         "height": 768,
-        "minWidth": 1180,
-        "minHeight": 700,
+        "minWidth": 860,
+        "minHeight": 560,
         "resizable": true,
         "visible": false
       },
@@ -50,7 +50,8 @@
     "targets": "all",
     "icon": ["icons/icon.ico", "icons/icon.png"],
     "resources": {
-      "../src-python": "src-python"
+      "../src-python": "src-python",
+      "../build/python-runtime/python": "python"
     }
   }
 }
