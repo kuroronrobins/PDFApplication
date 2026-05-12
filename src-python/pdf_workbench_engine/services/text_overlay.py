@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from ..errors import EngineError
+from .pdf_fonts import PDF_WORKBENCH_FALLBACK_FONT, text_insert_kwargs
 from .pdf_document import open_fitz_document
 
 
@@ -26,7 +27,30 @@ def replace_text_with_overlay(
             if areas:
                 page.apply_redactions()
                 for rect in areas:
-                    page.insert_text((rect.x0, rect.y1 - 2), replace, fontsize=11, color=(0, 0, 0))
+                    try:
+                        page.insert_text(
+                            (rect.x0, rect.y1 - 2),
+                            replace,
+                            fontsize=11,
+                            color=(0, 0, 0),
+                            **text_insert_kwargs(),
+                        )
+                    except Exception:
+                        try:
+                            page.insert_text(
+                                (rect.x0, rect.y1 - 2),
+                                replace,
+                                fontsize=11,
+                                color=(0, 0, 0),
+                                fontname=PDF_WORKBENCH_FALLBACK_FONT,
+                            )
+                        except Exception:
+                            page.insert_text(
+                                (rect.x0, rect.y1 - 2),
+                                replace,
+                                fontsize=11,
+                                color=(0, 0, 0),
+                            )
                 replacements += len(areas)
 
         output_file.parent.mkdir(parents=True, exist_ok=True)

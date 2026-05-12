@@ -1,9 +1,18 @@
 import { create } from "zustand";
 import { buildOutputPlan } from "./outputPlan";
+import {
+  initialDecorations,
+  initialFiles,
+  initialLogs,
+  initialPagesByFile,
+  initialSearchReplace,
+  initialSecurity,
+} from "./sampleData";
 import type {
   CacheState,
   CacheSession,
   Decoration,
+  DecorationDraft,
   DecorationKind,
   DecorationPosition,
   DecorationTarget,
@@ -23,7 +32,8 @@ import type {
 
 type WorkbenchState = WorkbenchSnapshot & {
   cacheSession: CacheSession;
-  exportDirectory?: string;
+  exportPath?: string;
+  lastOutputFiles: string[];
   exportJob: ExportJobState;
   logs: WorkbenchLog[];
   history: WorkbenchSnapshot[];
@@ -31,13 +41,17 @@ type WorkbenchState = WorkbenchSnapshot & {
   outputPlan: OutputPlan;
   canUndo: boolean;
   canRedo: boolean;
+  decorationDrafts: Record<DecorationKind, DecorationDraft>;
   setActiveTool: (tool: ToolId) => void;
+  loadDevelopmentFixture: () => void;
+  updateDecorationDraft: (kind: DecorationKind, patch: Partial<DecorationDraft>) => void;
   setCacheSession: (session: CacheSession) => void;
   addInputFiles: (inputFiles: InputFileInfo[]) => void;
   addLog: (level: WorkbenchLog["level"], message: string) => void;
-  setExportDirectory: (path: string) => void;
+  setExportPath: (path: string) => void;
   toggleFileExpanded: (fileId: string) => void;
   toggleFileExcluded: (fileId: string) => void;
+  removeFile: (fileId: string) => void;
   moveFile: (fileId: string, direction: -1 | 1) => void;
   moveFileToIndex: (fileId: string, insertionIndex: number) => void;
   prioritizeFileConversion: (fileId: string) => void;
@@ -54,6 +68,7 @@ type WorkbenchState = WorkbenchSnapshot & {
       pageCount: number;
       metadata: PdfMetadata;
       thumbnailPaths?: Record<number, string>;
+      previewPaths?: Record<number, string>;
       engineState?: WorkbenchFile["engineState"];
       message?: string;
     },
@@ -69,6 +84,11 @@ type WorkbenchState = WorkbenchSnapshot & {
     kind: DecorationKind,
     pageId?: string,
     position?: DecorationPosition,
+    fileId?: string,
+  ) => void;
+  applyDecorationToTarget: (
+    kind: DecorationKind,
+    target: { pageId?: string; fileId?: string },
   ) => void;
   updateDecoration: (decorationId: string, patch: Partial<Decoration>) => void;
   removeDecoration: (decorationId: string) => void;
@@ -218,6 +238,7 @@ function createPages(
   pageCount: number,
   sourceFileId = fileId,
   thumbnailPaths: Record<number, string> = {},
+  previewPaths: Record<number, string> = {},
 ): PageItem[] {
   return Array.from({ length: pageCount }, (_, index) => ({
     id: `${fileId}-p${index + 1}`,
@@ -226,6 +247,7 @@ function createPages(
     pageNumber: index + 1,
     originalPageNumber: index + 1,
     thumbnailPath: thumbnailPaths[index + 1],
+    previewPath: previewPaths[index + 1],
     excluded: false,
     selected: false,
     splitAfter: false,
@@ -268,8 +290,97 @@ function defaultDecorationPosition(kind: DecorationKind): DecorationPosition {
   }
 }
 
-function defaultDecorationTarget(pageId?: string): DecorationTarget {
-  return pageId ? "selected" : "all";
+function defaultDecorationColor(kind: DecorationKind): string {
+  return kind === "watermark" ? "#d56a6a" : "#355f92";
+}
+
+function defaultDecorationFontSize(kind: DecorationKind): number {
+  return kind === "watermark" ? 24 : 10;
+}
+
+function createDecorationDrafts(): Record<DecorationKind, DecorationDraft> {
+  return {
+    header: {
+      text: defaultDecorationText("header"),
+      position: defaultDecorationPosition("header"),
+      color: defaultDecorationColor("header"),
+      fontSize: defaultDecorationFontSize("header"),
+    },
+    footer: {
+      text: defaultDecorationText("footer"),
+      position: defaultDecorationPosition("footer"),
+      color: defaultDecorationColor("footer"),
+      fontSize: defaultDecorationFontSize("footer"),
+    },
+    "page-number": {
+      text: defaultDecorationText("page-number"),
+      position: defaultDecorationPosition("page-number"),
+      color: defaultDecorationColor("page-number"),
+      fontSize: defaultDecorationFontSize("page-number"),
+    },
+    watermark: {
+      text: defaultDecorationText("watermark"),
+      position: defaultDecorationPosition("watermark"),
+      color: defaultDecorationColor("watermark"),
+      fontSize: defaultDecorationFontSize("watermark"),
+    },
+  };
+}
+
+function colorOf(decoration: Decoration): string {
+  return decoration.color ?? defaultDecorationColor(decoration.kind);
+}
+
+function exactDecorationMatchesDraft(
+  decoration: Decoration,
+  kind: DecorationKind,
+  draft: DecorationDraft,
+): boolean {
+  return (
+    decoration.kind === kind &&
+    decoration.position === draft.position &&
+    decoration.text === draft.text &&
+    colorOf(decoration).toLowerCase() === draft.color.toLowerCase()
+  );
+}
+
+function sameDecorationSlot(
+  decoration: Decoration,
+  kind: DecorationKind,
+  position: DecorationPosition,
+): boolean {
+  return decoration.kind === kind && decoration.position === position;
+}
+
+function createDecorationFromDraft(
+  kind: DecorationKind,
+  draft: DecorationDraft,
+  pageId?: string,
+  fileId?: string,
+): Decoration {
+  return {
+    id: randomId("decoration"),
+    kind,
+    text: draft.text,
+    target: defaultDecorationTarget(pageId, fileId),
+    position: kind === "watermark" ? "center" : draft.position,
+    pageId,
+    fileId,
+    excludedPageIds: [],
+    fontSize: draft.fontSize,
+    opacity: 1,
+    color: draft.color,
+  };
+}
+
+function defaultDecorationTarget(pageId?: string, fileId?: string): DecorationTarget {
+  if (pageId) {
+    return "selected";
+  }
+  if (fileId) {
+    return "file";
+  }
+  return "all";
 }
 
 function commitSnapshot(
@@ -313,7 +424,7 @@ const initialExportJob: ExportJobState = {
   status: "idle",
   progress: 0,
   cancellable: false,
-  message: "待機中",
+  message: "準備完了",
 };
 
 export const useWorkbenchStore = create<WorkbenchState>((set, get) => ({
@@ -323,14 +434,53 @@ export const useWorkbenchStore = create<WorkbenchState>((set, get) => ({
     initialized: false,
   },
   exportJob: initialExportJob,
+  lastOutputFiles: [],
   logs: [],
   history: [],
   future: [],
   canUndo: false,
   canRedo: false,
+  decorationDrafts: createDecorationDrafts(),
 
   setActiveTool: (tool) => {
     set({ activeTool: tool });
+  },
+
+  loadDevelopmentFixture: () => {
+    const snapshot: WorkbenchSnapshot = {
+      files: initialFiles.map((file) => ({
+        ...file,
+        metadata: file.metadata ? { ...file.metadata } : undefined,
+      })),
+      pagesByFile: clonePages(initialPagesByFile),
+      activeTool: "select",
+      decorations: initialDecorations.map((decoration) => ({ ...decoration })),
+      selectedDecorationId: initialDecorations[0]?.id,
+      searchReplace: cloneSearchReplace(initialSearchReplace),
+      security: cloneSecurity(initialSecurity),
+    };
+    set({
+      ...derive(snapshot),
+      logs: initialLogs.map((log) => ({ ...log })),
+      lastOutputFiles: [],
+      history: [],
+      future: [],
+      canUndo: false,
+      canRedo: false,
+    });
+  },
+
+  updateDecorationDraft: (kind, patch) => {
+    const current = get();
+    set({
+      decorationDrafts: {
+        ...current.decorationDrafts,
+        [kind]: {
+          ...current.decorationDrafts[kind],
+          ...patch,
+        },
+      },
+    });
   },
 
   setCacheSession: (session) => {
@@ -465,9 +615,10 @@ export const useWorkbenchStore = create<WorkbenchState>((set, get) => ({
     }));
   },
 
-  setExportDirectory: (path) => {
+  setExportPath: (path) => {
     set((state) => ({
-      exportDirectory: path,
+      exportPath: path,
+      lastOutputFiles: [],
       logs: [createLog("info", `出力先を設定しました: ${path}`), ...state.logs],
     }));
   },
@@ -520,6 +671,51 @@ export const useWorkbenchStore = create<WorkbenchState>((set, get) => ({
       searchReplace: cloneSearchReplace(current.searchReplace),
       security: cloneSecurity(current.security),
     });
+  },
+
+  removeFile: (fileId) => {
+    const current = get();
+    const target = current.files.find((file) => file.id === fileId);
+    if (!target) {
+      return;
+    }
+
+    const removedPages = current.pagesByFile[fileId] ?? [];
+    const removedPageIds = new Set(removedPages.map((page) => page.id));
+    const pagesByFile = clonePages(current.pagesByFile);
+    delete pagesByFile[fileId];
+
+    const files = current.files
+      .filter((file) => file.id !== fileId)
+      .map((file) => ({ ...file, expanded: file.expanded && file.id !== fileId }));
+    const decorations = current.decorations
+      .filter(
+        (decoration) =>
+          decoration.fileId !== fileId &&
+          (!decoration.pageId || !removedPageIds.has(decoration.pageId)),
+      )
+      .map((decoration) => ({ ...decoration }));
+
+    commitSnapshot(
+      set,
+      current,
+      {
+        files,
+        pagesByFile,
+        activeTool: current.activeTool,
+        decorations,
+        selectedDecorationId: decorations.some(
+          (decoration) => decoration.id === current.selectedDecorationId,
+        )
+          ? current.selectedDecorationId
+          : undefined,
+        searchReplace: cloneSearchReplace(current.searchReplace),
+        security: cloneSecurity(current.security),
+      },
+      {
+        logs: [createLog("info", `${target.name} をワークスペースから除外しました。`), ...current.logs],
+      },
+    );
   },
 
   moveFile: (fileId, direction) => {
@@ -623,6 +819,7 @@ export const useWorkbenchStore = create<WorkbenchState>((set, get) => ({
       payload.pageCount,
       fileId,
       payload.thumbnailPaths,
+      payload.previewPaths,
     );
 
     const files = current.files.map((file) =>
@@ -904,18 +1101,13 @@ export const useWorkbenchStore = create<WorkbenchState>((set, get) => ({
     });
   },
 
-  placeDecoration: (kind, pageId, position) => {
+  placeDecoration: (kind, pageId, position, fileId) => {
     const current = get();
-    const decoration: Decoration = {
-      id: randomId("decoration"),
-      kind,
-      text: defaultDecorationText(kind),
-      target: defaultDecorationTarget(pageId),
-      position: position ?? defaultDecorationPosition(kind),
-      pageId,
-      fontSize: kind === "watermark" ? 16 : 10,
-      opacity: kind === "watermark" ? 0.32 : 1,
+    const draft: DecorationDraft = {
+      ...current.decorationDrafts[kind],
+      position: position ?? current.decorationDrafts[kind].position,
     };
+    const decoration = createDecorationFromDraft(kind, draft, pageId, fileId);
     commitSnapshot(
       set,
       current,
@@ -930,9 +1122,140 @@ export const useWorkbenchStore = create<WorkbenchState>((set, get) => ({
       },
       {
         logs: [
-          createLog("info", `${defaultDecorationText(kind)} をページへ配置しました。`),
+          createLog("info", `${draft.text} をページへ配置しました。`),
           ...current.logs,
         ],
+      },
+    );
+  },
+
+  applyDecorationToTarget: (kind, target) => {
+    const current = get();
+    const draft = {
+      ...current.decorationDrafts[kind],
+      position: kind === "watermark" ? ("center" as const) : current.decorationDrafts[kind].position,
+    };
+    const { pageId, fileId } = target;
+    if (pageId) {
+      const pageFileId = findPageFile(current.pagesByFile, pageId);
+      const fileScopedDecoration = current.decorations.find(
+        (decoration) =>
+          decoration.target === "file" &&
+          decoration.fileId === pageFileId &&
+          !decoration.pageId &&
+          exactDecorationMatchesDraft(decoration, kind, draft),
+      );
+      if (pageFileId && fileScopedDecoration) {
+        const excludedPageIds = new Set(fileScopedDecoration.excludedPageIds ?? []);
+        const excluded = excludedPageIds.has(pageId);
+        if (excluded) {
+          excludedPageIds.delete(pageId);
+        } else {
+          excludedPageIds.add(pageId);
+        }
+        const decorations = current.decorations.map((decoration) =>
+          decoration.id === fileScopedDecoration.id
+            ? { ...decoration, excludedPageIds: Array.from(excludedPageIds) }
+            : { ...decoration },
+        );
+        commitSnapshot(
+          set,
+          current,
+          {
+            files: current.files.map((file) => ({ ...file })),
+            pagesByFile: clonePages(current.pagesByFile),
+            activeTool: current.activeTool,
+            decorations,
+            selectedDecorationId: fileScopedDecoration.id,
+            searchReplace: cloneSearchReplace(current.searchReplace),
+            security: cloneSecurity(current.security),
+          },
+          {
+            logs: [
+              createLog(
+                "info",
+                excluded
+                  ? `${draft.text} をこのページへ再適用しました。`
+                  : `${draft.text} をこのページだけ一括適用から外しました。`,
+              ),
+              ...current.logs,
+            ],
+          },
+        );
+        return;
+      }
+    }
+    let scopedDecorations = current.decorations.filter((decoration) => {
+      if (!sameDecorationSlot(decoration, kind, draft.position)) {
+        return false;
+      }
+      if (pageId) {
+        return decoration.pageId === pageId;
+      }
+      if (fileId) {
+        return decoration.fileId === fileId;
+      }
+      return false;
+    });
+    if (fileId && scopedDecorations.length === 0) {
+      const pages = current.pagesByFile[fileId] ?? [];
+      const pageIds = new Set(pages.map((page) => page.id));
+      const exactPageScopedDecorations = current.decorations.filter(
+        (decoration) =>
+          decoration.pageId &&
+          pageIds.has(decoration.pageId) &&
+          exactDecorationMatchesDraft(decoration, kind, draft),
+      );
+      if (
+        pages.length > 0 &&
+        pages.every((page) =>
+          exactPageScopedDecorations.some((decoration) => decoration.pageId === page.id),
+        )
+      ) {
+        scopedDecorations = exactPageScopedDecorations;
+      }
+    }
+    const exactScopedDecorations = scopedDecorations.filter((decoration) =>
+      exactDecorationMatchesDraft(decoration, kind, draft),
+    );
+    const shouldRemove = scopedDecorations.length > 0 && scopedDecorations.length === exactScopedDecorations.length;
+    const decorations = current.decorations
+      .filter((decoration) => !scopedDecorations.some((item) => item.id === decoration.id))
+      .map((decoration) => ({ ...decoration }));
+
+    let selectedDecorationId = current.selectedDecorationId;
+    let logMessage: string;
+
+    if (shouldRemove) {
+      selectedDecorationId = decorations.some(
+        (decoration) => decoration.id === current.selectedDecorationId,
+      )
+        ? current.selectedDecorationId
+        : undefined;
+      logMessage = `${draft.text} を解除しました。`;
+    } else {
+      const decoration = createDecorationFromDraft(kind, draft, pageId, fileId);
+      decorations.push(decoration);
+      selectedDecorationId = decoration.id;
+      logMessage = fileId
+        ? `${draft.text} をファイル全体へ適用しました。`
+        : `${draft.text} をページへ適用しました。`;
+    }
+
+    commitSnapshot(
+      set,
+      current,
+      {
+        files: current.files.map((file) => ({ ...file })),
+        pagesByFile: clonePages(current.pagesByFile),
+        activeTool: current.activeTool,
+        decorations,
+        selectedDecorationId,
+        searchReplace: cloneSearchReplace(current.searchReplace),
+        security: cloneSecurity(current.security),
+      },
+      {
+        logs: [createLog("info", logMessage), ...current.logs],
       },
     );
   },
@@ -1084,6 +1407,7 @@ export const useWorkbenchStore = create<WorkbenchState>((set, get) => ({
         cancellable: true,
         message: waitingCount > 0 ? "未完了変換を先に処理中" : "一括書き出し中",
       },
+      lastOutputFiles: [],
       logs: [
         createLog(
           "info",
@@ -1125,6 +1449,7 @@ export const useWorkbenchStore = create<WorkbenchState>((set, get) => ({
         cancellable: false,
         message: "書き出し完了",
       },
+      lastOutputFiles: outputFiles ?? [],
       logs: [
         createLog("info", `書き出しが完了しました: ${names.join(", ")}`),
         ...current.logs,

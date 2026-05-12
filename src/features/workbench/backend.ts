@@ -64,9 +64,12 @@ export type InspectPdfResult = {
 export type RenderThumbnailsResult = {
   thumbnails: Array<{
     thumbnailPath: string;
+    previewPath?: string;
     pageNumber: number;
     width: number;
     height: number;
+    previewWidth?: number;
+    previewHeight?: number;
   }>;
 };
 
@@ -190,31 +193,33 @@ export async function renderPdfThumbnails(
     outputDir,
     pageNumbers: Array.from({ length: pageCount }, (_, index) => index + 1),
     password,
+    thumbnailZoom: 0.32,
+    previewZoom: 2.25,
   });
 }
 
-export async function exportWorkspaceToDirectory(
-  outputDir: string,
+export async function exportWorkspaceToPath(
+  outputPath: string,
   workspace: WorkbenchSnapshot,
   passwordMap?: Record<string, string>,
 ): Promise<ExportWorkspaceResult> {
   return runTypedEngine<ExportWorkspaceResult>({
     kind: "export_workspace",
-    outputDir,
+    outputPath,
     workspace,
     passwordMap,
   });
 }
 
-export async function exportWorkspaceToDirectoryStreaming(
-  outputDir: string,
+export async function exportWorkspaceToPathStreaming(
+  outputPath: string,
   workspace: WorkbenchSnapshot,
   passwordMap: Record<string, string> | undefined,
   jobId: string,
   onEvent: (event: ProcessingEngineEvent) => void,
 ): Promise<ExportWorkspaceResult> {
   if (!isTauriRuntime()) {
-    return exportWorkspaceToDirectory(outputDir, workspace, passwordMap);
+    return exportWorkspaceToPath(outputPath, workspace, passwordMap);
   }
 
   let unlisten: UnlistenFn | undefined;
@@ -241,7 +246,7 @@ export async function exportWorkspaceToDirectoryStreaming(
         return startProcessingEngineJob({
           kind: "export_workspace",
           jobId,
-          outputDir,
+          outputPath,
           workspace,
           passwordMap,
         });
@@ -251,4 +256,18 @@ export async function exportWorkspaceToDirectoryStreaming(
         reject(error);
       });
   });
+}
+
+export async function openOutputPath(path: string): Promise<void> {
+  if (!isTauriRuntime()) {
+    return;
+  }
+  await invoke("open_output_path", { path });
+}
+
+export async function revealOutputPath(path: string): Promise<void> {
+  if (!isTauriRuntime()) {
+    return;
+  }
+  await invoke("reveal_output_path", { path });
 }

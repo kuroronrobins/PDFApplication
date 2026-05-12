@@ -1,6 +1,7 @@
 use serde::Serialize;
 use serde_json::Value;
 use std::path::{Path, PathBuf};
+use std::process::Command;
 use std::time::{SystemTime, UNIX_EPOCH};
 use tauri::{Emitter, Manager};
 
@@ -143,6 +144,84 @@ fn cancel_processing_engine_job(
     Ok(cancelled)
 }
 
+#[tauri::command]
+fn open_output_path(path: String) -> Result<(), String> {
+    let target = PathBuf::from(path);
+    if !target.exists() {
+        return Err("出力ファイルが見つかりません。".to_string());
+    }
+
+    #[cfg(target_os = "windows")]
+    {
+        Command::new("rundll32")
+            .arg("url.dll,FileProtocolHandler")
+            .arg(&target)
+            .spawn()
+            .map_err(|error| error.to_string())?;
+        return Ok(());
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        Command::new("open")
+            .arg(&target)
+            .spawn()
+            .map_err(|error| error.to_string())?;
+        return Ok(());
+    }
+
+    #[cfg(all(unix, not(target_os = "macos")))]
+    {
+        Command::new("xdg-open")
+            .arg(&target)
+            .spawn()
+            .map_err(|error| error.to_string())?;
+        return Ok(());
+    }
+}
+
+#[tauri::command]
+fn reveal_output_path(path: String) -> Result<(), String> {
+    let target = PathBuf::from(path);
+    if !target.exists() {
+        return Err("出力ファイルが見つかりません。".to_string());
+    }
+
+    #[cfg(target_os = "windows")]
+    {
+        if target.is_file() {
+            Command::new("explorer")
+                .arg(format!("/select,{}", target.to_string_lossy()))
+                .spawn()
+                .map_err(|error| error.to_string())?;
+        } else {
+            Command::new("explorer")
+                .arg(&target)
+                .spawn()
+                .map_err(|error| error.to_string())?;
+        }
+        return Ok(());
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        Command::new("open")
+            .arg(target.parent().unwrap_or(&target))
+            .spawn()
+            .map_err(|error| error.to_string())?;
+        return Ok(());
+    }
+
+    #[cfg(all(unix, not(target_os = "macos")))]
+    {
+        Command::new("xdg-open")
+            .arg(target.parent().unwrap_or(&target))
+            .spawn()
+            .map_err(|error| error.to_string())?;
+        return Ok(());
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -154,7 +233,9 @@ pub fn run() {
             cleanup_cache_session,
             run_processing_engine,
             start_processing_engine_job,
-            cancel_processing_engine_job
+            cancel_processing_engine_job,
+            open_output_path,
+            reveal_output_path
         ])
         .run(tauri::generate_context!())
         .expect("error while running PDF Workbench");

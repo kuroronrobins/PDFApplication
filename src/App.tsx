@@ -17,11 +17,13 @@ import {
   CircleStop,
   Copy,
   Eye,
+  ExternalLink,
+  FileOutput,
   FilePlus2,
   FileSearch,
   FileText,
-  FolderOutput,
-  Hash,
+  FolderOpen,
+  Hand,
   Highlighter,
   Info,
   KeyRound,
@@ -29,7 +31,6 @@ import {
   Loader2,
   Lock,
   Logs,
-  MousePointer2,
   Redo2,
   Scissors,
   Search,
@@ -41,7 +42,12 @@ import {
   Upload,
   X,
 } from "lucide-react";
-import { cleanupCacheSession, prepareCacheSession } from "./features/workbench/backend";
+import {
+  cleanupCacheSession,
+  openOutputPath,
+  prepareCacheSession,
+  revealOutputPath,
+} from "./features/workbench/backend";
 import {
   cancelCurrentExportWithEngine,
   exportCurrentWorkspaceWithEngine,
@@ -57,7 +63,7 @@ import {
   droppedFilesToInputInfo,
   isTauriRuntime,
   openInputFilesDialog,
-  openOutputDirectoryDialog,
+  openOutputFileDialog,
   supportedExtensions,
 } from "./features/workbench/fileInput";
 import { useWorkbenchStore } from "./features/workbench/store";
@@ -75,15 +81,14 @@ import type {
 const toolItems: Array<{
   id: ToolId;
   label: string;
-  icon: typeof MousePointer2;
+  icon: typeof Hand;
   danger?: boolean;
 }> = [
-  { id: "select", label: "選択", icon: MousePointer2 },
+  { id: "select", label: "並び替え", icon: Hand },
   { id: "scissors", label: "ハサミ", icon: Scissors },
   { id: "trash", label: "ゴミ箱", icon: Trash2, danger: true },
   { id: "header", label: "ヘッダー", icon: Type },
   { id: "footer", label: "フッター", icon: Highlighter },
-  { id: "page-number", label: "ページ番号", icon: Hash },
   { id: "watermark", label: "透かし", icon: Stamp },
   { id: "search-replace", label: "検索置換", icon: Search },
   { id: "lock", label: "鍵", icon: Lock },
@@ -93,7 +98,6 @@ const toolItems: Array<{
 const decorationToolIds: DecorationKind[] = [
   "header",
   "footer",
-  "page-number",
   "watermark",
 ];
 
@@ -141,6 +145,20 @@ type ExportPreviewGroup = {
   pages: ExportPreviewPage[];
 };
 
+type ExportPreviewFilmstripPage = ExportPreviewPage & {
+  outputName: string;
+  outputIndex: number;
+  outputPageNumber: number;
+  outputPageTotal: number;
+  globalIndex: number;
+  startsOutput: boolean;
+};
+
+type OutputPageNumberInfo = {
+  outputPageNumber: number;
+  outputPageTotal: number;
+};
+
 function kindLabel(kind: FileKind): string {
   switch (kind) {
     case "excel":
@@ -154,12 +172,9 @@ function kindLabel(kind: FileKind): string {
   }
 }
 
-function cacheLabel(file: WorkbenchFile): string {
-  if (file.cacheState === "ready") {
-    return "PDF準備完了";
-  }
-  if (file.cacheState === "queued") {
-    return "PDF化待機";
+function cacheLabel(file: WorkbenchFile): string | undefined {
+  if (file.cacheState === "ready" || file.cacheState === "queued") {
+    return undefined;
   }
   if (file.cacheState === "error") {
     return "変換エラー";
@@ -218,16 +233,43 @@ function localAssetSrc(path?: string): string | undefined {
   return isTauriRuntime() ? convertFileSrc(path) : path;
 }
 
+function baseNameFromPath(path?: string): string {
+  return path?.split(/[\\/]/).pop() || "result.pdf";
+}
+
+function plannedOutputNames(outputPlan: OutputPlan, outputPath?: string): string[] {
+  if (outputPlan.outputCount === 0) {
+    return [];
+  }
+
+  const selectedName = baseNameFromPath(outputPath);
+  const normalizedName = selectedName.toLowerCase().endsWith(".pdf")
+    ? selectedName
+    : `${selectedName}.pdf`;
+  const stem = normalizedName.replace(/\.pdf$/i, "");
+
+  if (outputPlan.outputCount === 1) {
+    return [normalizedName];
+  }
+
+  return Array.from(
+    { length: outputPlan.outputCount },
+    (_, index) => `${stem}_${String(index + 1).padStart(3, "0")}.pdf`,
+  );
+}
+
 function buildExportPreviewGroups(
   files: WorkbenchFile[],
   pagesByFile: Record<string, PageItem[]>,
   outputPlan: OutputPlan,
+  outputPath?: string,
 ): ExportPreviewGroup[] {
-  if (outputPlan.outputFiles.length === 0) {
+  const outputNames = plannedOutputNames(outputPlan, outputPath);
+  if (outputNames.length === 0) {
     return [];
   }
 
-  const groups = outputPlan.outputFiles.map((name) => ({ name, pages: [] as ExportPreviewPage[] }));
+  const groups = outputNames.map((name) => ({ name, pages: [] as ExportPreviewPage[] }));
   let groupIndex = 0;
 
   for (const file of files) {
@@ -255,6 +297,50 @@ function buildExportPreviewGroups(
   return groups;
 }
 
+function flattenExportPreviewGroups(
+  groups: ExportPreviewGroup[],
+): ExportPreviewFilmstripPage[] {
+  return groups.flatMap((group, outputIndex) =>
+    group.pages.map((page, pageIndex) => ({
+      ...page,
+      outputName: group.name,
+      outputIndex,
+      outputPageNumber: pageIndex + 1,
+      outputPageTotal: group.pages.length,
+      globalIndex: groups
+        .slice(0, outputIndex)
+        .reduce((count, item) => count + item.pages.length, pageIndex),
+      startsOutput: outputIndex > 0 && pageIndex === 0,
+    })),
+  );
+}
+
+function buildOutputPageNumberMap(
+  files: WorkbenchFile[],
+  pagesByFile: Record<string, PageItem[]>,
+  outputPlan: OutputPlan,
+  outputPath?: string,
+): Record<string, OutputPageNumberInfo> {
+  const pageNumbers: Record<string, OutputPageNumberInfo> = {};
+  for (const group of buildExportPreviewGroups(files, pagesByFile, outputPlan, outputPath)) {
+    group.pages.forEach((page, pageIndex) => {
+      pageNumbers[page.id] = {
+        outputPageNumber: pageIndex + 1,
+        outputPageTotal: group.pages.length,
+      };
+    });
+  }
+  return pageNumbers;
+}
+
+function withOutputPageNumber<T extends PageItem>(
+  page: T,
+  outputPageNumbers: Record<string, OutputPageNumberInfo>,
+): T & Partial<OutputPageNumberInfo> {
+  const outputPageNumber = outputPageNumbers[page.id];
+  return outputPageNumber ? { ...page, ...outputPageNumber } : page;
+}
+
 function decorationLabel(kind: DecorationKind): string {
   switch (kind) {
     case "header":
@@ -268,23 +354,6 @@ function decorationLabel(kind: DecorationKind): string {
   }
 }
 
-function positionLabel(position: DecorationPosition): string {
-  switch (position) {
-    case "top":
-      return "上";
-    case "bottom":
-      return "下";
-    case "bottom-left":
-      return "左下";
-    case "bottom-center":
-      return "中央下";
-    case "bottom-right":
-      return "右下";
-    case "center":
-      return "中央";
-  }
-}
-
 function AppBar() {
   const inputRef = useRef<HTMLInputElement>(null);
   const [selectingFiles, setSelectingFiles] = useState(false);
@@ -295,13 +364,13 @@ function AppBar() {
   const canRedo = useWorkbenchStore((state) => state.canRedo);
   const addInputFiles = useWorkbenchStore((state) => state.addInputFiles);
   const addLog = useWorkbenchStore((state) => state.addLog);
-  const setExportDirectory = useWorkbenchStore((state) => state.setExportDirectory);
+  const setExportPath = useWorkbenchStore((state) => state.setExportPath);
   const startExportJob = useWorkbenchStore((state) => state.startExportJob);
   const setExportJobProgress = useWorkbenchStore((state) => state.setExportJobProgress);
   const completeExportJob = useWorkbenchStore((state) => state.completeExportJob);
   const failExportJob = useWorkbenchStore((state) => state.failExportJob);
   const exportJob = useWorkbenchStore((state) => state.exportJob);
-  const exportDirectory = useWorkbenchStore((state) => state.exportDirectory);
+  const exportPath = useWorkbenchStore((state) => state.exportPath);
   const cacheSession = useWorkbenchStore((state) => state.cacheSession);
   const outputPlan = useWorkbenchStore((state) => state.outputPlan);
 
@@ -331,15 +400,15 @@ function AppBar() {
     }
   };
 
-  const handleOutputDirectory = async () => {
+  const handleOutputFile = async () => {
     try {
       if (!isTauriRuntime()) {
-        setExportDirectory("ブラウザ検証用の出力先");
+        setExportPath("result.pdf");
         return;
       }
-      const directory = await openOutputDirectoryDialog();
-      if (directory) {
-        setExportDirectory(directory);
+      const path = await openOutputFileDialog(exportPath ?? "result.pdf");
+      if (path) {
+        setExportPath(path);
       }
     } catch (error) {
       addLog("error", `出力先を設定できませんでした: ${errorMessage(error)}`);
@@ -368,16 +437,16 @@ function AppBar() {
       return;
     }
 
-    let directory = exportDirectory;
-    if (!directory) {
+    let outputPath = exportPath;
+    if (!outputPath) {
       try {
-        const selected = await openOutputDirectoryDialog();
+        const selected = await openOutputFileDialog("result.pdf");
         if (!selected) {
           addLog("warn", "出力先の選択がキャンセルされました。");
           return;
         }
-        directory = selected;
-        setExportDirectory(selected);
+        outputPath = selected;
+        setExportPath(selected);
       } catch (error) {
         addLog("error", `出力先を設定できませんでした: ${errorMessage(error)}`);
         return;
@@ -398,7 +467,7 @@ function AppBar() {
         return;
       }
       setExportJobProgress(66, "結合", "PDFを書き出し中");
-      const result = await exportCurrentWorkspaceWithEngine(directory);
+      const result = await exportCurrentWorkspaceWithEngine(outputPath);
       completeExportJob(result.outputFiles);
     } catch (error) {
       if (isProcessingEngineCancelled(error)) {
@@ -449,9 +518,9 @@ function AppBar() {
           accept={supportedExtensions.map((extension) => `.${extension}`).join(",")}
           onChange={handleFallbackChange}
         />
-        <button onClick={handleOutputDirectory} title={exportDirectory ?? "出力先未設定"}>
-          <FolderOutput size={17} />
-          出力先
+        <button onClick={handleOutputFile} title={exportPath ?? "出力先未設定"}>
+          <FileOutput size={17} />
+          出力ファイル
         </button>
         <button
           className="icon-button"
@@ -469,22 +538,31 @@ function AppBar() {
         >
           <Redo2 size={18} />
         </button>
-        <div className="job-pill">
-          <span
-            className={[
-              "pulse",
-              exportJob.status === "running" ? "is-running" : "",
-              exportJob.status === "completed" ? "is-complete" : "",
-            ].join(" ")}
-          />
-          {exportJob.message}
-        </div>
+        {exportJob.status !== "idle" && (
+          <div className="job-pill">
+            <span
+              className={[
+                "pulse",
+                exportJob.status === "running" ? "is-running" : "",
+                exportJob.status === "completed" ? "is-complete" : "",
+              ].join(" ")}
+            />
+            {exportJob.message}
+          </div>
+        )}
         <button
-          className="export-button"
           disabled={exportJob.status === "running" || outputPlan.activePageCount === 0}
           onClick={requestExportPreview}
         >
-          <Upload size={17} />
+          <Eye size={17} />
+          プレビュー
+        </button>
+        <button
+          className="export-button"
+          disabled={exportJob.status === "running" || outputPlan.activePageCount === 0}
+          onClick={() => void handleExport()}
+        >
+          <FileOutput size={17} />
           書き出し
         </button>
       </div>
@@ -542,6 +620,7 @@ function FileCard({
   index,
   fileCount,
   thumbnailPath,
+  outputPageNumbers,
   draggingFileId,
   dropTarget,
   onPointerDragStart,
@@ -553,6 +632,7 @@ function FileCard({
   index: number;
   fileCount: number;
   thumbnailPath?: string;
+  outputPageNumbers: Record<string, OutputPageNumberInfo>;
   draggingFileId: string | null;
   dropTarget: FileDropTarget | null;
   onPointerDragStart: (event: React.PointerEvent<HTMLElement>, fileId: string) => void;
@@ -565,15 +645,43 @@ function FileCard({
   const toggleFileExpanded = useWorkbenchStore(
     (state) => state.toggleFileExpanded,
   );
-  const toggleFileExcluded = useWorkbenchStore((state) => state.toggleFileExcluded);
+  const activeTool = useWorkbenchStore((state) => state.activeTool);
+  const removeFile = useWorkbenchStore((state) => state.removeFile);
   const moveFile = useWorkbenchStore((state) => state.moveFile);
+  const applyDecorationToTarget = useWorkbenchStore(
+    (state) => state.applyDecorationToTarget,
+  );
+  const decorations = useWorkbenchStore((state) => state.decorations);
+  const pagesByFile = useWorkbenchStore((state) => state.pagesByFile);
   const prioritizeFileConversion = useWorkbenchStore(
     (state) => state.prioritizeFileConversion,
   );
+  const statusLabel = cacheLabel(file);
+  const filePages = pagesByFile[file.id] ?? [];
+  const previewPage =
+    filePages.find((page) => !page.excluded) ??
+    filePages[0];
+  const outputPreviewPage = previewPage
+    ? withOutputPageNumber(previewPage, outputPageNumbers)
+    : undefined;
+  const previewDecorations = fileWideDecorations(file, filePages, decorations);
   const dropClass =
     dropTarget?.fileId === file.id ? `is-drop-${dropTarget.position}` : "";
   const clickGuardRef = useRef(false);
+  const confirmRemoveFile = () => {
+    if (window.confirm(`${file.name} をワークスペースから除外しますか？`)) {
+      removeFile(file.id);
+    }
+  };
   const activateFile = () => {
+    if (decorationToolIds.includes(activeTool as DecorationKind)) {
+      applyDecorationToTarget(activeTool as DecorationKind, { fileId: file.id });
+      return;
+    }
+    if (activeTool === "trash") {
+      confirmRemoveFile();
+      return;
+    }
     if (ready) {
       toggleFileExpanded(file.id);
       return;
@@ -636,6 +744,9 @@ function FileCard({
       ].join(" ")}
       tabIndex={0}
       data-file-card-id={file.id}
+      data-decoration-target={
+        decorationToolIds.includes(activeTool as DecorationKind) ? "file" : undefined
+      }
       onClick={handleCardClick}
       onKeyDown={handleCardKeyDown}
       onPointerDown={handleCardPointerDown}
@@ -682,8 +793,16 @@ function FileCard({
           ) : (
             <Loader2 size={32} />
           )}
+          {outputPreviewPage && (
+            <PageDecorations page={outputPreviewPage} decorations={previewDecorations} />
+          )}
           <span>{index + 1}</span>
         </div>
+        {statusLabel && (
+          <div className="file-preview-side">
+            <span className={`cache-badge state-${file.cacheState}`}>{statusLabel}</span>
+          </div>
+        )}
         {file.cacheState === "converting" && (
           <div className="progress-ring">
             <Loader2 size={22} />
@@ -694,10 +813,7 @@ function FileCard({
         {file.name}
       </div>
       <div className="file-meta">
-        <span className={`cache-badge state-${file.cacheState}`}>
-          {cacheLabel(file)}
-        </span>
-        <span>{pageCountLabel(file)}</span>
+        <span className="file-page-count">{pageCountLabel(file)}</span>
       </div>
       <div className="file-submeta">
         <span>{file.extension?.toUpperCase() ?? "形式未取得"}</span>
@@ -708,20 +824,9 @@ function FileCard({
           {file.errorMessage}
         </div>
       )}
-      {file.cacheState === "converting" && (
-        <div className="mini-progress" aria-label={cacheLabel(file)}>
-          <span style={{ width: `${file.progress ?? 0}%` }} />
-        </div>
-      )}
       <div className="file-card-actions">
-        <button onClick={() => moveFile(file.id, -1)} disabled={index === 0}>
-          <ArrowUp size={14} />
-        </button>
-        <button onClick={() => moveFile(file.id, 1)} disabled={index === fileCount - 1}>
-          <ArrowDown size={14} />
-        </button>
-        <button onClick={() => toggleFileExcluded(file.id)}>
-          {file.excluded ? "復帰" : "除外"}
+        <button onClick={confirmRemoveFile}>
+          除外
         </button>
         <button
           className="expand-button"
@@ -740,11 +845,14 @@ function FileCard({
 function FileStrip() {
   const files = useWorkbenchStore((state) => state.files);
   const pagesByFile = useWorkbenchStore((state) => state.pagesByFile);
+  const outputPlan = useWorkbenchStore((state) => state.outputPlan);
+  const exportPath = useWorkbenchStore((state) => state.exportPath);
   const moveFileToIndex = useWorkbenchStore((state) => state.moveFileToIndex);
   const [draggingFileId, setDraggingFileId] = useState<string | null>(null);
   const [dropTarget, setDropTarget] = useState<FileDropTarget | null>(null);
   const [dragPreview, setDragPreview] = useState<FileDragPreview | null>(null);
   const pointerDragRef = useRef<FilePointerDragRef | null>(null);
+  const outputPageNumbers = buildOutputPageNumberMap(files, pagesByFile, outputPlan, exportPath);
 
   const firstThumbnailPath = (fileId: string) =>
     pagesByFile[fileId]?.find((page) => Boolean(page.thumbnailPath))?.thumbnailPath;
@@ -899,7 +1007,7 @@ function FileStrip() {
     : undefined;
 
   return (
-    <section className="workspace-section">
+    <section className="workspace-section file-order-section">
       <div className="section-heading">
         <div>
           <h2>ファイル順序</h2>
@@ -921,6 +1029,7 @@ function FileStrip() {
               index={index}
               fileCount={files.length}
               thumbnailPath={firstThumbnailPath(file.id)}
+              outputPageNumbers={outputPageNumbers}
               draggingFileId={draggingFileId}
               dropTarget={dropTarget}
               onPointerDragStart={handlePointerDragStart}
@@ -954,14 +1063,159 @@ function FileStrip() {
   );
 }
 
+type DecorationCoverage = "none" | "partial" | "full";
+
 function decorationAppliesToPage(decoration: Decoration, page: PageItem): boolean {
+  if (decoration.excludedPageIds?.includes(page.id)) {
+    return false;
+  }
   if (decoration.pageId === page.id) {
     return true;
+  }
+  if (decoration.target === "file" && decoration.fileId) {
+    return decoration.fileId === page.fileId;
   }
   if (decoration.target === "all") {
     return true;
   }
   return decoration.target === "selected" && page.selected && !decoration.pageId;
+}
+
+function decorationKindMatches(decoration: Decoration, kind: DecorationKind): boolean {
+  if (kind === "footer") {
+    return decoration.kind === "footer" || decoration.kind === "page-number";
+  }
+  return decoration.kind === kind;
+}
+
+function decorationMarkLabel(kind: DecorationKind): string {
+  switch (kind) {
+    case "header":
+      return "H";
+    case "footer":
+    case "page-number":
+      return "F";
+    case "watermark":
+      return "W";
+  }
+}
+
+function fileDecorationCoverage(
+  file: WorkbenchFile,
+  pages: PageItem[],
+  decorations: Decoration[],
+  kind: DecorationKind,
+): DecorationCoverage {
+  const relevantDecorations = decorations.filter((decoration) =>
+    decorationKindMatches(decoration, kind),
+  );
+  if (relevantDecorations.length === 0) {
+    return "none";
+  }
+  if (pages.length === 0) {
+    return relevantDecorations.some(
+      (decoration) =>
+        decoration.target === "all" ||
+        (decoration.target === "file" && decoration.fileId === file.id),
+    )
+      ? "full"
+      : "none";
+  }
+
+  const decoratedPageCount = pages.filter((page) =>
+    relevantDecorations.some((decoration) => decorationAppliesToPage(decoration, page)),
+  ).length;
+  if (decoratedPageCount === pages.length) {
+    return "full";
+  }
+  if (decoratedPageCount > 0) {
+    return "partial";
+  }
+  return "none";
+}
+
+function fileDecorationStatuses(
+  file: WorkbenchFile,
+  pages: PageItem[],
+  decorations: Decoration[],
+) {
+  return (["header", "footer", "watermark"] as DecorationKind[])
+    .map((kind) => ({
+      kind,
+      label: decorationMarkLabel(kind),
+      coverage: fileDecorationCoverage(file, pages, decorations, kind),
+      title: `${decorationLabel(kind)} ${
+        fileDecorationCoverage(file, pages, decorations, kind) === "full"
+          ? "全ページ適用"
+          : "一部適用"
+      }`,
+    }))
+    .filter((status) => status.coverage !== "none");
+}
+
+function fileWideDecorations(
+  file: WorkbenchFile,
+  pages: PageItem[],
+  decorations: Decoration[],
+): Decoration[] {
+  const activePages = pages.filter((page) => !page.excluded);
+  if (activePages.length === 0) {
+    return decorations.filter(
+      (decoration) =>
+        decoration.target === "all" ||
+        (decoration.target === "file" && decoration.fileId === file.id),
+    );
+  }
+
+  return decorations.filter((decoration) =>
+    activePages.every((page) => decorationAppliesToPage(decoration, page)),
+  );
+}
+
+function decorationTextForPage(decoration: Decoration, page: PageItem): string {
+  const outputPage = page as PageItem & {
+    outputPageNumber?: number;
+    outputPageTotal?: number;
+  };
+  const pageNumber = outputPage.outputPageNumber ?? page.pageNumber;
+  const total = outputPage.outputPageTotal ?? "total";
+  return decoration.text
+    .replace("{page}", String(pageNumber))
+    .replace("{total}", String(total));
+}
+
+function watermarkFontSize(text: string): number {
+  const length = Math.max(6, text.length);
+  return Math.max(10, Math.min(19, Math.floor(150 / length)));
+}
+
+type DecorationSlot = "left" | "center" | "right";
+
+function decorationSlot(position: DecorationPosition): DecorationSlot {
+  if (position.endsWith("-left")) {
+    return "left";
+  }
+  if (position.endsWith("-right")) {
+    return "right";
+  }
+  return "center";
+}
+
+function decorationSlotRows(
+  decorations: Decoration[],
+  kind: "header" | "footer",
+): Record<DecorationSlot, Decoration[]> {
+  return decorations.reduce<Record<DecorationSlot, Decoration[]>>(
+    (groups, decoration) => {
+      const isFooter = decoration.kind === "footer" || decoration.kind === "page-number";
+      if ((kind === "header" && decoration.kind !== "header") || (kind === "footer" && !isFooter)) {
+        return groups;
+      }
+      groups[decorationSlot(decoration.position)].push(decoration);
+      return groups;
+    },
+    { left: [], center: [], right: [] },
+  );
 }
 
 function PageDecorations({
@@ -974,32 +1228,39 @@ function PageDecorations({
   const visibleDecorations = decorations.filter((decoration) =>
     decorationAppliesToPage(decoration, page),
   );
-  const header = visibleDecorations.find((decoration) => decoration.kind === "header");
-  const footer = visibleDecorations.find((decoration) => decoration.kind === "footer");
-  const pageNumber = visibleDecorations.find(
-    (decoration) => decoration.kind === "page-number",
-  );
+  const headerSlots = decorationSlotRows(visibleDecorations, "header");
+  const footerSlots = decorationSlotRows(visibleDecorations, "footer");
   const watermark = visibleDecorations.find(
     (decoration) => decoration.kind === "watermark",
   );
+  const renderSlot = (slot: DecorationSlot, items: Decoration[]) => {
+    const primary = items[0];
+    return (
+      <div className={["decor-slot", `slot-${slot}`, primary ? "has-decoration" : ""].join(" ")} key={slot}>
+        {primary && (
+          <>
+            <span style={{ color: primary.color }}>{decorationTextForPage(primary, page)}</span>
+            {items.length > 1 && <small>+{items.length - 1}</small>}
+          </>
+        )}
+      </div>
+    );
+  };
 
   return (
     <>
-      {header && <div className="placed-header">{header.text}</div>}
-      {footer && <div className="placed-footer">{footer.text}</div>}
-      {pageNumber && (
-        <div className={`placed-number pos-${pageNumber.position}`}>
-          {pageNumber.text
-            .replace("{page}", String(page.pageNumber))
-            .replace("{total}", "total")}
-        </div>
-      )}
+      <div className="decor-row decor-row-header">
+        {(["left", "center", "right"] as DecorationSlot[]).map((slot) => renderSlot(slot, headerSlots[slot]))}
+      </div>
+      <div className="decor-row decor-row-footer">
+        {(["left", "center", "right"] as DecorationSlot[]).map((slot) => renderSlot(slot, footerSlots[slot]))}
+      </div>
       {watermark && (
         <div
           className="placed-watermark"
           style={{
-            opacity: watermark.opacity,
-            fontSize: `${watermark.fontSize}px`,
+            color: watermark.color,
+            fontSize: `${watermarkFontSize(watermark.text)}px`,
           }}
         >
           {watermark.text}
@@ -1038,7 +1299,9 @@ function PageCard({
   const selectPage = useWorkbenchStore((state) => state.selectPage);
   const togglePageExcluded = useWorkbenchStore((state) => state.togglePageExcluded);
   const togglePageSplit = useWorkbenchStore((state) => state.togglePageSplit);
-  const placeDecoration = useWorkbenchStore((state) => state.placeDecoration);
+  const applyDecorationToTarget = useWorkbenchStore(
+    (state) => state.applyDecorationToTarget,
+  );
   const clickGuardRef = useRef(false);
 
   const applyTool = (event?: React.MouseEvent) => {
@@ -1054,7 +1317,7 @@ function PageCard({
       return;
     }
     if (decorationToolIds.includes(activeTool as DecorationKind)) {
-      placeDecoration(activeTool as DecorationKind, page.id);
+      applyDecorationToTarget(activeTool as DecorationKind, { pageId: page.id });
       return;
     }
     selectPage(page.id, Boolean(event?.shiftKey || event?.ctrlKey || event?.metaKey));
@@ -1115,11 +1378,10 @@ function PageCard({
           <span />
         </div>
         <PageDecorations page={page} decorations={decorations} />
-        <div className="footer-zone">ページ番号</div>
+        <div className="footer-zone">フッター</div>
       </div>
       <div className="page-label">
         p{page.pageNumber}
-        {page.excluded && <span>除外</span>}
         {page.searchHit && <span className="hit-label">検索</span>}
       </div>
       {page.splitAfter && (
@@ -1132,107 +1394,104 @@ function PageCard({
 }
 
 function DecorationPanel({
-  decoration,
+  kind,
   onClose,
 }: {
-  decoration?: Decoration;
+  kind: DecorationKind;
   onClose: () => void;
 }) {
-  const updateDecoration = useWorkbenchStore((state) => state.updateDecoration);
-  const removeDecoration = useWorkbenchStore((state) => state.removeDecoration);
-
-  if (!decoration) {
-    return null;
-  }
+  const draft = useWorkbenchStore((state) => state.decorationDrafts[kind]);
+  const updateDecorationDraft = useWorkbenchStore(
+    (state) => state.updateDecorationDraft,
+  );
+  const Icon =
+    kind === "header" ? Type : kind === "footer" ? Highlighter : Stamp;
+  const isWatermark = kind === "watermark";
+  const positionOptions: Array<{ label: string; value: DecorationPosition }> =
+    kind === "header"
+      ? [
+          { label: "左", value: "top-left" },
+          { label: "中央", value: "top" },
+          { label: "右", value: "top-right" },
+        ]
+      : [
+          { label: "左", value: "bottom-left" },
+          { label: "中央", value: "bottom" },
+          { label: "右", value: "bottom-right" },
+        ];
+  const setPosition = (position: DecorationPosition) => {
+    updateDecorationDraft(kind, { position });
+  };
+  const addToken = (token: string) => {
+    updateDecorationDraft(kind, { text: `${draft.text}${token}` });
+  };
 
   return (
     <div className="floating-panel decoration-panel">
       <div className="floating-title">
         <span>
-          <Hash size={16} />
-          {decorationLabel(decoration.kind)}
+          <Icon size={16} />
+          {decorationLabel(kind)}
         </span>
         <button className="panel-close" onClick={onClose} aria-label="設定を隠す">
           <X size={14} />
         </button>
       </div>
       <label>
-        対象
-        <select
-          value={decoration.target}
-          onChange={(event) =>
-            updateDecoration(decoration.id, {
-              target: event.target.value as Decoration["target"],
-            })
-          }
-        >
-          <option value="all">全ページ</option>
-          <option value="selected">選択ページ</option>
-          <option value="output">この出力のみ</option>
-        </select>
-      </label>
-      <label>
         文字
         <input
-          value={decoration.text}
-          onChange={(event) => updateDecoration(decoration.id, { text: event.target.value })}
+          value={draft.text}
+          onChange={(event) => updateDecorationDraft(kind, { text: event.target.value })}
         />
       </label>
-      <label>
-        配置
-        <select
-          value={decoration.position}
-          onChange={(event) =>
-            updateDecoration(decoration.id, {
-              position: event.target.value as DecorationPosition,
-            })
-          }
-        >
+      {!isWatermark && (
+        <>
+          <div className="floating-controls">
+            {positionOptions.map((option) => (
+              <button
+                className={draft.position === option.value ? "is-active" : ""}
+                onClick={() => setPosition(option.value)}
+                type="button"
+                key={option.value}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+          <div className="token-controls">
+            <button onClick={() => addToken("{page}")} type="button">
+              page
+            </button>
+            <button onClick={() => addToken("{total}")} type="button">
+              total
+            </button>
+          </div>
+        </>
+      )}
+      {isWatermark && (
+        <div className="color-controls">
           {[
-            "top",
-            "bottom",
-            "bottom-left",
-            "bottom-center",
-            "bottom-right",
-            "center",
-          ].map((position) => (
-            <option value={position} key={position}>
-              {positionLabel(position as DecorationPosition)}
-            </option>
+            { label: "赤", value: "#d56a6a" },
+            { label: "灰", value: "#8d98a8" },
+          ].map((option) => (
+            <button
+              className={draft.color.toLowerCase() === option.value ? "is-active" : ""}
+              onClick={() => updateDecorationDraft(kind, { color: option.value })}
+              type="button"
+              key={option.value}
+            >
+              <span style={{ background: option.value }} />
+              {option.label}
+            </button>
           ))}
-        </select>
-      </label>
-      <div className="inline-controls">
-        <label>
-          サイズ
           <input
-            type="number"
-            min={8}
-            max={48}
-            value={decoration.fontSize}
-            onChange={(event) =>
-              updateDecoration(decoration.id, { fontSize: Number(event.target.value) })
-            }
+            type="color"
+            value={draft.color}
+            onChange={(event) => updateDecorationDraft(kind, { color: event.target.value })}
+            aria-label="透かし色"
           />
-        </label>
-        <label>
-          濃度
-          <input
-            type="number"
-            min={0.1}
-            max={1}
-            step={0.05}
-            value={decoration.opacity}
-            onChange={(event) =>
-              updateDecoration(decoration.id, { opacity: Number(event.target.value) })
-            }
-          />
-        </label>
-      </div>
-      <button className="panel-danger" onClick={() => removeDecoration(decoration.id)}>
-        <X size={14} />
-        削除
-      </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -1353,18 +1612,18 @@ function ExpandedTimeline() {
   const files = useWorkbenchStore((state) => state.files);
   const pagesByFile = useWorkbenchStore((state) => state.pagesByFile);
   const outputPlan = useWorkbenchStore((state) => state.outputPlan);
+  const exportPath = useWorkbenchStore((state) => state.exportPath);
   const decorations = useWorkbenchStore((state) => state.decorations);
-  const selectedDecorationId = useWorkbenchStore((state) => state.selectedDecorationId);
   const activeTool = useWorkbenchStore((state) => state.activeTool);
   const movePageToIndex = useWorkbenchStore((state) => state.movePageToIndex);
   const togglePageExcluded = useWorkbenchStore((state) => state.togglePageExcluded);
   const togglePageSplit = useWorkbenchStore((state) => state.togglePageSplit);
-  const placeDecoration = useWorkbenchStore((state) => state.placeDecoration);
+  const applyDecorationToTarget = useWorkbenchStore(
+    (state) => state.applyDecorationToTarget,
+  );
   const expandedFile = files.find((file) => file.expanded && file.cacheState === "ready");
   const pages = expandedFile ? pagesByFile[expandedFile.id] ?? [] : [];
-  const activeDecoration = decorations.find(
-    (decoration) => decoration.id === selectedDecorationId,
-  );
+  const outputPageNumbers = buildOutputPageNumberMap(files, pagesByFile, outputPlan, exportPath);
   const [draggingPageId, setDraggingPageId] = useState<string | null>(null);
   const [dropTarget, setDropTarget] = useState<PageDropTarget | null>(null);
   const [settingsPanelHidden, setSettingsPanelHidden] = useState(false);
@@ -1372,7 +1631,7 @@ function ExpandedTimeline() {
 
   useEffect(() => {
     setSettingsPanelHidden(false);
-  }, [activeTool, selectedDecorationId, expandedFile?.id]);
+  }, [activeTool, expandedFile?.id]);
 
   const positionFromEvent = (
     event: DragEvent<HTMLButtonElement>,
@@ -1520,7 +1779,7 @@ function ExpandedTimeline() {
       } else if (toolId === "scissors") {
         togglePageSplit(pageId);
       } else if (decorationToolIds.includes(toolId as DecorationKind)) {
-        placeDecoration(toolId as DecorationKind, pageId);
+        applyDecorationToTarget(toolId as DecorationKind, { pageId });
       }
       setDropTarget(null);
       return;
@@ -1537,17 +1796,19 @@ function ExpandedTimeline() {
       <SecurityPanel onClose={() => setSettingsPanelHidden(true)} />
     ) : activeTool === "info" ? (
       <InfoPanel file={expandedFile ?? files[0]} onClose={() => setSettingsPanelHidden(true)} />
-    ) : (
+    ) : decorationToolIds.includes(activeTool as DecorationKind) ? (
       <DecorationPanel
-        decoration={activeDecoration}
+        kind={activeTool as DecorationKind}
         onClose={() => setSettingsPanelHidden(true)}
       />
+    ) : (
+      null
     );
   const hasActivePanel = Boolean(
     activeTool === "search-replace" ||
       activeTool === "lock" ||
       activeTool === "info" ||
-      activeDecoration,
+      decorationToolIds.includes(activeTool as DecorationKind),
   );
 
   return (
@@ -1566,20 +1827,14 @@ function ExpandedTimeline() {
           <span>除外 {outputPlan.excludedPageCount}</span>
           <span>分割 {outputPlan.splitCount}</span>
           <span>装飾 {outputPlan.decorationCount}</span>
-          <span>出力 {outputPlan.outputCount}</span>
         </div>
-      </div>
-
-      <div className="page-groups">
-        <div className="output-band output-one">出力 1</div>
-        <div className="output-band output-two">出力 2</div>
       </div>
 
       <div className="page-timeline">
         {pages.length > 0 ? (
           pages.map((page) => (
             <PageCard
-              page={page}
+              page={withOutputPageNumber(page, outputPageNumbers)}
               fileId={expandedFile?.id ?? ""}
               decorations={decorations}
               draggingPageId={draggingPageId}
@@ -1617,9 +1872,12 @@ function OutputBar({
   onToggleLog: () => void;
 }) {
   const outputPlan = useWorkbenchStore((state) => state.outputPlan);
+  const exportPath = useWorkbenchStore((state) => state.exportPath);
   const files = useWorkbenchStore((state) => state.files);
   const exportJob = useWorkbenchStore((state) => state.exportJob);
+  const lastOutputFiles = useWorkbenchStore((state) => state.lastOutputFiles);
   const cancelExportJob = useWorkbenchStore((state) => state.cancelExportJob);
+  const addLog = useWorkbenchStore((state) => state.addLog);
   const handleCancel = async () => {
     if (isTauriRuntime()) {
       try {
@@ -1634,16 +1892,66 @@ function OutputBar({
     }
     cancelExportJob();
   };
-  const pendingCount = files.filter((file) =>
-    ["queued", "converting", "stale"].includes(file.cacheState) &&
-    !(file.sourcePath?.startsWith("sample://") || file.sourcePath?.startsWith("session://")),
+  const conversionFiles = files.filter(
+    (file) =>
+      !file.excluded &&
+      !(file.sourcePath?.startsWith("sample://") || file.sourcePath?.startsWith("session://")) &&
+      file.cacheState !== "error",
+  );
+  const pendingCount = conversionFiles.filter((file) =>
+    ["queued", "converting", "stale"].includes(file.cacheState),
   ).length;
+  const conversionProgress =
+    conversionFiles.length === 0
+      ? 0
+      : Math.round(
+          conversionFiles.reduce((sum, file) => {
+            if (file.cacheState === "ready") {
+              return sum + 100;
+            }
+            if (file.cacheState === "converting") {
+              return sum + (file.progress ?? 0);
+            }
+            return sum;
+          }, 0) / conversionFiles.length,
+        );
+  const isPreparing = pendingCount > 0;
   const progressWidth =
     exportJob.status === "running" || exportJob.status === "completed"
       ? `${exportJob.progress}%`
-      : pendingCount > 0
-        ? "42%"
+      : isPreparing
+        ? `${conversionProgress}%`
         : "0%";
+  const statusLabel =
+    exportJob.status === "running"
+      ? exportJob.currentStep
+      : isPreparing
+        ? `変換中 ${conversionProgress}%`
+        : exportJob.status === "idle"
+          ? ""
+          : exportJob.message;
+  const outputNames = plannedOutputNames(outputPlan, exportPath);
+  const firstOutputFile = lastOutputFiles[0];
+  const openFirstOutput = async () => {
+    if (!firstOutputFile) {
+      return;
+    }
+    try {
+      await openOutputPath(firstOutputFile);
+    } catch (error) {
+      addLog("warn", `出力ファイルを開けませんでした: ${errorMessage(error)}`);
+    }
+  };
+  const revealFirstOutput = async () => {
+    if (!firstOutputFile) {
+      return;
+    }
+    try {
+      await revealOutputPath(firstOutputFile);
+    } catch (error) {
+      addLog("warn", `出力フォルダを開けませんでした: ${errorMessage(error)}`);
+    }
+  };
 
   return (
     <footer className="output-bar">
@@ -1653,7 +1961,7 @@ function OutputBar({
           出力予定 {outputPlan.outputCount}ファイル
         </div>
         <div className="output-files">
-          {outputPlan.outputFiles.map((file) => (
+          {outputNames.map((file) => (
             <span key={file}>{file}</span>
           ))}
           <span className="locked-chip">
@@ -1667,13 +1975,7 @@ function OutputBar({
         </div>
       </div>
       <div className="job-status">
-        <span>
-          {exportJob.status === "running"
-            ? exportJob.currentStep
-            : pendingCount > 0
-              ? `待機 ${pendingCount}`
-              : exportJob.message}
-        </span>
+        {statusLabel && <span>{statusLabel}</span>}
         <div className="job-track">
           <span style={{ width: progressWidth }} />
         </div>
@@ -1682,6 +1984,18 @@ function OutputBar({
             <CircleStop size={16} />
             中止
           </button>
+        )}
+        {exportJob.status === "completed" && firstOutputFile && (
+          <>
+            <button onClick={openFirstOutput} title={firstOutputFile}>
+              <ExternalLink size={16} />
+              開く
+            </button>
+            <button onClick={revealFirstOutput} title={firstOutputFile}>
+              <FolderOpen size={16} />
+              フォルダ
+            </button>
+          </>
         )}
         <button aria-expanded={logOpen} onClick={onToggleLog}>
           <Logs size={16} />
@@ -1704,6 +2018,234 @@ function ExportPreviewModal({
   const files = useWorkbenchStore((state) => state.files);
   const pagesByFile = useWorkbenchStore((state) => state.pagesByFile);
   const outputPlan = useWorkbenchStore((state) => state.outputPlan);
+  const exportPath = useWorkbenchStore((state) => state.exportPath);
+  const decorations = useWorkbenchStore((state) => state.decorations);
+  const exportJob = useWorkbenchStore((state) => state.exportJob);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [previewInfoOpen, setPreviewInfoOpen] = useState(false);
+  const thumbnailRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+  const groups = buildExportPreviewGroups(files, pagesByFile, outputPlan, exportPath);
+  const pages = flattenExportPreviewGroups(groups);
+  const pendingFiles = files.filter(
+    (file) =>
+      !file.excluded && ["queued", "converting", "stale"].includes(file.cacheState),
+  );
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+    setPreviewInfoOpen(false);
+    setCurrentIndex((index) =>
+      pages.length === 0 ? 0 : Math.min(Math.max(index, 0), pages.length - 1),
+    );
+  }, [open, pages.length]);
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (isTextInputTarget(event.target)) {
+        return;
+      }
+      if (pages.length === 0) {
+        return;
+      }
+      if (event.key === "ArrowLeft") {
+        event.preventDefault();
+        setCurrentIndex((index) => Math.max(0, index - 1));
+      } else if (event.key === "ArrowRight") {
+        event.preventDefault();
+        setCurrentIndex((index) => Math.min(pages.length - 1, index + 1));
+      } else if (event.key === "Escape") {
+        event.preventDefault();
+        onClose();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [open, onClose, pages.length]);
+
+  const currentPage = pages[currentIndex];
+  const currentKey = currentPage ? `${currentPage.id}-${currentPage.globalIndex}` : "";
+
+  useEffect(() => {
+    if (!open || !currentKey) {
+      return;
+    }
+    thumbnailRefs.current[currentKey]?.scrollIntoView({
+      behavior: "smooth",
+      block: "nearest",
+      inline: "center",
+    });
+  }, [currentKey, open]);
+
+  if (!open) {
+    return null;
+  }
+
+  const goToPage = (nextIndex: number) => {
+    if (pages.length === 0) {
+      setCurrentIndex(0);
+      return;
+    }
+    setCurrentIndex(Math.max(0, Math.min(pages.length - 1, nextIndex)));
+  };
+  const currentThumbnailSrc = localAssetSrc(currentPage?.previewPath ?? currentPage?.thumbnailPath);
+
+  return (
+    <div className="modal-backdrop" role="presentation">
+      <section
+        className="export-preview-modal preview-modal-v2"
+        role="dialog"
+        aria-modal="true"
+        aria-label="書き出しプレビュー"
+      >
+        <div className="preview-modal-top">
+          <div className="preview-modal-title">
+            <Eye size={18} />
+            <strong>書き出しプレビュー</strong>
+          </div>
+          <div className="preview-modal-meta">
+            <span>{outputPlan.outputCount}ファイル</span>
+            <span>{pages.length}ページ</span>
+            {currentPage && (
+              <span>
+                {currentPage.outputName} p{currentPage.outputPageNumber}
+              </span>
+            )}
+            {pendingFiles.length > 0 && <span className="is-warning">準備中 {pendingFiles.length}</span>}
+            <button
+              className="icon-button"
+              aria-expanded={previewInfoOpen}
+              onClick={() => setPreviewInfoOpen((value) => !value)}
+              title="プレビューの説明を表示"
+              type="button"
+            >
+              <BadgeInfo size={17} />
+            </button>
+            <button className="icon-button" onClick={onClose} aria-label="プレビューを閉じる" type="button">
+              <X size={18} />
+            </button>
+          </div>
+          {previewInfoOpen && (
+            <div className="preview-info-popover">
+              除外ページは表示しません。下部のハサミ位置が分割後の出力境界です。ページ番号は結合後の出力順で表示します。
+            </div>
+          )}
+        </div>
+
+        <div className="preview-stage">
+          <button
+            className="preview-nav-button is-prev"
+            disabled={!currentPage || currentIndex === 0}
+            onClick={() => goToPage(currentIndex - 1)}
+            type="button"
+            aria-label="前のページ"
+          >
+            <ChevronRight size={24} />
+          </button>
+          <div className="preview-canvas">
+            {currentPage ? (
+              <div className="preview-live-page">
+                {currentThumbnailSrc ? (
+                  <img className="preview-live-thumbnail" src={currentThumbnailSrc} alt="" draggable={false} />
+                ) : (
+                  <div className="preview-live-placeholder">
+                    <FileText size={48} />
+                    <span>{currentPage.fileName}</span>
+                  </div>
+                )}
+                <PageDecorations page={currentPage} decorations={decorations} />
+                <div className="preview-live-page-label">
+                  {kindLabel(currentPage.fileKind)} p{currentPage.outputPageNumber}
+                </div>
+              </div>
+            ) : (
+              <div className="preview-live-empty">出力対象ページがありません</div>
+            )}
+          </div>
+          <button
+            className="preview-nav-button"
+            disabled={!currentPage || currentIndex >= pages.length - 1}
+            onClick={() => goToPage(currentIndex + 1)}
+            type="button"
+            aria-label="次のページ"
+          >
+            <ChevronRight size={24} />
+          </button>
+        </div>
+
+        <div className="preview-filmstrip" aria-label="出力ページ一覧">
+          {pages.length > 0 ? (
+            pages.map((page, index) => {
+              const pageKey = `${page.id}-${page.globalIndex}`;
+              const thumbnailSrc = localAssetSrc(page.thumbnailPath);
+              return (
+                <div className="filmstrip-item-wrap" key={pageKey}>
+                  {page.startsOutput && (
+                    <div className="filmstrip-split-marker">
+                      <Scissors size={14} />
+                      <span>{page.outputName}</span>
+                    </div>
+                  )}
+                  <button
+                    ref={(node) => {
+                      thumbnailRefs.current[pageKey] = node;
+                    }}
+                    className={["filmstrip-thumb", index === currentIndex ? "is-active" : ""].join(" ")}
+                    onClick={() => goToPage(index)}
+                    type="button"
+                    title={`${page.outputName} / ${page.fileName} p${page.pageNumber}`}
+                  >
+                    <div className={["filmstrip-paper", thumbnailSrc ? "has-thumbnail" : ""].join(" ")}>
+                      {thumbnailSrc ? (
+                        <img src={thumbnailSrc} alt="" draggable={false} />
+                      ) : (
+                        <FileText size={20} />
+                      )}
+                      <PageDecorations page={page} decorations={decorations} />
+                    </div>
+                    <span>{kindLabel(page.fileKind)} p{page.outputPageNumber}</span>
+                  </button>
+                </div>
+              );
+            })
+          ) : (
+            <div className="preview-empty">出力対象ページがありません</div>
+          )}
+        </div>
+
+        <div className="preview-actions">
+          <button onClick={onClose}>戻る</button>
+          <button
+            className="export-button"
+            disabled={exportJob.status === "running" || outputPlan.activePageCount === 0}
+            onClick={onConfirm}
+          >
+            <FileOutput size={17} />
+            この内容で書き出し
+          </button>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function LegacyExportPreviewModal({
+  open,
+  onClose,
+  onConfirm,
+}: {
+  open: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+}) {
+  const files = useWorkbenchStore((state) => state.files);
+  const pagesByFile = useWorkbenchStore((state) => state.pagesByFile);
+  const outputPlan = useWorkbenchStore((state) => state.outputPlan);
+  const exportPath = useWorkbenchStore((state) => state.exportPath);
   const decorations = useWorkbenchStore((state) => state.decorations);
   const exportJob = useWorkbenchStore((state) => state.exportJob);
 
@@ -1711,7 +2253,7 @@ function ExportPreviewModal({
     return null;
   }
 
-  const groups = buildExportPreviewGroups(files, pagesByFile, outputPlan);
+  const groups = buildExportPreviewGroups(files, pagesByFile, outputPlan, exportPath);
   const pendingFiles = files.filter(
     (file) =>
       !file.excluded && ["queued", "converting", "stale"].includes(file.cacheState),
@@ -1786,7 +2328,7 @@ function ExportPreviewModal({
             disabled={exportJob.status === "running" || outputPlan.activePageCount === 0}
             onClick={onConfirm}
           >
-            <Upload size={17} />
+            <FileOutput size={17} />
             この内容で書き出し
           </button>
         </div>
@@ -1846,6 +2388,20 @@ export function App() {
   const cacheSession = useWorkbenchStore((state) => state.cacheSession);
   const tickBackgroundJobs = useWorkbenchStore((state) => state.tickBackgroundJobs);
   const tickExportJob = useWorkbenchStore((state) => state.tickExportJob);
+  const loadDevelopmentFixture = useWorkbenchStore(
+    (state) => state.loadDevelopmentFixture,
+  );
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("fixture") === "workbench") {
+      loadDevelopmentFixture();
+    }
+    const tool = params.get("tool");
+    if (toolItems.some((item) => item.id === tool)) {
+      setActiveTool(tool as ToolId);
+    }
+  }, [loadDevelopmentFixture, setActiveTool]);
 
   useEffect(() => {
     let sessionId: string | undefined;

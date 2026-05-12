@@ -18,15 +18,24 @@ export type ToolId =
 
 export type DecorationKind = "header" | "footer" | "page-number" | "watermark";
 
-export type DecorationTarget = "all" | "selected" | "output";
+export type DecorationTarget = "all" | "file" | "selected" | "output";
 
 export type DecorationPosition =
+  | "top-left"
   | "top"
+  | "top-right"
   | "bottom"
   | "bottom-left"
   | "bottom-center"
   | "bottom-right"
   | "center";
+
+export type DecorationDraft = {
+  text: string;
+  position: DecorationPosition;
+  color: string;
+  fontSize: number;
+};
 
 export type JobStatus = "idle" | "running" | "completed" | "cancelled" | "error";
 
@@ -84,6 +93,7 @@ export type PageItem = {
   pageNumber: number;
   originalPageNumber: number;
   thumbnailPath?: string;
+  previewPath?: string;
   excluded: boolean;
   selected: boolean;
   splitAfter: boolean;
@@ -97,9 +107,12 @@ export type Decoration = {
   target: DecorationTarget;
   position: DecorationPosition;
   pageId?: string;
+  fileId?: string;
   outputIndex?: number;
+  excludedPageIds?: string[];
   fontSize: number;
   opacity: number;
+  color?: string;
 };
 
 export type SearchReplaceState = {

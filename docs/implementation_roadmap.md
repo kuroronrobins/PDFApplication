@@ -59,6 +59,26 @@ PDF Workbench は旧 Flet/Python システムを `archive/legacy_flet_system_202
 - `docs/reports/screenshots/2026-05-12-file-card-thumbnail-density-1366x768.png`
 - `docs/reports/screenshots/2026-05-12-export-preview-modal-1366x768.png`
 - `docs/reports/screenshots/2026-05-12-floating-panel-hidden-1366x768.png`
+- `docs/reports/screenshots/2026-05-12-layout-fix-1366x768.png`
+
+## 2026-05-12 レイアウト構造化と出力帯削除
+
+- 固定表示していた `出力 1` / `出力 2` の背景帯を削除した。分割はページカード上のハサミマーカー、下部の出力予定数、プレビュー、実書き出し時の `splitAfter` で扱う。
+- ファイルカードは grid 行で `種別/サムネイル/ファイル名/状態/メタ情報/進捗/操作/装飾` を予約し、PDF化中の進捗バーがカード外へ押し出さない構造にした。
+- ページタイムラインは背景帯レイヤーを廃止し、タイムライン自体を1つのコンテナ背景にした。ページカードは `紙面 + ラベル` をカード内 grid に収める。
+- 上部アクションは `プレビュー` と `書き出し` を分離し、`書き出し` は確認モーダルを経由せず直接実行する。
+- 書き出しアイコンはアップロードに見える `Upload` からローカル出力を示す `FileOutput` に変更した。
+- 並び替えツールは掴んで移動する意味を優先し、手のアイコンに変更した。
+- ファイルカードからヘッダー、フッター、ページ番号、透かしをファイル単位で追加できるショートカットを追加した。装飾モデルに `file` スコープと `fileId` を追加し、Python側の装飾反映でも対象ファイルだけへ適用する。
+
+検証:
+
+- `npm run typecheck`
+- `npm run build`
+- `python -m compileall src-python\pdf_workbench_engine`
+- `npm run tauri build`
+- 1366x768 headless Chromium 表示確認: `docs/reports/screenshots/2026-05-12-layout-actions-1366x768.png`
+- `docs/reports/screenshots/2026-05-12-layout-actions-1366x768.png`
 
 配布物:
 
@@ -87,6 +107,27 @@ PDF Workbench は旧 Flet/Python システムを `archive/legacy_flet_system_202
 
 - Tauri 実機上で Explorer からの手動ファイルドロップを確認する。
 - プレビューから実PDF書き出しまでのOffice混在E2Eを確認する。
+
+## 2026-05-12 権限とレイアウト修正
+
+実装済み:
+
+- Tauri capability に `core:event:default` を追加し、frontend の `event.listen` を許可した。
+- Explorer D&D 待ち受けと書き出しworker進捗ストリーミングが同じ権限不足で失敗していたため、両方を同時に解消する構成にした。
+- ツールバー先頭の表示名を「選択」から「並び替え」へ変更した。
+- ファイルカード下部がファイル順序セクションからはみ出さないよう、上段ワークベンチ行を 316px に調整し、カード下部操作の重複した上下移動ボタンを削除した。
+- ページタイムラインの左右余白を 22px に広げ、1ページ目が左境界へ寄りすぎないようにした。
+
+検証:
+
+- `npm run typecheck`: 成功
+- `npm run build`: 成功
+- `npm run tauri build`: 成功
+- headless Chromium CDP で 1366x768 のレイアウトを確認。ファイルカード下端はセクション下端より 5px 内側、1ページ目左余白は 22px。
+
+残る確認:
+
+- Tauri実機で Explorer からの手動D&Dと、プレビュー後の実書き出しを再確認する。
 
 ## 実装方針
 
@@ -411,3 +452,96 @@ PDF Workbench は旧 Flet/Python システムを `archive/legacy_flet_system_202
 - ハサミ/ゴミ箱/装飾/検索置換/暗号化が実出力PDFへ反映される。
 - 書き出し失敗時にログ、対象ファイル、復旧方法が表示される。
 - 1366x768と1920x1080で表示崩れがない。
+
+## 2026-05-12 装飾一括操作とカード内包の実装
+
+実装済み:
+
+- ファイルカード下のヘッダー/フッター/ページ番号/透かしの個別アイコン列を廃止した。
+- ツールバーでヘッダー/フッター/透かしを選択し、ファイルカードクリックでファイル内全ページへ一括適用/解除、ページクリックでページ単位適用/解除する。
+- ファイルカードに `H` / `F` / `W` の全適用/部分適用マークを表示する。
+- ページ番号はヘッダー/フッター文字列内の `{page}` / `{total}` トークンとして扱う。
+- ヘッダー/フッターは左/中央/右を個別配置できる。
+- 透かしは中央固定、斜め表示、自動サイズ、薄赤/グレー/任意色とし、濃度設定を廃止した。
+- 装飾設定パネルはクリックしたページではなく、選択中の編集ツールで切り替える。
+- ページ単位の `除外` 表示を廃止し、除外状態はグレー表示だけにした。
+- ファイル単位の `除外` は確認後にワークスペースから取り除く。元ファイルは削除しない。
+- `PDF準備完了` と `待機中` の常時表示を廃止した。
+- ファイルごとの変換進捗バーを廃止し、下部バーで全体進捗を扱う。
+- ブラウザ検証用に `?fixture=workbench` と `tool=` の明示フィクスチャを追加した。通常起動は空ワークスペースを維持する。
+
+検証:
+
+- `npm run typecheck`
+- `python -m compileall src-python\pdf_workbench_engine`
+- `npm run build`
+- `npm run tauri build`
+- `docs/reports/screenshots/2026-05-12-decoration-batch-toggle-1366x768.png`
+- `docs/reports/screenshots/2026-05-12-decoration-tool-panel-1366x768.png`
+
+## 2026-05-12 追加実装: 装飾スロットと出力ファイル指定
+
+完了:
+
+- ファイルカード下部の装飾バッジを廃止し、代表サムネイル上へヘッダー/フッター/透かしを直接描画。
+- ページサムネイルのヘッダー/フッターを左・中央・右スロットに分離し、複数箇所の設定が重ならない表示へ変更。
+- 展開ボタンを強調表示し、ファイルカードの縦方向レイアウトを1366x768で収まる密度に再調整。
+- 出力先選択をフォルダ指定からPDFファイル指定へ変更。複数出力時は指定stemに `_001`, `_002` を付与。
+- Python workerの中間PDFをランダム接頭辞付き一時ファイルへ変更し、処理後に削除。
+- PyMuPDFの装飾/検索置換に `japan` フォントを指定し、日本語テキストの描画に対応。
+
+検証:
+
+- `npm run typecheck`
+- `python -m compileall src-python`
+- `npm run build`
+- `npm run tauri build`
+- Python worker smoke: `outputPath=pdfwb_smoke_final.pdf` から `pdfwb_smoke_final_001.pdf` / `pdfwb_smoke_final_002.pdf` のみ生成され、一時ファイルが残らないことを確認。
+- Browser visual check: `docs/reports/screenshots/2026-05-12-decoration-slots-output-file-1366x768.png`
+
+## 2026-05-12 プレビュー刷新と装飾除外ルール
+実装済み:
+
+- 書き出しプレビューを大型中央ページ + 下部フィルムストリップへ刷新した。除外ページは表示せず、分割後の出力境界はフィルムストリップ上のハサミ区切りで示す。
+- プレビューは左右ボタンとキーボード左右キーでページ移動でき、選択中サムネイルは青枠のみでハイライトする。
+- ファイル単位サムネイルの装飾表示は、対象ファイルの全出力ページへ同じ装飾が適用されている場合だけ表示する。
+- ファイル単位で一括適用したヘッダー/フッター/透かしは、ページ単位クリックで重複追加せず、そのページだけ一括適用から除外/復帰する。
+- Python の PDF 装飾反映でも `excludedPageIds` を解釈し、UIのページ単位解除が実PDFへ反映される。
+- 書き出し完了後、最後に生成した出力ファイルを開くボタンと、エクスプローラーで表示するボタンを下部バーに出す。
+
+検証:
+
+- `npm run typecheck`
+- `python -m compileall src-python`
+- `npm run build`
+- `npm run tauri build`
+- Browser visual check: `docs/reports/screenshots/2026-05-12-preview-modal-redesign-1280x720.png`
+
+残課題:
+
+- 実ファイルを使ったTauriウィンドウ上の保存ダイアログE2E確認。
+- 装飾スロットの直接クリック解除やスロット別プリセット保存など、さらに直感的な解除UXの拡張。
+
+## 2026-05-13 Preview resolution / numbering / font follow-up
+
+Implemented:
+
+- Export preview now uses a dedicated high-resolution `previewPath` generated beside the compact `thumbnailPath`.
+- PDF thumbnail rendering requests use `previewZoom: 2.25` for the large preview and keep compact thumbnails lightweight.
+- Preview filmstrip layout now reserves a grid row with contained thumbnail cards so the top of thumbnails is not hidden by modal overflow.
+- Preview info icon opens a compact popover explaining excluded pages, split markers, and output-order numbering.
+- Header/footer/page-number placeholders now receive post-merge output numbering in both UI preview and Python export decoration context.
+- UI decoration text uses a gothic/sans font stack compatible with Japanese text.
+- PDF decoration/search overlay code now prefers `BIZ UDPGothic` / `Yu Gothic` Windows font files, with the existing Japanese fallback retained.
+
+Verification:
+
+- `npm run typecheck`
+- `python -m compileall src-python\pdf_workbench_engine`
+- `npm run build` passed after rerunning outside the sandbox because the sandbox blocked Vite config loading with `spawn EPERM`.
+- `npm run tauri build` passed after rerunning outside the sandbox for the same `spawn EPERM` sandbox limitation.
+- Screenshot: `docs/reports/screenshots/2026-05-13-preview-resolution-layout-1366x768.png`
+
+Remaining:
+
+- Recheck with real text-heavy PDFs in the Tauri runtime because the browser fixture uses placeholder page imagery.

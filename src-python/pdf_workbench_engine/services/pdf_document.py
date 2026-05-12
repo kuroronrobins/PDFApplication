@@ -83,7 +83,8 @@ def render_thumbnail(
     output_dir: Path,
     page_number: int,
     password: str = "",
-    zoom: float = 0.22,
+    zoom: float = 0.32,
+    preview_zoom: float | None = 2.25,
 ) -> dict[str, Any]:
     if page_number < 1:
         raise EngineError("invalid_page", "pageNumber は1以上を指定してください。", target=str(input_file))
@@ -102,12 +103,25 @@ def render_thumbnail(
         output_dir.mkdir(parents=True, exist_ok=True)
         out_path = output_dir / f"{input_file.stem}-p{page_number}.png"
         pix.save(str(out_path))
-        return {
+        result = {
             "thumbnailPath": str(out_path),
             "pageNumber": page_number,
             "width": pix.width,
             "height": pix.height,
         }
+        if preview_zoom and preview_zoom > zoom:
+            preview_pix = page.get_pixmap(matrix=fitz.Matrix(preview_zoom, preview_zoom), alpha=False)
+            preview_path = output_dir / "preview" / f"{input_file.stem}-p{page_number}.png"
+            preview_path.parent.mkdir(parents=True, exist_ok=True)
+            preview_pix.save(str(preview_path))
+            result.update(
+                {
+                    "previewPath": str(preview_path),
+                    "previewWidth": preview_pix.width,
+                    "previewHeight": preview_pix.height,
+                }
+            )
+        return result
     finally:
         doc.close()
 
@@ -117,7 +131,8 @@ def render_thumbnails(
     output_dir: Path,
     page_numbers: list[int],
     password: str = "",
-    zoom: float = 0.22,
+    zoom: float = 0.32,
+    preview_zoom: float | None = 2.25,
 ) -> list[dict[str, Any]]:
     if not page_numbers:
         return []
@@ -140,14 +155,25 @@ def render_thumbnails(
             pix = page.get_pixmap(matrix=fitz.Matrix(zoom, zoom), alpha=False)
             out_path = output_dir / f"{input_file.stem}-p{page_number}.png"
             pix.save(str(out_path))
-            thumbnails.append(
-                {
-                    "thumbnailPath": str(out_path),
-                    "pageNumber": page_number,
-                    "width": pix.width,
-                    "height": pix.height,
-                }
-            )
+            item = {
+                "thumbnailPath": str(out_path),
+                "pageNumber": page_number,
+                "width": pix.width,
+                "height": pix.height,
+            }
+            if preview_zoom and preview_zoom > zoom:
+                preview_pix = page.get_pixmap(matrix=fitz.Matrix(preview_zoom, preview_zoom), alpha=False)
+                preview_path = output_dir / "preview" / f"{input_file.stem}-p{page_number}.png"
+                preview_path.parent.mkdir(parents=True, exist_ok=True)
+                preview_pix.save(str(preview_path))
+                item.update(
+                    {
+                        "previewPath": str(preview_path),
+                        "previewWidth": preview_pix.width,
+                        "previewHeight": preview_pix.height,
+                    }
+                )
+            thumbnails.append(item)
         return thumbnails
     finally:
         doc.close()

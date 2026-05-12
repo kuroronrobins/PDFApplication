@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import { open } from "@tauri-apps/plugin-dialog";
+import { open, save } from "@tauri-apps/plugin-dialog";
 import type { InputFileInfo, InputFileKind } from "./types";
 
 export const supportedExtensions = [
@@ -74,17 +74,18 @@ export async function openInputFilesDialog(): Promise<InputFileInfo[] | null> {
   return describeInputPaths(paths);
 }
 
-export async function openOutputDirectoryDialog(): Promise<string | null> {
-  const selected = await open({
-    directory: true,
-    multiple: false,
+export async function openOutputFileDialog(defaultPath = "result.pdf"): Promise<string | null> {
+  const selected = await save({
+    defaultPath,
+    filters: [
+      {
+        name: "PDF",
+        extensions: ["pdf"],
+      },
+    ],
   });
 
-  if (!selected || Array.isArray(selected)) {
-    return null;
-  }
-
-  return selected;
+  return selected || null;
 }
 
 export function browserFilesToInputInfo(files: FileList | File[]): InputFileInfo[] {

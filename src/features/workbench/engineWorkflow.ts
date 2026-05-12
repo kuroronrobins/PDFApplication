@@ -2,7 +2,7 @@ import {
   cancelProcessingEngineJob,
   convertOfficeFile,
   createProcessingJobId,
-  exportWorkspaceToDirectoryStreaming,
+  exportWorkspaceToPathStreaming,
   inspectPdfFile,
   ProcessingEngineCancelledError,
   renderPdfThumbnails,
@@ -56,6 +56,17 @@ function thumbnailMap(
 ): Record<number, string> {
   return Object.fromEntries(
     thumbnails.map((thumbnail) => [thumbnail.pageNumber, thumbnail.thumbnailPath]),
+  );
+}
+
+function previewMap(
+  thumbnails: Array<{ pageNumber: number; previewPath?: string; thumbnailPath: string }>,
+): Record<number, string> {
+  return Object.fromEntries(
+    thumbnails.map((thumbnail) => [
+      thumbnail.pageNumber,
+      thumbnail.previewPath ?? thumbnail.thumbnailPath,
+    ]),
   );
 }
 
@@ -118,6 +129,7 @@ async function processFileInternal(file: WorkbenchFile, sessionDir: string): Pro
       pageCount: inspection.pageCount,
       metadata: metadataFromInspection(inspection),
       thumbnailPaths: thumbnailMap(thumbnails.thumbnails),
+      previewPaths: previewMap(thumbnails.thumbnails),
       engineState: file.kind === "pdf" ? "inspected" : "cached",
       message: `${file.name} を実PDFとして準備しました。${inspection.pageCount}ページ。`,
     });
@@ -252,7 +264,7 @@ function passwordMapForExport(snapshot: WorkbenchSnapshot): Record<string, strin
 }
 
 export async function exportCurrentWorkspaceWithEngine(
-  outputDir: string,
+  outputPath: string,
 ): Promise<ExportWorkspaceResult> {
   if (activeExportCancellationRequested) {
     throw new ProcessingEngineCancelledError();
@@ -261,8 +273,8 @@ export async function exportCurrentWorkspaceWithEngine(
   const jobId = createProcessingJobId("export");
   activeExportJobId = jobId;
   try {
-    return await exportWorkspaceToDirectoryStreaming(
-      outputDir,
+    return await exportWorkspaceToPathStreaming(
+      outputPath,
       snapshot,
       passwordMapForExport(snapshot),
       jobId,

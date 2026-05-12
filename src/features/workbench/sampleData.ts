@@ -99,6 +99,7 @@ export const initialDecorations: Decoration[] = [
     position: "bottom-right",
     fontSize: 10,
     opacity: 1,
+    color: "#355f92",
   },
   {
     id: "dec-watermark",
@@ -109,6 +110,7 @@ export const initialDecorations: Decoration[] = [
     pageId: "appendix-6",
     fontSize: 13,
     opacity: 0.32,
+    color: "#d56a6a",
   },
 ];
 
@@ -129,7 +131,7 @@ export const initialExportJob: ExportJobState = {
   status: "idle",
   progress: 0,
   cancellable: false,
-  message: "待機中",
+  message: "準備完了",
 };
 
 export const initialLogs: WorkbenchLog[] = [
@@ -137,7 +139,7 @@ export const initialLogs: WorkbenchLog[] = [
     id: "log-initial-1",
     time: "20:59:01",
     level: "info",
-    message: "Office 変換ジョブを待機中です。",
+    message: "Office 変換ジョブを準備中です。",
   },
   {
     id: "log-initial-2",

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import Any
+from uuid import uuid4
 
 from ..errors import EngineError
 from ..schemas import as_path
@@ -96,7 +97,9 @@ def _build_groups(workspace: dict[str, Any]) -> list[list[dict[str, Any]]]:
 def _apply_post_processing(
     output_file: Path,
     workspace: dict[str, Any],
-    output_dir: Path,
+    scratch_dir: Path,
+    scratch_prefix: str,
+    final_file: Path,
     index: int,
     group: list[dict[str, Any]],
     emit: Any = None,
@@ -104,15 +107,23 @@ def _apply_post_processing(
     base_progress: int = 55,
 ) -> Path:
     current = output_file
+    output_page_contexts = [
+        {
+            **page_context,
+            "outputPageNumber": page_number,
+            "outputPageTotal": len(group),
+        }
+        for page_number, page_context in enumerate(group, start=1)
+    ]
     decorations = workspace.get("decorations")
     if isinstance(decorations, list) and decorations:
         _emit_progress(emit, job_id, "装飾", base_progress, f"出力{index}へ装飾を反映しています。")
-        decorated = output_dir / f".decorated-{index:03}.pdf"
+        decorated = scratch_dir / f"{scratch_prefix}-decorated-{index:03}.pdf"
         current = apply_decorations(
             current,
             decorated,
             decorations,
-            page_contexts=group,
+            page_contexts=output_page_contexts,
             output_index=index,
         )
 
@@ -124,7 +135,7 @@ def _apply_post_processing(
         replacement = str(search_replace.get("replacement") or "")
     if search:
         _emit_progress(emit, job_id, "検索置換", base_progress + 12, f"出力{index}の検索置換を反映しています。")
-        replaced = output_dir / f".replaced-{index:03}.pdf"
+        replaced = scratch_dir / f"{scratch_prefix}-replaced-{index:03}.pdf"
         replace_text_with_overlay(
             current,
             replaced,
@@ -140,7 +151,7 @@ def _apply_post_processing(
         password = str(security.get("userPassword") or security.get("outputPassword") or security.get("ownerPassword") or "")
         if not password:
             raise EngineError("missing_password", "暗号化にはパスワードが必要です。")
-        encrypted = output_dir / f".encrypted-{index:03}.pdf"
+        encrypted = scratch_dir / f"{scratch_prefix}-encrypted-{index:03}.pdf"
         current = encrypt_pdf(
             current,
             encrypted,
@@ -148,14 +159,34 @@ def _apply_post_processing(
             owner_password=str(security.get("ownerPassword") or password),
         )
 
-    final_file = output_dir / f"result_{index:03}.pdf"
     if current != final_file:
+        final_file.parent.mkdir(parents=True, exist_ok=True)
         final_file.write_bytes(current.read_bytes())
     return final_file
 
 
+def _requested_output_file(request: dict[str, Any]) -> Path:
+    raw_output_path = request.get("outputPath")
+    if isinstance(raw_output_path, str) and raw_output_path:
+        output_file = as_path(raw_output_path, "outputPath")
+    else:
+        output_dir = as_path(request.get("outputDir"), "outputDir")
+        output_file = output_dir / "result.pdf"
+
+    if output_file.suffix.lower() != ".pdf":
+        output_file = output_file.with_suffix(".pdf")
+    return output_file
+
+
+def _final_output_file(base_file: Path, output_count: int, index: int) -> Path:
+    if output_count <= 1:
+        return base_file
+    return base_file.with_name(f"{base_file.stem}_{index:03}.pdf")
+
+
 def handle(request: dict[str, Any]) -> dict[str, Any]:
-    output_dir = as_path(request.get("outputDir"), "outputDir")
+    output_file = _requested_output_file(request)
+    output_dir = output_file.parent
     workspace = request.get("workspace")
     if not isinstance(workspace, dict):
         raise EngineError("invalid_workspace", "workspace を指定してください。")
@@ -169,28 +200,38 @@ def handle(request: dict[str, Any]) -> dict[str, Any]:
     _emit_progress(emit, job_id, "分割", 16, f"{len(groups)}個の出力PDFへ分割計画を作成しました。")
 
     outputs: list[str] = []
-    for index, group in enumerate(groups, start=1):
-        group_progress = 20 + int(((index - 1) / max(1, len(groups))) * 38)
-        _emit_progress(
-            emit,
-            job_id,
-            "結合",
-            group_progress,
-            f"出力{index}/{len(groups)}のページ列を作成しています。",
-        )
-        raw_output = output_dir / f".pages-{index:03}.pdf"
-        write_page_sequence(group, raw_output, password_map={str(Path(key).resolve()): str(value) for key, value in password_map.items()})
-        final_file = _apply_post_processing(
-            raw_output,
-            workspace,
-            output_dir,
-            index,
-            group,
-            emit=emit,
-            job_id=job_id,
-            base_progress=58 + int((index / max(1, len(groups))) * 18),
-        )
-        outputs.append(str(final_file))
+    scratch_prefix = f".pdf-workbench-{uuid4().hex}"
+    try:
+        for index, group in enumerate(groups, start=1):
+            group_progress = 20 + int(((index - 1) / max(1, len(groups))) * 38)
+            _emit_progress(
+                emit,
+                job_id,
+                "結合",
+                group_progress,
+                f"出力{index}/{len(groups)}のページ列を作成しています。",
+            )
+            raw_output = output_dir / f"{scratch_prefix}-pages-{index:03}.pdf"
+            write_page_sequence(group, raw_output, password_map={str(Path(key).resolve()): str(value) for key, value in password_map.items()})
+            final_file = _apply_post_processing(
+                raw_output,
+                workspace,
+                output_dir,
+                scratch_prefix,
+                _final_output_file(output_file, len(groups), index),
+                index,
+                group,
+                emit=emit,
+                job_id=job_id,
+                base_progress=58 + int((index / max(1, len(groups))) * 18),
+            )
+            outputs.append(str(final_file))
+    finally:
+        for scratch_file in output_dir.glob(f"{scratch_prefix}-*"):
+            try:
+                scratch_file.unlink()
+            except OSError:
+                pass
 
     _emit_progress(emit, job_id, "保存", 96, "出力PDFを保存しました。")
     return {
