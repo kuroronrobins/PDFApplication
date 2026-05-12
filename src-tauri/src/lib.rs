@@ -2,7 +2,7 @@ use serde::Serialize;
 use serde_json::Value;
 use std::path::{Path, PathBuf};
 use std::process::Command;
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 use tauri::{Emitter, Manager};
 
 mod python_worker;
@@ -45,6 +45,11 @@ struct E2eBootstrapInfo {
 
 const ALPHA_EXPIRES_ON: &str = "2026-06-30";
 const ALPHA_EXPIRY_UNIX_SECONDS: u64 = 1_782_831_600; // 2026-07-01 00:00:00 JST.
+const MIN_SPLASH_VISIBLE_MILLIS: u64 = 4_000;
+
+struct StartupClock {
+    launched_at: Instant,
+}
 
 fn kind_from_extension(extension: &str) -> &'static str {
     match extension {
@@ -319,7 +324,16 @@ fn reveal_output_path(path: String) -> Result<(), String> {
 }
 
 #[tauri::command]
-fn complete_startup(app: tauri::AppHandle) -> Result<(), String> {
+fn complete_startup(
+    app: tauri::AppHandle,
+    startup: tauri::State<'_, StartupClock>,
+) -> Result<(), String> {
+    let minimum_visible = Duration::from_millis(MIN_SPLASH_VISIBLE_MILLIS);
+    let elapsed = startup.launched_at.elapsed();
+    if elapsed < minimum_visible {
+        std::thread::sleep(minimum_visible - elapsed);
+    }
+
     let main_window = app
         .get_webview_window("main")
         .ok_or_else(|| "main window was not found".to_string())?;
@@ -338,6 +352,9 @@ fn complete_startup(app: tauri::AppHandle) -> Result<(), String> {
 pub fn run() {
     tauri::Builder::default()
         .manage(python_worker::EngineJobRegistry::default())
+        .manage(StartupClock {
+            launched_at: Instant::now(),
+        })
         .plugin(tauri_plugin_dialog::init())
         .invoke_handler(tauri::generate_handler![
             describe_input_files,

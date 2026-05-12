@@ -585,6 +585,54 @@ Remaining:
 
 - Re-test startup timing from the generated release executable on the target PC workflow.
 
+## 2026-05-13 Startup splash minimum display duration
+
+Implemented:
+
+- Added a 4-second minimum splash display guard to the Tauri `complete_startup` command.
+- The guard measures from application launch and only waits for the remaining time when startup preparation finishes too quickly.
+- The main window still appears immediately after the 4-second minimum has elapsed on slower machines.
+
+Verification:
+
+- `cargo fmt --check`: passed.
+- `cargo check`: passed.
+- `npm run typecheck`: passed.
+- `npm run tauri build`: passed and regenerated the release exe plus NSIS/MSI bundles.
+- Visual asset unchanged; existing splash screenshot remains `docs/reports/screenshots/2026-05-13-startup-splash-a-picture.png`.
+
+Remaining:
+
+- Confirm the 4-second splash hold by launching the regenerated installer build in the target user workflow.
+
+## 2026-05-13 Installer Japanese alpha wording
+
+Implemented:
+
+- Configured bundle metadata with `koki kurokawa` as publisher and copyright owner.
+- Added a Japanese alpha notice shown as the installer license/notice page.
+- Switched the NSIS installer to Japanese and added Japanese custom strings for Tauri-specific installer messages.
+- Added a Japanese WiX locale file for MSI-specific strings.
+- Kept `productName` as `PDF Workbench` to avoid changing app identity or installer upgrade behavior.
+
+Verification:
+
+- Tauri config JSON parse check: passed.
+- `npm run typecheck`: passed.
+- `cargo check`: passed.
+- `npm run tauri build`: passed and regenerated the release exe plus NSIS/MSI bundles.
+- Generated NSIS source inspection passed:
+  - Japanese language setup is included.
+  - `koki kurokawa` metadata is included.
+  - The alpha notice is wired as the installer license/notice page.
+- Generated WiX source inspection passed:
+  - `ja-JP` locale strings are included.
+  - The generated license RTF contains the Japanese alpha notice.
+
+Remaining:
+
+- Launch the regenerated NSIS installer and visually confirm that the Japanese text and alpha notice match the intended tone.
+
 ## 2026-05-13 Office COM / alpha license / layout hardening
 
 Implemented:

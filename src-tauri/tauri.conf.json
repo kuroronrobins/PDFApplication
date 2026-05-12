@@ -48,10 +48,33 @@
   "bundle": {
     "active": true,
     "targets": "all",
+    "publisher": "koki kurokawa",
+    "copyright": "Copyright (c) 2026 koki kurokawa",
+    "licenseFile": "installer/alpha-notice-ja.txt",
+    "shortDescription": "PDF Workbench アルファ版",
+    "longDescription": "PDF/Officeファイルの変換、結合、分割、装飾を一画面で扱う PDF Workbench の限定アルファ版です。",
     "icon": ["icons/icon.ico", "icons/icon.png"],
     "resources": {
       "../src-python": "src-python",
       "../build/python-runtime/python": "python"
+    },
+    "windows": {
+      "nsis": {
+        "languages": ["Japanese"],
+        "customLanguageFiles": {
+          "Japanese": "installer/nsis/Japanese.nsh"
+        },
+        "displayLanguageSelector": false,
+        "startMenuFolder": "PDF Workbench"
+      },
+      "wix": {
+        "upgradeCode": "191d276c-f539-5ee0-9ab8-c3e1c3b55b3d",
+        "language": {
+          "ja-JP": {
+            "localePath": "installer/wix/ja-JP.wxl"
+          }
+        }
+      }
     }
   }
 }
