@@ -1,0 +1,100 @@
+{
+  "sources": [
+    {
+      "kind": "excel",
+      "path": "C:\\Users\\kuroron\\Downloads\\job_history.xlsx",
+      "sizeBytes": 37647
+    },
+    {
+      "kind": "powerpoint",
+      "path": "C:\\Users\\kuroron\\Downloads\\プレゼン資料 (003).pptx",
+      "sizeBytes": 18442549
+    },
+    {
+      "kind": "word",
+      "path": "C:\\Users\\kuroron\\Downloads\\生体機械力学１.docx",
+      "sizeBytes": 16192
+    }
+  ],
+  "converted": [
+    {
+      "id": "file-1",
+      "kind": "excel",
+      "sourcePath": "C:\\Users\\kuroron\\Downloads\\job_history.xlsx",
+      "cachePath": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\docs\\reports\\e2e\\2026-05-13-office-com\\session-cache\\office-cache\\01-excel.pdf",
+      "name": "job_history.xlsx",
+      "pageCount": 7,
+      "encrypted": false,
+      "convertSeconds": 2.763,
+      "inspectSeconds": 0.289,
+      "thumbnailSeconds": 0.272,
+      "thumbnailPath": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\docs\\reports\\e2e\\2026-05-13-office-com\\thumbnails\\01-excel\\01-excel-p1.png",
+      "previewPath": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\docs\\reports\\e2e\\2026-05-13-office-com\\thumbnails\\01-excel\\preview\\01-excel-p1.png",
+      "outputName": "01-excel.pdf"
+    },
+    {
+      "id": "file-2",
+      "kind": "powerpoint",
+      "sourcePath": "C:\\Users\\kuroron\\Downloads\\プレゼン資料 (003).pptx",
+      "cachePath": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\docs\\reports\\e2e\\2026-05-13-office-com\\session-cache\\office-cache\\02-powerpoint.pdf",
+      "name": "プレゼン資料 (003).pptx",
+      "pageCount": 27,
+      "encrypted": false,
+      "convertSeconds": 11.569,
+      "inspectSeconds": 0.492,
+      "thumbnailSeconds": 0.339,
+      "thumbnailPath": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\docs\\reports\\e2e\\2026-05-13-office-com\\thumbnails\\02-powerpoint\\02-powerpoint-p1.png",
+      "previewPath": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\docs\\reports\\e2e\\2026-05-13-office-com\\thumbnails\\02-powerpoint\\preview\\02-powerpoint-p1.png",
+      "outputName": "02-powerpoint.pdf"
+    },
+    {
+      "id": "file-3",
+      "kind": "word",
+      "sourcePath": "C:\\Users\\kuroron\\Downloads\\生体機械力学１.docx",
+      "cachePath": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\docs\\reports\\e2e\\2026-05-13-office-com\\session-cache\\office-cache\\03-word.pdf",
+      "name": "生体機械力学１.docx",
+      "pageCount": 7,
+      "encrypted": false,
+      "convertSeconds": 9.325,
+      "inspectSeconds": 0.442,
+      "thumbnailSeconds": 0.355,
+      "thumbnailPath": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\docs\\reports\\e2e\\2026-05-13-office-com\\thumbnails\\03-word\\03-word-p1.png",
+      "previewPath": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\docs\\reports\\e2e\\2026-05-13-office-com\\thumbnails\\03-word\\preview\\03-word-p1.png",
+      "outputName": "03-word.pdf"
+    }
+  ],
+  "export": {
+    "outputFiles": [
+      "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\docs\\reports\\e2e\\2026-05-13-office-com\\outputs\\office-e2e-result_001.pdf",
+      "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\docs\\reports\\e2e\\2026-05-13-office-com\\outputs\\office-e2e-result_002.pdf"
+    ],
+    "outputCount": 2,
+    "exportSeconds": 2.617,
+    "outputInspections": [
+      {
+        "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\docs\\reports\\e2e\\2026-05-13-office-com\\outputs\\office-e2e-result_001.pdf",
+        "pageCount": 7,
+        "encrypted": false,
+        "inspectSeconds": 0.27,
+        "sizeBytes": 3200416
+      },
+      {
+        "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\docs\\reports\\e2e\\2026-05-13-office-com\\outputs\\office-e2e-result_002.pdf",
+        "pageCount": 34,
+        "encrypted": false,
+        "inspectSeconds": 0.264,
+        "sizeBytes": 6443069
+      }
+    ]
+  },
+  "workspace": {
+    "fileCount": 3,
+    "totalInputPages": 41,
+    "splitCount": 1,
+    "decorations": [
+      "header",
+      "footer",
+      "watermark"
+    ]
+  }
+}

@@ -105,7 +105,10 @@ async function processFileInternal(file: WorkbenchFile, sessionDir: string): Pro
     let pdfPath = sourcePath;
     if (file.kind !== "pdf") {
       const converted = await convertOfficeFile(sourcePath, sessionDir, `${file.id}.pdf`);
-      pdfPath = converted.outputPath;
+      pdfPath = converted.outputPath ?? converted.cachePath ?? "";
+      if (!pdfPath) {
+        throw new Error("Office変換後のPDFパスを取得できませんでした。");
+      }
       useWorkbenchStore
         .getState()
         .setFileCacheProgress(file.id, "converting", 58, `${file.name} のPDF化が完了しました。ページ解析中です。`);

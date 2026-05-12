@@ -19,5 +19,7 @@ def handle(request: dict[str, Any]) -> dict[str, Any]:
     return {
         "sourcePath": str(source),
         "cachePath": str(converted),
+        "outputPath": str(converted),
         "outputName": converted.name,
+        "kind": source.suffix.lower().lstrip("."),
     }

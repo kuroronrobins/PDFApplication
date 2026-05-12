@@ -49,9 +49,17 @@ export class ProcessingEngineCancelledError extends Error {
 }
 
 export type ConvertOfficeResult = {
-  outputPath: string;
+  outputPath?: string;
+  cachePath?: string;
   sourcePath: string;
   kind: string;
+};
+
+export type AlphaLicenseStatus = {
+  valid: boolean;
+  expiresOn: string;
+  checkedAtEpochSeconds?: number;
+  message?: string;
 };
 
 export type InspectPdfResult = {
@@ -95,6 +103,26 @@ export async function cleanupCacheSession(sessionId: string): Promise<void> {
   }
 
   await invoke("cleanup_cache_session", { sessionId });
+}
+
+export async function completeStartup(): Promise<void> {
+  if (!isTauriRuntime()) {
+    return;
+  }
+
+  await invoke("complete_startup");
+}
+
+export async function checkAlphaLicense(): Promise<AlphaLicenseStatus> {
+  if (!isTauriRuntime()) {
+    return {
+      valid: true,
+      expiresOn: "2026-06-30",
+      message: "Browser development runtime",
+    };
+  }
+
+  return invoke<AlphaLicenseStatus>("check_alpha_license");
 }
 
 export async function runProcessingEngine(

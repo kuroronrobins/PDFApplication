@@ -439,3 +439,58 @@ COM変換が失敗した場合は、対象ファイル、Officeアプリ名、�
 - The preview info icon toggles an explanatory popover.
 - Header/footer/page-number tokens `{page}` and `{total}` represent the post-merge output PDF order, including split output groups.
 - UI decoration previews and PDF decoration output prefer gothic/sans Japanese-compatible fonts: `BIZ UDPGothic`, `Yu Gothic`, `Yu Gothic UI`, then existing fallbacks.
+
+## 2026-05-13 Startup Splash B
+
+The startup experience uses the selected B direction: a compact premium desk/workbench splash window with PDF pages, a stamp, scissors, lock, completion check, and a calm blue/green paid-software palette.
+
+Behavior:
+
+- The release app creates a lightweight `splashscreen` window first and keeps the main `main` window hidden.
+- The splash uses bundled static assets under `public/`, so production startup does not wait for the React workbench to paint before showing a branded loading surface.
+- The React workbench calls the Tauri `complete_startup` command after initial session-cache setup settles.
+- `complete_startup` shows and focuses the main window, then closes the splash window.
+- The bottom of the splash displays `Licensed to koki kurokawa` and the current visible version `v0.1.0`.
+- The lowest row displays a small spinner and a single subtle rotating status line.
+- Production Windows builds suppress the console subsystem so users see the app window flow instead of a terminal.
+
+Current limits:
+
+- The splash status text is a lightweight local rotation, not live backend phase telemetry.
+- `npm run tauri dev` still depends on the Vite dev server startup; the intended no-terminal/no-blank behavior is for release binaries.
+
+Reference screenshot:
+
+- `docs/reports/screenshots/2026-05-13-startup-splash-b.png`
+
+## 2026-05-13 Startup Splash A Picture Adoption
+
+The selected startup picture is now the earlier A direction: a restrained premium glass-desk PDF workbench image. The app uses a cropped PNG asset that keeps the document workspace, paper stack, glass surface, and editing-tool feel while reducing the visual prominence of the lock motif from the generated comparison board.
+
+Behavior remains unchanged:
+
+- The `splashscreen` window appears first.
+- The hidden `main` window is shown after frontend initialization completes.
+- License, version, spinner, and lightweight rotating startup status remain in the lower rows.
+
+Reference screenshot:
+
+- `docs/reports/screenshots/2026-05-13-startup-splash-a-picture.png`
+
+## 2026-05-13 Office COM, Alpha License, and Layout Hardening
+
+今回のUI/起動/Office方針更新:
+
+- ファイル順序セクションのカード枠は、ページタイムラインと同じく右端まで視覚的に広げる。カードが少ない場合も右側に未使用の白い余白を残さず、淡いトレイ背景としてワークスペース全体を使う。
+- `D&D対応` の補助チップは廃止する。ドラッグ操作はカードの掴める見た目、ゴースト表示、挿入ガイドで伝える。
+- ファイル読込み中/Office変換中のカードは、サムネイル、変換ステータス、ファイル名、メタ情報、操作ボタンをgrid内に固定し、ステータスバッジやエラー文がカード外へはみ出さないようにする。
+- ログドロワーは長いWindowsパスを必ず折り返す。パスやセッションIDが長くても、ログ枠外へ横にはみ出さない。
+- Office変換はactiveなPython workerのMicrosoft Office COM経路を本接続する。Word/Excel/PowerPointはセッション一時PDFへ変換し、そのPDFをPDFファイルと同じ検査、サムネイル、ページ編集、書き出し経路へ渡す。
+- Office変換結果は `outputPath` / `cachePath` の両方で返し、フロントエンドはどちらのworker応答形式でもPDFパスを取得できるようにする。
+- 起動ミニウィンドウの採用A画像は、前回より少し引きで切り出す。ただし画像領域に余白が出ないよう `object-fit: cover` を維持する。
+- アルファ版配布制限として、起動時に簡易日時確認を行う。2026-06-30 まで有効、2026-07-01 00:00:00 JST 以降はメインワークベンチを表示せず期限切れ画面を出す。
+
+検証スクリーンショット:
+
+- `docs/reports/screenshots/2026-05-13-office-ui-layout-1366x768.png`
+- `docs/reports/screenshots/2026-05-13-startup-splash-a-picture.png`

@@ -545,3 +545,110 @@ Verification:
 Remaining:
 
 - Recheck with real text-heavy PDFs in the Tauri runtime because the browser fixture uses placeholder page imagery.
+
+## 2026-05-13 Startup splash B implementation
+
+Implemented:
+
+- Added a two-window startup flow: static `splashscreen` visible first, hidden `main` workbench shown after frontend initialization.
+- Added Tauri command `complete_startup` to show/focus the main window and close the splash window.
+- Added bundled splash HTML and B-direction desk/workbench artwork under `public/`.
+- Added Windows release console suppression via `windows_subsystem = "windows"`.
+- Kept Tauri IPC capabilities scoped to the `main` window; the static `splashscreen` window does not require dialog or event permissions.
+
+Verification:
+
+- `npm run typecheck`: passed.
+- `cargo check`: passed.
+- `npm run build`: sandbox blocked Vite config loading with `spawn EPERM`; rerun outside sandbox passed.
+- `npm run tauri build`: passed outside sandbox and produced release exe plus MSI/NSIS bundles.
+- Headless Edge screenshot: `docs/reports/screenshots/2026-05-13-startup-splash-b.png`.
+- `cargo fmt --check`: not clean because existing unrelated files `src-tauri/build.rs` and `src-tauri/src/python_worker.rs` have formatting diffs; not reformatted in this splash change.
+
+Remaining:
+
+- Decide whether splash status should receive real backend phase events instead of local rotating text.
+- Re-test startup timing from the generated release executable on the target PC workflow.
+
+## 2026-05-13 Startup splash A picture adoption
+
+Implemented:
+
+- Replaced the startup splash hero artwork with the selected earlier A-direction glass desk / PDF workbench picture.
+- Added `public/assets/splash-workbench-a.png` as a cropped repository asset from the generated concept board.
+- Updated `public/splashscreen.html` to load the new PNG while preserving the existing splash layout and startup behavior.
+
+Verification:
+
+- `npm run typecheck`
+- `npm run build` passed after rerunning outside the sandbox because the sandbox blocked Vite config loading with `spawn EPERM`.
+- Headless Edge screenshot: `docs/reports/screenshots/2026-05-13-startup-splash-a-picture.png`
+
+Remaining:
+
+- Re-test startup timing from the generated release executable on the target PC workflow.
+
+## 2026-05-13 Office COM / alpha license / layout hardening
+
+Implemented:
+
+- Fixed the Office conversion bridge so the frontend accepts both `outputPath` and `cachePath` from the Python worker. This connects converted Word/Excel/PowerPoint PDFs back into the same PDF inspection, thumbnail, edit, preview, and export workflow.
+- Updated the Python `convert_office` job response to return `sourcePath`, `outputPath`, `cachePath`, `outputName`, and `kind`.
+- Added a Tauri startup alpha-license command. The alpha build is valid through 2026-06-30 and blocks the workbench from 2026-07-01 00:00:00 JST onward.
+- Added an expired-alpha screen in React and prevented background file processing when the alpha check is invalid.
+- Removed the `D&D対応` chip from the file-order header.
+- Reworked file-card loading/conversion layout so status badges and errors stay inside the card grid.
+- Extended the file-order tray visually to the right edge, matching the page timeline's full-width work area.
+- Made the log drawer wrap long Windows paths and session IDs instead of allowing horizontal overflow.
+- Re-cropped the selected splash A image so it is shown more pulled back while still covering the picture area without blank margins.
+
+Verification:
+
+- `npm run typecheck`: passed.
+- `python -m compileall src-python\pdf_workbench_engine`: passed.
+- `cargo check`: passed.
+- `npm run build`: sandbox blocked Vite config loading with `spawn EPERM`; rerun outside sandbox passed.
+- `python -c "import win32com.client; print('pywin32 ok')"` with `PYTHONPATH=src-python`: passed.
+- Office worker shape smoke with a missing `.docx`: returned expected `input_not_found`, confirming `sourcePath` is now passed to the worker instead of being lost.
+- `npm run tauri build`: passed outside sandbox and produced release exe plus MSI/NSIS bundles.
+- Screenshot: `docs/reports/screenshots/2026-05-13-office-ui-layout-1366x768.png`
+- Screenshot: `docs/reports/screenshots/2026-05-13-startup-splash-a-picture.png`
+
+Remaining:
+
+- Run Word/Excel/PowerPoint real-document conversion on a Windows machine with Microsoft Office installed and record the output PDFs.
+- Package or document the Python runtime and required Python libraries for alpha distribution PCs.
+
+## 2026-05-13 Office COM real-file E2E
+
+Implemented during verification:
+
+- Hardened `src-python/pdf_workbench_engine/services/office_com.py` for real Office COM conversion:
+  - Stage Office input files into the session cache before conversion.
+  - Use explicit read-only/open-and-repair options for Word.
+  - Use more defensive Excel open options, including link suppression, local mode, repair loading, and Protected View fallback.
+  - Remove staged source copies after conversion.
+
+E2E result:
+
+- `job_history.xlsx` converted through Excel COM to a 7-page PDF.
+- `プレゼン資料 (003).pptx` converted through PowerPoint COM to a 27-page PDF.
+- `生体機械力学１.docx` converted through Word COM to a 7-page PDF.
+- The mixed 41-page workspace exported with one split marker into two final PDFs:
+  - `office-e2e-result_001.pdf`: 7 pages
+  - `office-e2e-result_002.pdf`: 34 pages
+- Header, footer, and watermark decorations were applied and preview-rendered from the final PDFs.
+
+Verification:
+
+- `python -m compileall src-python\pdf_workbench_engine`: passed.
+- Excel COM blank workbook smoke outside sandbox: passed.
+- Full Office COM E2E outside sandbox: passed.
+- Evidence report: `docs/reports/2026-05-13-office-com-e2e.md`
+- Summary JSON: `docs/reports/e2e/2026-05-13-office-com/summary.json`
+- Final output PDFs: `docs/reports/e2e/2026-05-13-office-com/outputs/`
+
+Remaining:
+
+- Repeat the same scenario from the Tauri UI/release executable with Explorer drag-and-drop and visible UI logs.
+- Package or document the Python runtime and Office dependency expectations for alpha distribution PCs.

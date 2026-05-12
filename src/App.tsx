@@ -43,10 +43,13 @@ import {
   X,
 } from "lucide-react";
 import {
+  checkAlphaLicense,
   cleanupCacheSession,
+  completeStartup,
   openOutputPath,
   prepareCacheSession,
   revealOutputPath,
+  type AlphaLicenseStatus,
 } from "./features/workbench/backend";
 import {
   cancelCurrentExportWithEngine,
@@ -352,6 +355,22 @@ function decorationLabel(kind: DecorationKind): string {
     case "watermark":
       return "透かし";
   }
+}
+
+function AlphaExpiredScreen({ license }: { license: AlphaLicenseStatus }) {
+  return (
+    <div className="alpha-expired-shell">
+      <section className="alpha-expired-card" role="alert" aria-live="assertive">
+        <div className="brand-mark">PDF</div>
+        <h1>PDF Workbench</h1>
+        <strong>アルファ版の利用期限が終了しました</strong>
+        <p>
+          この限定版は {license.expiresOn} まで利用可能です。期限後は作業画面を開けません。
+        </p>
+        <small>{license.message ?? "Alpha license expired"}</small>
+      </section>
+    </div>
+  );
 }
 
 function AppBar() {
@@ -803,11 +822,6 @@ function FileCard({
             <span className={`cache-badge state-${file.cacheState}`}>{statusLabel}</span>
           </div>
         )}
-        {file.cacheState === "converting" && (
-          <div className="progress-ring">
-            <Loader2 size={22} />
-          </div>
-        )}
       </div>
       <div className="file-name" title={file.name}>
         {file.name}
@@ -815,15 +829,18 @@ function FileCard({
       <div className="file-meta">
         <span className="file-page-count">{pageCountLabel(file)}</span>
       </div>
-      <div className="file-submeta">
-        <span>{file.extension?.toUpperCase() ?? "形式未取得"}</span>
-        <span>{formatSize(file.sizeBytes)}</span>
+      <div className={["file-submeta", file.errorMessage ? "has-error" : ""].join(" ")}>
+        {file.errorMessage ? (
+          <span className="file-error" title={file.errorMessage}>
+            {file.errorMessage}
+          </span>
+        ) : (
+          <>
+            <span>{file.extension?.toUpperCase() ?? "形式未取得"}</span>
+            <span>{formatSize(file.sizeBytes)}</span>
+          </>
+        )}
       </div>
-      {file.errorMessage && (
-        <div className="file-error" title={file.errorMessage}>
-          {file.errorMessage}
-        </div>
-      )}
       <div className="file-card-actions">
         <button onClick={confirmRemoveFile}>
           除外
@@ -1013,7 +1030,6 @@ function FileStrip() {
           <h2>ファイル順序</h2>
           <p>{files.length}件、結合順をカード単位で編集中</p>
         </div>
-        <div className="hint-chip">D&amp;D対応</div>
       </div>
       <div className="file-strip">
         {files.length === 0 ? (
@@ -2368,7 +2384,7 @@ function LogDrawerPreview({ open }: { open: boolean }) {
         <div className="log-row" key={log.id}>
           <span className="log-time">{log.time}</span>
           <span className={`log-level ${log.level}`}>{log.level.toUpperCase()}</span>
-          <span>{log.message}</span>
+          <span className="log-message">{log.message}</span>
         </div>
       ))}
     </aside>
@@ -2378,6 +2394,7 @@ function LogDrawerPreview({ open }: { open: boolean }) {
 export function App() {
   const [dropActive, setDropActive] = useState(false);
   const [logOpen, setLogOpen] = useState(false);
+  const [alphaLicense, setAlphaLicense] = useState<AlphaLicenseStatus | null>(null);
   const addInputFiles = useWorkbenchStore((state) => state.addInputFiles);
   const addLog = useWorkbenchStore((state) => state.addLog);
   const undo = useWorkbenchStore((state) => state.undo);
@@ -2404,6 +2421,39 @@ export function App() {
   }, [loadDevelopmentFixture, setActiveTool]);
 
   useEffect(() => {
+    let disposed = false;
+    checkAlphaLicense()
+      .then((license) => {
+        if (!disposed) {
+          setAlphaLicense(license);
+        }
+      })
+      .catch((error) => {
+        addLog("warn", `アルファ版の日時確認を実施できませんでした: ${errorMessage(error)}`);
+        if (!disposed) {
+          setAlphaLicense({
+            valid: true,
+            expiresOn: "2026-06-30",
+            message: "Date check fallback",
+          });
+        }
+      });
+
+    return () => {
+      disposed = true;
+    };
+  }, [addLog]);
+
+  useEffect(() => {
+    if (!alphaLicense) {
+      return undefined;
+    }
+
+    if (!alphaLicense.valid) {
+      completeStartup().catch(() => undefined);
+      return undefined;
+    }
+
     let sessionId: string | undefined;
     prepareCacheSession()
       .then((session) => {
@@ -2414,17 +2464,23 @@ export function App() {
       })
       .catch((error) =>
         addLog("warn", `一時キャッシュを初期化できませんでした: ${errorMessage(error)}`),
-      );
+      )
+      .finally(() => {
+        completeStartup().catch(() => undefined);
+      });
 
     return () => {
       if (sessionId) {
         cleanupCacheSession(sessionId).catch(() => undefined);
       }
     };
-  }, [addLog, setCacheSession]);
+  }, [addLog, alphaLicense, setCacheSession]);
 
   useEffect(() => {
     const timer = window.setInterval(() => {
+      if (!alphaLicense?.valid) {
+        return;
+      }
       if (isTauriRuntime() && cacheSession.path) {
         processNextPendingEngineFile(cacheSession.path);
         return;
@@ -2432,7 +2488,7 @@ export function App() {
       tickBackgroundJobs();
     }, 900);
     return () => window.clearInterval(timer);
-  }, [cacheSession.path, tickBackgroundJobs]);
+  }, [alphaLicense?.valid, cacheSession.path, tickBackgroundJobs]);
 
   useEffect(() => {
     if (isTauriRuntime()) {
@@ -2569,6 +2625,10 @@ export function App() {
       addLog("error", `ドロップしたファイルを読めませんでした: ${errorMessage(error)}`);
     }
   };
+
+  if (alphaLicense && !alphaLicense.valid) {
+    return <AlphaExpiredScreen license={alphaLicense} />;
+  }
 
   return (
     <div className={["app-shell", dropActive ? "is-drop-active" : ""].join(" ")}>

@@ -25,6 +25,18 @@ struct CacheSessionInfo {
     initialized: bool,
 }
 
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct AlphaLicenseInfo {
+    valid: bool,
+    expires_on: &'static str,
+    checked_at_epoch_seconds: u64,
+    message: String,
+}
+
+const ALPHA_EXPIRES_ON: &str = "2026-06-30";
+const ALPHA_EXPIRY_UNIX_SECONDS: u64 = 1_782_831_600; // 2026-07-01 00:00:00 JST.
+
 fn kind_from_extension(extension: &str) -> &'static str {
     match extension {
         "pdf" => "pdf",
@@ -89,6 +101,26 @@ fn prepare_cache_session() -> Result<CacheSessionInfo, String> {
         path: path.to_string_lossy().to_string(),
         initialized: true,
     })
+}
+
+#[tauri::command]
+fn check_alpha_license() -> AlphaLicenseInfo {
+    let checked_at_epoch_seconds = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|duration| duration.as_secs())
+        .unwrap_or_default();
+    let valid = checked_at_epoch_seconds < ALPHA_EXPIRY_UNIX_SECONDS;
+
+    AlphaLicenseInfo {
+        valid,
+        expires_on: ALPHA_EXPIRES_ON,
+        checked_at_epoch_seconds,
+        message: if valid {
+            "Alpha license is valid.".to_string()
+        } else {
+            "Alpha license has expired.".to_string()
+        },
+    }
 }
 
 #[tauri::command]
@@ -222,6 +254,22 @@ fn reveal_output_path(path: String) -> Result<(), String> {
     }
 }
 
+#[tauri::command]
+fn complete_startup(app: tauri::AppHandle) -> Result<(), String> {
+    let main_window = app
+        .get_webview_window("main")
+        .ok_or_else(|| "main window was not found".to_string())?;
+
+    main_window.show().map_err(|error| error.to_string())?;
+    let _ = main_window.set_focus();
+
+    if let Some(splash_window) = app.get_webview_window("splashscreen") {
+        let _ = splash_window.close();
+    }
+
+    Ok(())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -229,13 +277,15 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .invoke_handler(tauri::generate_handler![
             describe_input_files,
+            check_alpha_license,
             prepare_cache_session,
             cleanup_cache_session,
             run_processing_engine,
             start_processing_engine_job,
             cancel_processing_engine_job,
             open_output_path,
-            reveal_output_path
+            reveal_output_path,
+            complete_startup
         ])
         .run(tauri::generate_context!())
         .expect("error while running PDF Workbench");

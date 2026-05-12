@@ -12,12 +12,29 @@
   "app": {
     "windows": [
       {
+        "label": "main",
         "title": "PDF Workbench",
         "width": 1366,
         "height": 768,
         "minWidth": 1180,
         "minHeight": 700,
-        "resizable": true
+        "resizable": true,
+        "visible": false
+      },
+      {
+        "label": "splashscreen",
+        "title": "PDF Workbench",
+        "url": "splashscreen.html",
+        "width": 560,
+        "height": 390,
+        "resizable": false,
+        "fullscreen": false,
+        "decorations": false,
+        "transparent": true,
+        "center": true,
+        "alwaysOnTop": true,
+        "skipTaskbar": true,
+        "visible": true
       }
     ],
     "security": {

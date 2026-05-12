@@ -42,10 +42,47 @@
 
 未完了:
 
-- Microsoft Office COM実機変換検証
+- Tauri UI/リリースexe経由のMicrosoft Office COM実機E2E
 - Python実行環境と依存ライブラリの同梱/インストール方式の確定
 - 大容量PDFでのサムネイル生成負荷対策
 - 書き出し前のOffice/PDF準備処理まで含む完全キャンセル
+
+### 2026-05-13 追記
+
+Office COM変換のactive worker経路を、通常のPDF検査/サムネイル/編集/書き出し経路へ接続した。
+
+変更点:
+
+- `convert_office` workerは `sourcePath`, `outputPath`, `cachePath`, `outputName`, `kind` を返す。
+- フロントエンドは `outputPath ?? cachePath` を変換済みPDFとして扱う。
+- Word/Excel/PowerPointはMicrosoft Office COMでセッション一時PDFへ変換し、その後はPDFと同じ `inspect_pdf` / `render_thumbnail` / `export_workspace` 経路へ進む。
+
+注意:
+
+- `pywin32` のimportとworker要求形状は確認済み。
+- 実Word/Excel/PowerPoint文書を使ったMicrosoft Office COM変換は、Officeがインストールされた実行PCで追加確認する。
+- LibreOffice fallback は引き続き採用しない。
+
+### 2026-05-13 E2E結果
+
+ユーザー提供の実ファイルで、Microsoft Office COM変換からPDF書き出しまでのworkerレベルE2Eを確認した。
+
+- `job_history.xlsx`: Excel COMでPDF化成功、7ページ。
+- `プレゼン資料 (003).pptx`: PowerPoint COMでPDF化成功、27ページ。
+- `生体機械力学１.docx`: Word COMでPDF化成功、7ページ。
+- 3ファイル合計41ページをワークスペースとして扱い、1箇所の分割により2つのPDFへ書き出し成功。
+- ヘッダー、フッター、透かしの装飾反映後PDFを再検査し、出力1は7ページ、出力2は34ページで確認済み。
+
+検証証跡:
+
+- `docs/reports/2026-05-13-office-com-e2e.md`
+- `docs/reports/e2e/2026-05-13-office-com/summary.json`
+- `docs/reports/e2e/2026-05-13-office-com/outputs/`
+
+残る注意点:
+
+- Office COMはCodexサンドボックス内ではExcelが誤ったメモリ/ディスク不足エラーを返した。実Office変換E2Eはサンドボックス外で実行する必要がある。
+- Tauri UIからのExplorer D&D、UIログ、リリースexe経由の同一E2Eは次の確認対象とする。
 
 ## 2. 採用理由
 

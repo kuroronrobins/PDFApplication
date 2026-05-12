@@ -3,6 +3,7 @@ from __future__ import annotations
 import shutil
 from pathlib import Path
 from typing import Any
+from uuid import uuid4
 
 from ..errors import EngineError, dependency_missing
 from .pdf_document import ensure_input_file
@@ -41,7 +42,14 @@ def _convert_word(src: Path, out_pdf: Path) -> None:
         app = win32com_client.DispatchEx("Word.Application")
         app.Visible = False
         app.DisplayAlerts = 0
-        doc = app.Documents.Open(str(src.resolve()), ReadOnly=True)
+        doc = app.Documents.Open(
+            FileName=str(src.resolve()),
+            ConfirmConversions=False,
+            ReadOnly=True,
+            AddToRecentFiles=False,
+            Visible=False,
+            OpenAndRepair=True,
+        )
         doc.ExportAsFixedFormat(str(out_pdf.resolve()), 17)
     except Exception as exc:
         raise EngineError("office_com_failed", f"Word変換に失敗しました: {src.name}", target=str(src), detail=str(exc)) from exc
@@ -62,7 +70,23 @@ def _convert_excel(src: Path, out_pdf: Path) -> None:
         app = win32com_client.DispatchEx("Excel.Application")
         app.Visible = False
         app.DisplayAlerts = False
-        workbook = app.Workbooks.Open(str(src.resolve()), ReadOnly=True)
+        source = str(src.resolve())
+        try:
+            workbook = app.Workbooks.Open(
+                Filename=source,
+                UpdateLinks=0,
+                ReadOnly=True,
+                IgnoreReadOnlyRecommended=True,
+                AddToMru=False,
+                Local=True,
+                CorruptLoad=1,
+            )
+        except Exception:
+            try:
+                protected_view = app.ProtectedViewWindows.Open(source)
+                workbook = protected_view.Edit()
+            except Exception:
+                workbook = app.Workbooks.Open(source, 0, True, None, None, None, True, None, None, False, False, None, False, True, 1)
         workbook.ExportAsFixedFormat(0, str(out_pdf.resolve()))
     except Exception as exc:
         raise EngineError("office_com_failed", f"Excel変換に失敗しました: {src.name}", target=str(src), detail=str(exc)) from exc
@@ -113,12 +137,22 @@ def convert_to_pdf(src: Path, out_pdf: Path) -> Path:
     if suffix == ".pdf":
         shutil.copy2(src, out_pdf)
         return out_pdf
-    if suffix in {".doc", ".docx", ".docm"}:
-        _convert_word(src, out_pdf)
-    elif suffix in {".xls", ".xlsx", ".xlsm", ".xlsb"}:
-        _convert_excel(src, out_pdf)
-    elif suffix in {".ppt", ".pptx", ".pptm"}:
-        _convert_powerpoint(src, out_pdf)
+    staged_source = out_pdf.parent / "office-source" / f"{uuid4().hex}{suffix}"
+    staged_source.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(src, staged_source)
+    source_for_conversion = staged_source
+    try:
+        if suffix in {".doc", ".docx", ".docm"}:
+            _convert_word(source_for_conversion, out_pdf)
+        elif suffix in {".xls", ".xlsx", ".xlsm", ".xlsb"}:
+            _convert_excel(source_for_conversion, out_pdf)
+        elif suffix in {".ppt", ".pptx", ".pptm"}:
+            _convert_powerpoint(source_for_conversion, out_pdf)
+    finally:
+        try:
+            staged_source.unlink()
+        except OSError:
+            pass
 
     if not out_pdf.exists():
         raise EngineError("office_output_missing", f"変換結果のPDFが見つかりませんでした: {out_pdf.name}", target=str(src))
