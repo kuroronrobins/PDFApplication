@@ -158,10 +158,8 @@ src-python/
       pdf_pages.py
       pdf_decorations.py
       pdf_security.py
-      text_overlay.py
     tests/
       test_pdf_pages.py
-      test_text_overlay.py
 ```
 
 Tauri側は次の責務に分ける。
@@ -217,7 +215,6 @@ TauriはPython workerを子プロセスとして起動し、JSONで要求と結�
     "files": [],
     "pagesByFile": {},
     "decorations": [],
-    "searchReplace": {},
     "security": {}
   }
 }
@@ -315,3 +312,7 @@ Tauriはこれらをフロントエンドの既存 `ExportJobState` とログド
 - エラー時に対象ファイル、原因、復旧方法が表示される。
 - セッションキャッシュが終了時またはキャンセル時に破棄される。
 - 実ファイルを使った検証結果を `docs/reports/` に残す。
+
+## 2026-05-15 Search/Replace Retirement
+
+Search/replace is no longer part of the active implementation. Historical references above are retained only as context for the earlier engine direction. The active export worker handles merge, split, page exclusion, page movement, decorations, Office conversion, and encryption, but does not include search/replace state or text overlay processing.

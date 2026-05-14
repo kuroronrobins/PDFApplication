@@ -5,7 +5,6 @@ import {
   initialFiles,
   initialLogs,
   initialPagesByFile,
-  initialSearchReplace,
   initialSecurity,
 } from "./sampleData";
 import type {
@@ -22,7 +21,6 @@ import type {
   OutputPlan,
   PageItem,
   PdfMetadata,
-  SearchReplaceState,
   SecurityState,
   ToolId,
   WorkbenchFile,
@@ -76,7 +74,9 @@ type WorkbenchState = WorkbenchSnapshot & {
   ) => void;
   failFileProcessing: (fileId: string, message: string) => void;
   tickBackgroundJobs: () => void;
-  selectPage: (pageId: string, additive?: boolean) => void;
+  clearSelections: () => void;
+  selectFile: (fileId: string, mode?: SelectionMode) => void;
+  selectPage: (pageId: string, mode?: SelectionMode) => void;
   togglePageExcluded: (pageId: string) => void;
   togglePageSplit: (pageId: string) => void;
   movePageToIndex: (pageId: string, targetFileId: string, insertionIndex: number) => void;
@@ -93,8 +93,6 @@ type WorkbenchState = WorkbenchSnapshot & {
   ) => void;
   updateDecoration: (decorationId: string, patch: Partial<Decoration>) => void;
   removeDecoration: (decorationId: string) => void;
-  updateSearchReplace: (patch: Partial<SearchReplaceState>) => void;
-  applySearchReplace: () => void;
   updateSecurity: (patch: Partial<SecurityState>) => void;
   startExportJob: () => void;
   setExportJobProgress: (progress: number, currentStep?: JobStep, message?: string) => void;
@@ -106,6 +104,8 @@ type WorkbenchState = WorkbenchSnapshot & {
   redo: () => void;
 };
 
+type SelectionMode = "replace" | "toggle" | "range";
+
 const exportSteps: JobStep[] = [
   "Office変換",
   "PDF解析",
@@ -113,7 +113,6 @@ const exportSteps: JobStep[] = [
   "ページ編集反映",
   "分割",
   "装飾",
-  "検索置換",
   "暗号化",
   "保存",
 ];
@@ -127,10 +126,6 @@ function clonePages(
       pages.map((page) => ({ ...page })),
     ]),
   );
-}
-
-function cloneSearchReplace(searchReplace: SearchReplaceState): SearchReplaceState {
-  return { ...searchReplace };
 }
 
 function cloneSecurity(security: SecurityState): SecurityState {
@@ -147,7 +142,6 @@ function snapshotOf(state: WorkbenchSnapshot): WorkbenchSnapshot {
     activeTool: state.activeTool,
     decorations: state.decorations.map((decoration) => ({ ...decoration })),
     selectedDecorationId: state.selectedDecorationId,
-    searchReplace: cloneSearchReplace(state.searchReplace),
     security: cloneSecurity(state.security),
   };
 }
@@ -157,7 +151,6 @@ function derive(snapshot: WorkbenchSnapshot) {
     snapshot.files,
     snapshot.pagesByFile,
     snapshot.decorations,
-    snapshot.searchReplace,
     snapshot.security,
   );
   return {
@@ -173,6 +166,66 @@ function findPageFile(
   return Object.keys(pagesByFile).find((fileId) =>
     pagesByFile[fileId].some((page) => page.id === pageId),
   );
+}
+
+function pageOrder(pagesByFile: Record<string, PageItem[]>): PageItem[] {
+  return Object.values(pagesByFile).flat();
+}
+
+function rangeIds<T extends { id: string; selected: boolean }>(
+  items: T[],
+  targetId: string,
+): Set<string> {
+  const targetIndex = items.findIndex((item) => item.id === targetId);
+  if (targetIndex < 0) {
+    return new Set();
+  }
+  const selectedIndexes = items
+    .map((item, index) => (item.selected ? index : -1))
+    .filter((index) => index >= 0);
+  if (selectedIndexes.length === 0) {
+    return new Set([targetId]);
+  }
+  const anchorIndex = selectedIndexes.reduce((closest, index) =>
+    Math.abs(index - targetIndex) < Math.abs(closest - targetIndex) ? index : closest,
+  );
+  const start = Math.min(anchorIndex, targetIndex);
+  const end = Math.max(anchorIndex, targetIndex);
+  return new Set(items.slice(start, end + 1).map((item) => item.id));
+}
+
+function selectedFileIdsForAction(files: WorkbenchFile[], fileId: string): string[] {
+  const selectedIds = files.filter((file) => file.selected).map((file) => file.id);
+  return selectedIds.includes(fileId) ? selectedIds : [fileId];
+}
+
+function selectedPageIdsForAction(
+  pagesByFile: Record<string, PageItem[]>,
+  pageId: string,
+): string[] {
+  const pages = pageOrder(pagesByFile);
+  const selectedIds = pages.filter((page) => page.selected).map((page) => page.id);
+  return selectedIds.includes(pageId) ? selectedIds : [pageId];
+}
+
+function clearPageSelection(
+  pagesByFile: Record<string, PageItem[]>,
+): Record<string, PageItem[]> {
+  return Object.fromEntries(
+    Object.entries(pagesByFile).map(([fileId, pages]) => [
+      fileId,
+      pages.map((page) => ({ ...page, selected: false })),
+    ]),
+  );
+}
+
+function clearAllSelections(snapshot: WorkbenchSnapshot): WorkbenchSnapshot {
+  return {
+    ...snapshot,
+    files: snapshot.files.map((file) => ({ ...file, selected: false })),
+    pagesByFile: clearPageSelection(snapshot.pagesByFile),
+    selectedDecorationId: undefined,
+  };
 }
 
 function nowLabel(): string {
@@ -271,7 +324,6 @@ function createPages(
     excluded: false,
     selected: false,
     splitAfter: false,
-    searchHit: false,
   }));
 }
 
@@ -427,13 +479,6 @@ const initialSnapshot: WorkbenchSnapshot = {
   activeTool: "select",
   decorations: [],
   selectedDecorationId: undefined,
-  searchReplace: {
-    query: "",
-    replacement: "",
-    target: "all",
-    matchCount: 0,
-    appliedCount: 0,
-  },
   security: {
     inputPasswordRequired: false,
     outputEncrypted: false,
@@ -464,7 +509,19 @@ export const useWorkbenchStore = create<WorkbenchState>((set, get) => ({
   decorationDrafts: createDecorationDrafts(),
 
   setActiveTool: (tool) => {
-    set({ activeTool: tool });
+    const current = get();
+    set(
+      derive(
+        clearAllSelections({
+          files: current.files.map((file) => ({ ...file })),
+          pagesByFile: clonePages(current.pagesByFile),
+          activeTool: tool,
+          decorations: current.decorations.map((decoration) => ({ ...decoration })),
+          selectedDecorationId: current.selectedDecorationId,
+          security: cloneSecurity(current.security),
+        }),
+      ),
+    );
   },
 
   loadDevelopmentFixture: () => {
@@ -477,7 +534,6 @@ export const useWorkbenchStore = create<WorkbenchState>((set, get) => ({
       activeTool: "select",
       decorations: initialDecorations.map((decoration) => ({ ...decoration })),
       selectedDecorationId: initialDecorations[0]?.id,
-      searchReplace: cloneSearchReplace(initialSearchReplace),
       security: cloneSecurity(initialSecurity),
     };
     set({
@@ -579,6 +635,7 @@ export const useWorkbenchStore = create<WorkbenchState>((set, get) => ({
         progress: info.kind === "pdf" ? 100 : undefined,
         expanded: false,
         excluded: false,
+        selected: false,
         engineState: info.kind === "pdf" ? "synthetic" : undefined,
         metadata: {
           encrypted: false,
@@ -616,15 +673,6 @@ export const useWorkbenchStore = create<WorkbenchState>((set, get) => ({
           ? []
           : current.decorations.map((decoration) => ({ ...decoration })),
         selectedDecorationId: replaceSampleWorkspace ? undefined : current.selectedDecorationId,
-        searchReplace: replaceSampleWorkspace
-          ? {
-              query: "",
-              replacement: "",
-              target: "all",
-              matchCount: 0,
-              appliedCount: 0,
-            }
-          : cloneSearchReplace(current.searchReplace),
         security: cloneSecurity(current.security),
       },
       {
@@ -677,7 +725,6 @@ export const useWorkbenchStore = create<WorkbenchState>((set, get) => ({
       activeTool: current.activeTool,
       decorations: current.decorations.map((decoration) => ({ ...decoration })),
       selectedDecorationId: current.selectedDecorationId,
-      searchReplace: cloneSearchReplace(current.searchReplace),
       security: cloneSecurity(current.security),
     });
   },
@@ -693,30 +740,33 @@ export const useWorkbenchStore = create<WorkbenchState>((set, get) => ({
       activeTool: current.activeTool,
       decorations: current.decorations.map((decoration) => ({ ...decoration })),
       selectedDecorationId: current.selectedDecorationId,
-      searchReplace: cloneSearchReplace(current.searchReplace),
       security: cloneSecurity(current.security),
     });
   },
 
   removeFile: (fileId) => {
     const current = get();
-    const target = current.files.find((file) => file.id === fileId);
-    if (!target) {
+    const targetFileIds = selectedFileIdsForAction(current.files, fileId);
+    const targetFileIdSet = new Set(targetFileIds);
+    const targets = current.files.filter((file) => targetFileIdSet.has(file.id));
+    if (targets.length === 0) {
       return;
     }
 
-    const removedPages = current.pagesByFile[fileId] ?? [];
+    const removedPages = targetFileIds.flatMap((targetId) => current.pagesByFile[targetId] ?? []);
     const removedPageIds = new Set(removedPages.map((page) => page.id));
     const pagesByFile = clonePages(current.pagesByFile);
-    delete pagesByFile[fileId];
+    for (const targetId of targetFileIds) {
+      delete pagesByFile[targetId];
+    }
 
     const files = current.files
-      .filter((file) => file.id !== fileId)
-      .map((file) => ({ ...file, expanded: file.expanded && file.id !== fileId }));
+      .filter((file) => !targetFileIdSet.has(file.id))
+      .map((file) => ({ ...file }));
     const decorations = current.decorations
       .filter(
         (decoration) =>
-          decoration.fileId !== fileId &&
+          (!decoration.fileId || !targetFileIdSet.has(decoration.fileId)) &&
           (!decoration.pageId || !removedPageIds.has(decoration.pageId)),
       )
       .map((decoration) => ({ ...decoration }));
@@ -734,11 +784,13 @@ export const useWorkbenchStore = create<WorkbenchState>((set, get) => ({
         )
           ? current.selectedDecorationId
           : undefined,
-        searchReplace: cloneSearchReplace(current.searchReplace),
         security: cloneSecurity(current.security),
       },
       {
-        logs: [createLog("info", `${target.name} をワークスペースから除外しました。`), ...current.logs],
+        logs: [
+          createLog("info", targets.map((file) => file.name).join(", ") + " removed from workspace."),
+          ...current.logs,
+        ],
       },
     );
   },
@@ -761,29 +813,37 @@ export const useWorkbenchStore = create<WorkbenchState>((set, get) => ({
       return;
     }
 
+    const movingIds = selectedFileIdsForAction(current.files, fileId);
+    const movingIdSet = new Set(movingIds);
     const clampedInsertionIndex = Math.max(
       0,
       Math.min(insertionIndex, current.files.length),
     );
-    const adjustedIndex =
-      fromIndex < clampedInsertionIndex
-        ? clampedInsertionIndex - 1
-        : clampedInsertionIndex;
+    const insertIndex = current.files
+      .slice(0, clampedInsertionIndex)
+      .filter((file) => !movingIdSet.has(file.id)).length;
+    const movingFiles = current.files
+      .filter((file) => movingIdSet.has(file.id))
+      .map((file) => ({ ...file }));
+    const remainingFiles = current.files
+      .filter((file) => !movingIdSet.has(file.id))
+      .map((file) => ({ ...file }));
+    const files = [
+      ...remainingFiles.slice(0, insertIndex),
+      ...movingFiles,
+      ...remainingFiles.slice(insertIndex),
+    ];
 
-    if (fromIndex === adjustedIndex) {
+    if (files.map((file) => file.id).join("\0") === current.files.map((file) => file.id).join("\0")) {
       return;
     }
 
-    const files = current.files.map((file) => ({ ...file }));
-    const [file] = files.splice(fromIndex, 1);
-    files.splice(adjustedIndex, 0, file);
     commitSnapshot(set, current, {
       files,
       pagesByFile: clonePages(current.pagesByFile),
       activeTool: current.activeTool,
       decorations: current.decorations.map((decoration) => ({ ...decoration })),
       selectedDecorationId: current.selectedDecorationId,
-      searchReplace: cloneSearchReplace(current.searchReplace),
       security: cloneSecurity(current.security),
     });
   },
@@ -824,7 +884,6 @@ export const useWorkbenchStore = create<WorkbenchState>((set, get) => ({
         activeTool: current.activeTool,
         decorations: current.decorations.map((decoration) => ({ ...decoration })),
         selectedDecorationId: current.selectedDecorationId,
-        searchReplace: cloneSearchReplace(current.searchReplace),
         security: cloneSecurity(current.security),
       }),
       logs: message ? [createLog("info", message), ...current.logs] : current.logs,
@@ -870,7 +929,6 @@ export const useWorkbenchStore = create<WorkbenchState>((set, get) => ({
         activeTool: current.activeTool,
         decorations: current.decorations.map((decoration) => ({ ...decoration })),
         selectedDecorationId: current.selectedDecorationId,
-        searchReplace: cloneSearchReplace(current.searchReplace),
         security: cloneSecurity(current.security),
       }),
       logs: [
@@ -904,7 +962,6 @@ export const useWorkbenchStore = create<WorkbenchState>((set, get) => ({
         activeTool: current.activeTool,
         decorations: current.decorations.map((decoration) => ({ ...decoration })),
         selectedDecorationId: current.selectedDecorationId,
-        searchReplace: cloneSearchReplace(current.searchReplace),
         security: cloneSecurity(current.security),
       }),
       logs: [
@@ -978,33 +1035,75 @@ export const useWorkbenchStore = create<WorkbenchState>((set, get) => ({
         activeTool: current.activeTool,
         decorations: current.decorations.map((decoration) => ({ ...decoration })),
         selectedDecorationId: current.selectedDecorationId,
-        searchReplace: cloneSearchReplace(current.searchReplace),
         security: cloneSecurity(current.security),
       }),
       logs,
     });
   },
 
-  selectPage: (pageId, additive = false) => {
+  clearSelections: () => {
     const current = get();
+    set(
+      derive(
+        clearAllSelections({
+          files: current.files.map((file) => ({ ...file })),
+          pagesByFile: clonePages(current.pagesByFile),
+          activeTool: current.activeTool,
+          decorations: current.decorations.map((decoration) => ({ ...decoration })),
+          selectedDecorationId: current.selectedDecorationId,
+          security: cloneSecurity(current.security),
+        }),
+      ),
+    );
+  },
+
+  selectFile: (fileId, mode = "replace") => {
+    const current = get();
+    const selectedRangeIds = mode === "range" ? rangeIds(current.files, fileId) : new Set([fileId]);
+    const files = current.files.map((file) => {
+      if (mode === "toggle" && file.id === fileId) {
+        return { ...file, selected: !file.selected };
+      }
+      if (mode === "range") {
+        return { ...file, selected: selectedRangeIds.has(file.id) };
+      }
+      return { ...file, selected: file.id === fileId };
+    });
+    set(
+      derive({
+        files,
+        pagesByFile: clearPageSelection(current.pagesByFile),
+        activeTool: current.activeTool,
+        decorations: current.decorations.map((decoration) => ({ ...decoration })),
+        selectedDecorationId: current.selectedDecorationId,
+        security: cloneSecurity(current.security),
+      }),
+    );
+  },
+
+  selectPage: (pageId, mode = "replace") => {
+    const current = get();
+    const orderedPages = pageOrder(current.pagesByFile);
+    const selectedRangeIds = mode === "range" ? rangeIds(orderedPages, pageId) : new Set([pageId]);
     const pagesByFile = clonePages(current.pagesByFile);
     for (const pages of Object.values(pagesByFile)) {
       for (const page of pages) {
-        if (page.id === pageId) {
-          page.selected = additive ? !page.selected : true;
-        } else if (!additive) {
-          page.selected = false;
+        if (mode === "toggle" && page.id === pageId) {
+          page.selected = !page.selected;
+        } else if (mode === "range") {
+          page.selected = selectedRangeIds.has(page.id);
+        } else {
+          page.selected = page.id === pageId;
         }
       }
     }
     set(
       derive({
-        files: current.files.map((file) => ({ ...file })),
+        files: current.files.map((file) => ({ ...file, selected: false })),
         pagesByFile,
         activeTool: current.activeTool,
         decorations: current.decorations.map((decoration) => ({ ...decoration })),
         selectedDecorationId: current.selectedDecorationId,
-        searchReplace: cloneSearchReplace(current.searchReplace),
         security: cloneSecurity(current.security),
       }),
     );
@@ -1012,42 +1111,54 @@ export const useWorkbenchStore = create<WorkbenchState>((set, get) => ({
 
   togglePageExcluded: (pageId) => {
     const current = get();
-    const fileId = findPageFile(current.pagesByFile, pageId);
-    if (!fileId) {
+    const targetPageIds = selectedPageIdsForAction(current.pagesByFile, pageId);
+    if (targetPageIds.length === 0) {
       return;
     }
-    const pagesByFile = clonePages(current.pagesByFile);
-    pagesByFile[fileId] = pagesByFile[fileId].map((page) =>
-      page.id === pageId ? { ...page, excluded: !page.excluded } : page,
+    const targetPageIdSet = new Set(targetPageIds);
+    const allTargets = pageOrder(current.pagesByFile).filter((page) =>
+      targetPageIdSet.has(page.id),
     );
+    const nextExcluded = !allTargets.every((page) => page.excluded);
+    const pagesByFile = clonePages(current.pagesByFile);
+    for (const [fileId, pages] of Object.entries(pagesByFile)) {
+      pagesByFile[fileId] = pages.map((page) =>
+        targetPageIdSet.has(page.id) ? { ...page, excluded: nextExcluded } : page,
+      );
+    }
     commitSnapshot(set, current, {
       files: current.files.map((file) => ({ ...file })),
       pagesByFile,
       activeTool: current.activeTool,
       decorations: current.decorations.map((decoration) => ({ ...decoration })),
       selectedDecorationId: current.selectedDecorationId,
-      searchReplace: cloneSearchReplace(current.searchReplace),
       security: cloneSecurity(current.security),
     });
   },
 
   togglePageSplit: (pageId) => {
     const current = get();
-    const fileId = findPageFile(current.pagesByFile, pageId);
-    if (!fileId) {
+    const targetPageIds = selectedPageIdsForAction(current.pagesByFile, pageId);
+    if (targetPageIds.length === 0) {
       return;
     }
-    const pagesByFile = clonePages(current.pagesByFile);
-    pagesByFile[fileId] = pagesByFile[fileId].map((page) =>
-      page.id === pageId ? { ...page, splitAfter: !page.splitAfter } : page,
+    const targetPageIdSet = new Set(targetPageIds);
+    const allTargets = pageOrder(current.pagesByFile).filter((page) =>
+      targetPageIdSet.has(page.id),
     );
+    const nextSplit = !allTargets.every((page) => page.splitAfter);
+    const pagesByFile = clonePages(current.pagesByFile);
+    for (const [fileId, pages] of Object.entries(pagesByFile)) {
+      pagesByFile[fileId] = pages.map((page) =>
+        targetPageIdSet.has(page.id) ? { ...page, splitAfter: nextSplit } : page,
+      );
+    }
     commitSnapshot(set, current, {
       files: current.files.map((file) => ({ ...file })),
       pagesByFile,
       activeTool: current.activeTool,
       decorations: current.decorations.map((decoration) => ({ ...decoration })),
       selectedDecorationId: current.selectedDecorationId,
-      searchReplace: cloneSearchReplace(current.searchReplace),
       security: cloneSecurity(current.security),
     });
   },
@@ -1059,26 +1170,39 @@ export const useWorkbenchStore = create<WorkbenchState>((set, get) => ({
       return;
     }
 
+    const movingIds = selectedPageIdsForAction(current.pagesByFile, pageId);
+    const movingIdSet = new Set(movingIds);
     const pagesByFile = clonePages(current.pagesByFile);
-    const sourcePages = pagesByFile[sourceFileId];
-    const sourceIndex = sourcePages.findIndex((page) => page.id === pageId);
-    if (sourceIndex < 0) {
+    const movingPages = current.files.flatMap((file) =>
+      (pagesByFile[file.id] ?? []).filter((page) => movingIdSet.has(page.id)),
+    );
+    if (movingPages.length === 0) {
       return;
     }
-    const [page] = sourcePages.splice(sourceIndex, 1);
-    const targetPages = sourceFileId === targetFileId ? sourcePages : pagesByFile[targetFileId];
-    const adjustedIndex =
-      sourceFileId === targetFileId && sourceIndex < insertionIndex
-        ? insertionIndex - 1
-        : insertionIndex;
+
+    for (const fileId of Object.keys(pagesByFile)) {
+      pagesByFile[fileId] = pagesByFile[fileId].filter((page) => !movingIdSet.has(page.id));
+    }
+    const originalTargetPages = current.pagesByFile[targetFileId] ?? [];
+    const adjustedIndex = originalTargetPages
+      .slice(0, insertionIndex)
+      .filter((page) => !movingIdSet.has(page.id)).length;
+    const targetPages = pagesByFile[targetFileId] ?? [];
     const clampedIndex = Math.max(0, Math.min(adjustedIndex, targetPages.length));
-    targetPages.splice(clampedIndex, 0, {
-      ...page,
-      fileId: targetFileId,
-      sourceFileId: page.sourceFileId ?? sourceFileId,
-    });
-    pagesByFile[sourceFileId] = renumberPages(sourcePages, sourceFileId);
-    pagesByFile[targetFileId] = renumberPages(targetPages, targetFileId);
+    targetPages.splice(
+      clampedIndex,
+      0,
+      ...movingPages.map((page) => ({
+        ...page,
+        fileId: targetFileId,
+        sourceFileId: page.sourceFileId ?? sourceFileId,
+      })),
+    );
+    pagesByFile[targetFileId] = targetPages;
+
+    for (const fileId of Object.keys(pagesByFile)) {
+      pagesByFile[fileId] = renumberPages(pagesByFile[fileId], fileId);
+    }
 
     const files = current.files.map((file) => ({
       ...file,
@@ -1091,7 +1215,6 @@ export const useWorkbenchStore = create<WorkbenchState>((set, get) => ({
       activeTool: current.activeTool,
       decorations: current.decorations.map((decoration) => ({ ...decoration })),
       selectedDecorationId: current.selectedDecorationId,
-      searchReplace: cloneSearchReplace(current.searchReplace),
       security: cloneSecurity(current.security),
     });
   },
@@ -1121,7 +1244,6 @@ export const useWorkbenchStore = create<WorkbenchState>((set, get) => ({
       activeTool: current.activeTool,
       decorations: current.decorations.map((decoration) => ({ ...decoration })),
       selectedDecorationId: current.selectedDecorationId,
-      searchReplace: cloneSearchReplace(current.searchReplace),
       security: cloneSecurity(current.security),
     });
   },
@@ -1142,7 +1264,6 @@ export const useWorkbenchStore = create<WorkbenchState>((set, get) => ({
         activeTool: current.activeTool,
         decorations: [...current.decorations.map((item) => ({ ...item })), decoration],
         selectedDecorationId: decoration.id,
-        searchReplace: cloneSearchReplace(current.searchReplace),
         security: cloneSecurity(current.security),
       },
       {
@@ -1161,6 +1282,163 @@ export const useWorkbenchStore = create<WorkbenchState>((set, get) => ({
       position: kind === "watermark" ? ("center" as const) : current.decorationDrafts[kind].position,
     };
     const { pageId, fileId } = target;
+    if (fileId) {
+      const targetFileIds = selectedFileIdsForAction(current.files, fileId);
+      if (targetFileIds.length > 1) {
+        const targetFileIdSet = new Set(targetFileIds);
+        const existingFileDecorations = current.decorations.filter(
+          (decoration) =>
+            decoration.fileId &&
+            targetFileIdSet.has(decoration.fileId) &&
+            !decoration.pageId &&
+            sameDecorationSlot(decoration, kind, draft.position) &&
+            exactDecorationMatchesDraft(decoration, kind, draft),
+        );
+        const removeAll = targetFileIds.every((targetId) =>
+          existingFileDecorations.some((decoration) => decoration.fileId === targetId),
+        );
+        const decorations = current.decorations
+          .filter((decoration) => {
+            if (!removeAll) {
+              return true;
+            }
+            return !existingFileDecorations.some((item) => item.id === decoration.id);
+          })
+          .map((decoration) => ({ ...decoration }));
+
+        let selectedDecorationId = current.selectedDecorationId;
+        if (removeAll) {
+          selectedDecorationId = decorations.some(
+            (decoration) => decoration.id === current.selectedDecorationId,
+          )
+            ? current.selectedDecorationId
+            : undefined;
+        } else {
+          for (const targetId of targetFileIds) {
+            if (existingFileDecorations.some((decoration) => decoration.fileId === targetId)) {
+              continue;
+            }
+            const decoration = createDecorationFromDraft(kind, draft, undefined, targetId);
+            decorations.push(decoration);
+            selectedDecorationId = decoration.id;
+          }
+        }
+
+        commitSnapshot(
+          set,
+          current,
+          {
+            files: current.files.map((file) => ({ ...file })),
+            pagesByFile: clonePages(current.pagesByFile),
+            activeTool: current.activeTool,
+            decorations,
+            selectedDecorationId,
+            security: cloneSecurity(current.security),
+          },
+          {
+            logs: [
+              createLog(
+                "info",
+                `${draft.text} ${removeAll ? "removed from" : "applied to"} ${targetFileIds.length} files.`,
+              ),
+              ...current.logs,
+            ],
+          },
+        );
+        return;
+      }
+    }
+    if (pageId) {
+      const targetPageIds = selectedPageIdsForAction(current.pagesByFile, pageId);
+      if (targetPageIds.length > 1) {
+        const targetPageIdSet = new Set(targetPageIds);
+        const pageFileById = new Map(
+          Object.entries(current.pagesByFile).flatMap(([entryFileId, pages]) =>
+            pages.map((page) => [page.id, entryFileId] as const),
+          ),
+        );
+        const decorations = current.decorations.map((decoration) => ({ ...decoration }));
+        const handledByFileDecoration = new Set<string>();
+
+        for (const decoration of decorations) {
+          if (
+            decoration.target !== "file" ||
+            !decoration.fileId ||
+            decoration.pageId ||
+            !exactDecorationMatchesDraft(decoration, kind, draft)
+          ) {
+            continue;
+          }
+          const pageIdsInFile = targetPageIds.filter(
+            (targetId) => pageFileById.get(targetId) === decoration.fileId,
+          );
+          if (pageIdsInFile.length === 0) {
+            continue;
+          }
+          const excludedPageIds = new Set(decoration.excludedPageIds ?? []);
+          const reapply = pageIdsInFile.every((targetId) => excludedPageIds.has(targetId));
+          for (const targetId of pageIdsInFile) {
+            if (reapply) {
+              excludedPageIds.delete(targetId);
+            } else {
+              excludedPageIds.add(targetId);
+            }
+            handledByFileDecoration.add(targetId);
+          }
+          decoration.excludedPageIds = Array.from(excludedPageIds);
+        }
+
+        const remainingPageIds = targetPageIds.filter(
+          (targetId) => !handledByFileDecoration.has(targetId),
+        );
+        const existingPageDecorations = decorations.filter(
+          (decoration) =>
+            decoration.pageId &&
+            remainingPageIds.includes(decoration.pageId) &&
+            sameDecorationSlot(decoration, kind, draft.position) &&
+            exactDecorationMatchesDraft(decoration, kind, draft),
+        );
+        const removePageScoped =
+          remainingPageIds.length > 0 &&
+          remainingPageIds.every((targetId) =>
+            existingPageDecorations.some((decoration) => decoration.pageId === targetId),
+          );
+        let nextDecorations = decorations;
+        if (removePageScoped) {
+          nextDecorations = decorations.filter(
+            (decoration) => !existingPageDecorations.some((item) => item.id === decoration.id),
+          );
+        } else {
+          for (const targetId of remainingPageIds) {
+            if (existingPageDecorations.some((decoration) => decoration.pageId === targetId)) {
+              continue;
+            }
+            nextDecorations.push(createDecorationFromDraft(kind, draft, targetId));
+          }
+        }
+
+        commitSnapshot(
+          set,
+          current,
+          {
+            files: current.files.map((file) => ({ ...file })),
+            pagesByFile: clonePages(current.pagesByFile),
+            activeTool: current.activeTool,
+            decorations: nextDecorations,
+            selectedDecorationId:
+              nextDecorations[nextDecorations.length - 1]?.id ?? current.selectedDecorationId,
+            security: cloneSecurity(current.security),
+          },
+          {
+            logs: [
+              createLog("info", `${draft.text} applied/toggled on ${targetPageIds.length} pages.`),
+              ...current.logs,
+            ],
+          },
+        );
+        return;
+      }
+    }
     if (pageId) {
       const pageFileId = findPageFile(current.pagesByFile, pageId);
       const fileScopedDecoration = current.decorations.find(
@@ -1192,7 +1470,6 @@ export const useWorkbenchStore = create<WorkbenchState>((set, get) => ({
             activeTool: current.activeTool,
             decorations,
             selectedDecorationId: fileScopedDecoration.id,
-            searchReplace: cloneSearchReplace(current.searchReplace),
             security: cloneSecurity(current.security),
           },
           {
@@ -1276,7 +1553,6 @@ export const useWorkbenchStore = create<WorkbenchState>((set, get) => ({
         activeTool: current.activeTool,
         decorations,
         selectedDecorationId,
-        searchReplace: cloneSearchReplace(current.searchReplace),
         security: cloneSecurity(current.security),
       },
       {
@@ -1296,7 +1572,6 @@ export const useWorkbenchStore = create<WorkbenchState>((set, get) => ({
       activeTool: current.activeTool,
       decorations,
       selectedDecorationId: decorationId,
-      searchReplace: cloneSearchReplace(current.searchReplace),
       security: cloneSecurity(current.security),
     });
   },
@@ -1315,72 +1590,10 @@ export const useWorkbenchStore = create<WorkbenchState>((set, get) => ({
         current.selectedDecorationId === decorationId
           ? decorations[0]?.id
           : current.selectedDecorationId,
-      searchReplace: cloneSearchReplace(current.searchReplace),
       security: cloneSecurity(current.security),
     });
   },
 
-  updateSearchReplace: (patch) => {
-    const current = get();
-    const searchReplace = {
-      ...current.searchReplace,
-      ...patch,
-    };
-    const pagesByFile = clonePages(current.pagesByFile);
-    const query = searchReplace.query.trim();
-    let matchCount = 0;
-    for (const pages of Object.values(pagesByFile)) {
-      for (const page of pages) {
-        const hit = Boolean(query) && (page.pageNumber + page.fileId.length) % 4 === 0;
-        page.searchHit = hit;
-        if (hit) {
-          matchCount += 1;
-        }
-      }
-    }
-    set(
-      derive({
-        files: current.files.map((file) => ({ ...file })),
-        pagesByFile,
-        activeTool: current.activeTool,
-        decorations: current.decorations.map((decoration) => ({ ...decoration })),
-        selectedDecorationId: current.selectedDecorationId,
-        searchReplace: { ...searchReplace, matchCount },
-        security: cloneSecurity(current.security),
-      }),
-    );
-  },
-
-  applySearchReplace: () => {
-    const current = get();
-    const appliedCount = current.searchReplace.matchCount;
-    const searchReplace = {
-      ...current.searchReplace,
-      appliedCount,
-    };
-    commitSnapshot(
-      set,
-      current,
-      {
-        files: current.files.map((file) => ({ ...file })),
-        pagesByFile: clonePages(current.pagesByFile),
-        activeTool: current.activeTool,
-        decorations: current.decorations.map((decoration) => ({ ...decoration })),
-        selectedDecorationId: current.selectedDecorationId,
-        searchReplace,
-        security: cloneSecurity(current.security),
-      },
-      {
-        logs: [
-          createLog(
-            "info",
-            `検索置換を予約しました: ${appliedCount}件を一括書き出し時に反映します。`,
-          ),
-          ...current.logs,
-        ],
-      },
-    );
-  },
 
   updateSecurity: (patch) => {
     const current = get();
@@ -1397,7 +1610,6 @@ export const useWorkbenchStore = create<WorkbenchState>((set, get) => ({
         activeTool: current.activeTool,
         decorations: current.decorations.map((decoration) => ({ ...decoration })),
         selectedDecorationId: current.selectedDecorationId,
-        searchReplace: cloneSearchReplace(current.searchReplace),
         security,
       },
       {

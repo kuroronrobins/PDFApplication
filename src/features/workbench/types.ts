@@ -12,7 +12,6 @@ export type ToolId =
   | "footer"
   | "page-number"
   | "watermark"
-  | "search-replace"
   | "lock"
   | "info";
 
@@ -46,7 +45,6 @@ export type JobStep =
   | "ページ編集反映"
   | "分割"
   | "装飾"
-  | "検索置換"
   | "暗号化"
   | "保存";
 
@@ -80,6 +78,7 @@ export type WorkbenchFile = {
   progress?: number;
   expanded: boolean;
   excluded: boolean;
+  selected: boolean;
   priority?: boolean;
   engineState?: FileEngineState;
   errorMessage?: string;
@@ -97,7 +96,6 @@ export type PageItem = {
   excluded: boolean;
   selected: boolean;
   splitAfter: boolean;
-  searchHit?: boolean;
 };
 
 export type Decoration = {
@@ -113,14 +111,6 @@ export type Decoration = {
   fontSize: number;
   opacity: number;
   color?: string;
-};
-
-export type SearchReplaceState = {
-  query: string;
-  replacement: string;
-  target: DecorationTarget;
-  matchCount: number;
-  appliedCount: number;
 };
 
 export type SecurityState = {
@@ -154,7 +144,6 @@ export type OutputPlan = {
   excludedPageCount: number;
   splitCount: number;
   decorationCount: number;
-  searchReplaceCount: number;
   encrypted: boolean;
 };
 
@@ -171,6 +160,5 @@ export type WorkbenchSnapshot = {
   activeTool: ToolId;
   decorations: Decoration[];
   selectedDecorationId?: string;
-  searchReplace: SearchReplaceState;
   security: SecurityState;
 };

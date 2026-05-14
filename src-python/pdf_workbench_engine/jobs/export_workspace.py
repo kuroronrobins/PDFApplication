@@ -9,7 +9,6 @@ from ..schemas import as_path
 from ..services.pdf_decorations import apply_decorations
 from ..services.pdf_pages import write_page_sequence
 from ..services.pdf_security import encrypt_pdf
-from ..services.text_overlay import replace_text_with_overlay
 
 
 def _emit_progress(
@@ -126,23 +125,6 @@ def _apply_post_processing(
             page_contexts=output_page_contexts,
             output_index=index,
         )
-
-    search_replace = workspace.get("searchReplace")
-    search = ""
-    replacement = ""
-    if isinstance(search_replace, dict):
-        search = str(search_replace.get("search") or search_replace.get("query") or "").strip()
-        replacement = str(search_replace.get("replacement") or "")
-    if search:
-        _emit_progress(emit, job_id, "検索置換", base_progress + 12, f"出力{index}の検索置換を反映しています。")
-        replaced = scratch_dir / f"{scratch_prefix}-replaced-{index:03}.pdf"
-        replace_text_with_overlay(
-            current,
-            replaced,
-            search,
-            replacement,
-        )
-        current = replaced
 
     security = workspace.get("security")
     encrypt_output = isinstance(security, dict) and bool(security.get("encryptOutput") or security.get("outputEncrypted"))

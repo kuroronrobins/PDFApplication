@@ -17,7 +17,7 @@ Requests are JSON on stdin. Responses are JSON on stdout.
 ## Dependencies
 
 - `pypdf` for PDF page assembly and encryption
-- `PyMuPDF` for page rendering, text position search, and visual overlays
+- `PyMuPDF` for page rendering, thumbnails, and decoration overlays
 - `pywin32` for Microsoft Office COM conversion on Windows
 
 Microsoft Office is a runtime requirement for Word/Excel/PowerPoint conversion.

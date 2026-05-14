@@ -13,7 +13,6 @@ import {
   ArrowDown,
   ArrowUp,
   BadgeInfo,
-  CheckCircle2,
   ChevronDown,
   ChevronRight,
   CircleStop,
@@ -22,7 +21,6 @@ import {
   ExternalLink,
   FileOutput,
   FilePlus2,
-  FileSearch,
   FileText,
   FolderOpen,
   Hand,
@@ -35,7 +33,6 @@ import {
   Logs,
   Redo2,
   Scissors,
-  Search,
   Shield,
   Stamp,
   Trash2,
@@ -98,7 +95,6 @@ const toolItems: Array<{
   { id: "header", label: "ヘッダー", icon: Type },
   { id: "footer", label: "フッター", icon: Highlighter },
   { id: "watermark", label: "透かし", icon: Stamp },
-  { id: "search-replace", label: "検索置換", icon: Search },
   { id: "lock", label: "鍵", icon: Lock },
   { id: "info", label: "情報", icon: Info },
 ];
@@ -189,6 +185,15 @@ type ExportPreviewFilmstripPage = ExportPreviewPage & {
 type OutputPageNumberInfo = {
   outputPageNumber: number;
   outputPageTotal: number;
+};
+
+type ConfirmDialogState = {
+  title: string;
+  message: string;
+  confirmLabel: string;
+  cancelLabel: string;
+  danger?: boolean;
+  onConfirm: () => void;
 };
 
 function kindLabel(kind: FileKind): string {
@@ -374,6 +379,93 @@ function AlphaExpiredScreen({ license }: { license: AlphaLicenseStatus }) {
           この限定版は {license.expiresOn} まで利用可能です。期限後は作業画面を開けません。
         </p>
         <small>{license.message ?? "Alpha license expired"}</small>
+      </section>
+    </div>
+  );
+}
+
+function ConfirmDialog({
+  dialog,
+  onClose,
+}: {
+  dialog: ConfirmDialogState | null;
+  onClose: () => void;
+}) {
+  const [selectedAction, setSelectedAction] = useState<"cancel" | "confirm">("cancel");
+
+  useEffect(() => {
+    if (!dialog) {
+      return undefined;
+    }
+    setSelectedAction("cancel");
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        onClose();
+        return;
+      }
+      if (
+        event.key === "ArrowLeft" ||
+        event.key === "ArrowRight" ||
+        event.key === "ArrowUp" ||
+        event.key === "ArrowDown"
+      ) {
+        event.preventDefault();
+        setSelectedAction((current) => (current === "cancel" ? "confirm" : "cancel"));
+        return;
+      }
+      if (event.key === "Enter") {
+        event.preventDefault();
+        if (selectedAction === "confirm") {
+          dialog.onConfirm();
+        }
+        onClose();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [dialog, onClose, selectedAction]);
+
+  if (!dialog) {
+    return null;
+  }
+
+  return (
+    <div className="modal-backdrop confirm-backdrop" role="presentation">
+      <section
+        className="confirm-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-label={dialog.title}
+      >
+        <div>
+          <h2>{dialog.title}</h2>
+          <p>{dialog.message}</p>
+        </div>
+        <div className="confirm-actions">
+          <button
+            className={selectedAction === "cancel" ? "is-key-selected" : ""}
+            onClick={onClose}
+            onMouseEnter={() => setSelectedAction("cancel")}
+            type="button"
+          >
+            {dialog.cancelLabel}
+          </button>
+          <button
+            className={[
+              dialog.danger ? "danger-action" : "primary-action",
+              selectedAction === "confirm" ? "is-key-selected" : "",
+            ].join(" ")}
+            onClick={() => {
+              dialog.onConfirm();
+              onClose();
+            }}
+            onMouseEnter={() => setSelectedAction("confirm")}
+            type="button"
+          >
+            {dialog.confirmLabel}
+          </button>
+        </div>
       </section>
     </div>
   );
@@ -629,6 +721,7 @@ function FileCard({
   onPointerDragMove,
   onPointerDragEnd,
   onPointerDragCancel,
+  onRequestRemoveFiles,
 }: {
   file: WorkbenchFile;
   index: number;
@@ -641,6 +734,7 @@ function FileCard({
   onPointerDragMove: (event: React.PointerEvent<HTMLElement>, fileId: string) => boolean;
   onPointerDragEnd: (event: React.PointerEvent<HTMLElement>, fileId: string) => boolean;
   onPointerDragCancel: (event: React.PointerEvent<HTMLElement>, fileId: string) => void;
+  onRequestRemoveFiles: (files: WorkbenchFile[]) => void;
 }) {
   const ready = file.cacheState === "ready";
   const thumbnailSrc = localAssetSrc(thumbnailPath);
@@ -648,7 +742,8 @@ function FileCard({
     (state) => state.toggleFileExpanded,
   );
   const activeTool = useWorkbenchStore((state) => state.activeTool);
-  const removeFile = useWorkbenchStore((state) => state.removeFile);
+  const selectFile = useWorkbenchStore((state) => state.selectFile);
+  const files = useWorkbenchStore((state) => state.files);
   const moveFile = useWorkbenchStore((state) => state.moveFile);
   const applyDecorationToTarget = useWorkbenchStore(
     (state) => state.applyDecorationToTarget,
@@ -671,9 +766,8 @@ function FileCard({
     dropTarget?.fileId === file.id ? `is-drop-${dropTarget.position}` : "";
   const clickGuardRef = useRef(false);
   const confirmRemoveFile = () => {
-    if (window.confirm(`${file.name} をワークスペースから除外しますか？`)) {
-      removeFile(file.id);
-    }
+    const targets = file.selected ? files.filter((item) => item.selected) : [file];
+    onRequestRemoveFiles(targets.length > 0 ? targets : [file]);
   };
   const activateFile = () => {
     if (decorationToolIds.includes(activeTool as DecorationKind)) {
@@ -696,6 +790,13 @@ function FileCard({
       clickGuardRef.current ||
       (target instanceof HTMLElement && target.closest("button"))
     ) {
+      return;
+    }
+    if (activeTool === "select" && (event.shiftKey || event.ctrlKey || event.metaKey)) {
+      selectFile(
+        file.id,
+        event.shiftKey ? "range" : event.ctrlKey || event.metaKey ? "toggle" : "replace",
+      );
       return;
     }
     activateFile();
@@ -741,6 +842,7 @@ function FileCard({
         "file-card",
         ready ? "is-ready" : "is-pending",
         file.excluded ? "is-excluded" : "",
+        file.selected ? "is-selected" : "",
         draggingFileId === file.id ? "is-dragging" : "",
         dropClass,
       ].join(" ")}
@@ -844,8 +946,10 @@ function FileCard({
 
 function FileStrip({
   onInternalDragActiveChange = () => undefined,
+  onRequestRemoveFiles,
 }: {
   onInternalDragActiveChange?: InternalDragActiveHandler;
+  onRequestRemoveFiles: (files: WorkbenchFile[]) => void;
 }) {
   const files = useWorkbenchStore((state) => state.files);
   const pagesByFile = useWorkbenchStore((state) => state.pagesByFile);
@@ -1169,6 +1273,7 @@ function FileStrip({
               onPointerDragMove={handlePointerDragMove}
               onPointerDragEnd={handlePointerDragEnd}
               onPointerDragCancel={handlePointerDragCancel}
+              onRequestRemoveFiles={onRequestRemoveFiles}
               key={file.id}
             />
           ))
@@ -1453,7 +1558,14 @@ function PageCard({
       applyDecorationToTarget(activeTool as DecorationKind, { pageId: page.id });
       return;
     }
-    selectPage(page.id, Boolean(event?.shiftKey || event?.ctrlKey || event?.metaKey));
+    selectPage(
+      page.id,
+      event?.shiftKey
+        ? "range"
+        : event?.ctrlKey || event?.metaKey
+          ? "toggle"
+          : "replace",
+    );
   };
   const handlePointerDown = (event: React.PointerEvent<HTMLButtonElement>) => {
     if (activeTool !== "select" || event.button !== 0) {
@@ -1484,7 +1596,6 @@ function PageCard({
         "page-card",
         page.excluded ? "is-excluded" : "",
         page.selected ? "is-selected" : "",
-        page.searchHit ? "has-search-hit" : "",
         draggingPageId === page.id ? "is-dragging" : "",
         dropTarget?.pageId === page.id ? `is-drop-${dropTarget.position}` : "",
       ].join(" ")}
@@ -1521,7 +1632,6 @@ function PageCard({
       </div>
       <div className="page-label">
         p{page.pageNumber}
-        {page.searchHit && <span className="hit-label">検索</span>}
       </div>
       {page.splitAfter && (
         <div className="split-marker" title="このページの後で分割">
@@ -1631,45 +1741,6 @@ function DecorationPanel({
           />
         </div>
       )}
-    </div>
-  );
-}
-
-function SearchPanel({ onClose }: { onClose: () => void }) {
-  const searchReplace = useWorkbenchStore((state) => state.searchReplace);
-  const updateSearchReplace = useWorkbenchStore((state) => state.updateSearchReplace);
-  const applySearchReplace = useWorkbenchStore((state) => state.applySearchReplace);
-
-  return (
-    <div className="floating-panel tool-panel">
-      <button className="panel-close panel-close-floating" onClick={onClose} aria-label="設定を隠す">
-        <X size={14} />
-      </button>
-      <div className="floating-title">
-        <FileSearch size={16} />
-        検索置換
-      </div>
-      <label>
-        検索
-        <input
-          value={searchReplace.query}
-          onChange={(event) => updateSearchReplace({ query: event.target.value })}
-        />
-      </label>
-      <label>
-        置換
-        <input
-          value={searchReplace.replacement}
-          onChange={(event) =>
-            updateSearchReplace({ replacement: event.target.value })
-          }
-        />
-      </label>
-      <div className="panel-summary">{searchReplace.matchCount}件一致</div>
-      <button onClick={applySearchReplace}>
-        <CheckCircle2 size={14} />
-        一括予約
-      </button>
     </div>
   );
 }
@@ -1985,9 +2056,7 @@ function ExpandedTimeline({
   };
 
   const activePanel =
-    activeTool === "search-replace" ? (
-      <SearchPanel onClose={() => setSettingsPanelHidden(true)} />
-    ) : activeTool === "lock" ? (
+    activeTool === "lock" ? (
       <SecurityPanel onClose={() => setSettingsPanelHidden(true)} />
     ) : activeTool === "info" ? (
       <InfoPanel file={expandedFile ?? files[0]} onClose={() => setSettingsPanelHidden(true)} />
@@ -2000,8 +2069,7 @@ function ExpandedTimeline({
       null
     );
   const hasActivePanel = Boolean(
-    activeTool === "search-replace" ||
-      activeTool === "lock" ||
+    activeTool === "lock" ||
       activeTool === "info" ||
       decorationToolIds.includes(activeTool as DecorationKind),
   );
@@ -2612,6 +2680,7 @@ function LogDrawerPreview({ open }: { open: boolean }) {
 export function App() {
   const [dropActive, setDropActive] = useState(false);
   const [logOpen, setLogOpen] = useState(false);
+  const [confirmDialog, setConfirmDialog] = useState<ConfirmDialogState | null>(null);
   const [alphaLicense, setAlphaLicense] = useState<AlphaLicenseStatus | null>(null);
   const [e2eBootstrap, setE2eBootstrap] = useState<E2eBootstrapInfo | null>(null);
   const e2eStartedRef = useRef(false);
@@ -2627,6 +2696,7 @@ export function App() {
   const undo = useWorkbenchStore((state) => state.undo);
   const redo = useWorkbenchStore((state) => state.redo);
   const deleteSelectedPages = useWorkbenchStore((state) => state.deleteSelectedPages);
+  const removeFile = useWorkbenchStore((state) => state.removeFile);
   const setActiveTool = useWorkbenchStore((state) => state.setActiveTool);
   const setCacheSession = useWorkbenchStore((state) => state.setCacheSession);
   const cacheSession = useWorkbenchStore((state) => state.cacheSession);
@@ -2637,6 +2707,27 @@ export function App() {
   const tickExportJob = useWorkbenchStore((state) => state.tickExportJob);
   const loadDevelopmentFixture = useWorkbenchStore(
     (state) => state.loadDevelopmentFixture,
+  );
+
+  const requestRemoveFiles = useCallback(
+    (targets: WorkbenchFile[]) => {
+      if (targets.length === 0) {
+        return;
+      }
+      const names = targets.map((file) => file.name).join(", ");
+      setConfirmDialog({
+        title: targets.length > 1 ? "複数ファイルを除外" : "ファイルを除外",
+        message:
+          targets.length > 1
+            ? `${targets.length}件のファイルをワークスペースから除外します。`
+            : `${names} をワークスペースから除外します。`,
+        confirmLabel: "除外",
+        cancelLabel: "戻る",
+        danger: true,
+        onConfirm: () => removeFile(targets[0].id),
+      });
+    },
+    [removeFile],
   );
 
   useEffect(() => {
@@ -3026,11 +3117,15 @@ export function App() {
         onDragLeave={handleWorkbenchDragLeave}
         onDrop={handleWorkbenchDrop}
       >
-        <FileStrip onInternalDragActiveChange={markInternalDragActive} />
+        <FileStrip
+          onInternalDragActiveChange={markInternalDragActive}
+          onRequestRemoveFiles={requestRemoveFiles}
+        />
         <ExpandedTimeline onInternalDragActiveChange={markInternalDragActive} />
       </main>
       <OutputBar logOpen={logOpen} onToggleLog={() => setLogOpen((open) => !open)} />
       <LogDrawerPreview open={logOpen} />
+      <ConfirmDialog dialog={confirmDialog} onClose={() => setConfirmDialog(null)} />
     </div>
   );
 }

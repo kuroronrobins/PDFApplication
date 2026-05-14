@@ -18,7 +18,7 @@ def _import_fitz() -> Any:
     try:
         import fitz
     except ImportError as exc:  # pragma: no cover - depends on local env
-        raise dependency_missing("PyMuPDF", "PDFの描画/検索") from exc
+        raise dependency_missing("PyMuPDF", "PDFの描画") from exc
     return fitz
 
 
@@ -34,15 +34,21 @@ def open_pdf_reader(path: Path, password: str = "") -> Any:
     PdfReader, _ = _import_pypdf()
     reader = PdfReader(str(path))
     if reader.is_encrypted:
-        if not password:
+        decrypt_password = password
+        if not decrypt_password:
+            try:
+                if reader.decrypt("") != 0:
+                    return reader
+            except Exception:
+                pass
             raise EngineError(
                 "pdf_password_required",
-                f"PDFは暗号化されています。パスワードを入力してください: {path.name}",
+                f"PDFパスワードが必要です: {path.name}",
                 target=str(path),
             )
-        status = reader.decrypt(password)
+        status = reader.decrypt(decrypt_password)
         if status == 0:
-            raise EngineError("pdf_password_invalid", f"PDFのパスワードが正しくありません: {path.name}", target=str(path))
+            raise EngineError("pdf_password_invalid", f"PDFパスワードが正しくありません: {path.name}", target=str(path))
     return reader
 
 
@@ -51,16 +57,22 @@ def open_fitz_document(path: Path, password: str = "") -> Any:
     fitz = _import_fitz()
     doc = fitz.open(str(path))
     if doc.needs_pass:
-        if not password:
+        authenticate_password = password
+        if not authenticate_password:
+            try:
+                if doc.authenticate(""):
+                    return doc
+            except Exception:
+                pass
             doc.close()
             raise EngineError(
                 "pdf_password_required",
-                f"PDFは暗号化されています。パスワードを入力してください: {path.name}",
+                f"PDFパスワードが必要です: {path.name}",
                 target=str(path),
             )
-        if not doc.authenticate(password):
+        if not doc.authenticate(authenticate_password):
             doc.close()
-            raise EngineError("pdf_password_invalid", f"PDFのパスワードが正しくありません: {path.name}", target=str(path))
+            raise EngineError("pdf_password_invalid", f"PDFパスワードが正しくありません: {path.name}", target=str(path))
     return doc
 
 

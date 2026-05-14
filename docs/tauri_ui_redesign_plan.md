@@ -450,7 +450,7 @@ Behavior:
 - The splash uses bundled static assets under `public/`, so production startup does not wait for the React workbench to paint before showing a branded loading surface.
 - The React workbench calls the Tauri `complete_startup` command after initial session-cache setup settles.
 - `complete_startup` shows and focuses the main window, then closes the splash window.
-- The bottom of the splash displays `Licensed to koki kurokawa` and the current visible version `v0.1.0`.
+- The bottom of the splash displays `Licensed to koki kurokawa` and the current visible version.
 - The lowest row displays a small spinner and a single subtle rotating status line.
 - Production Windows builds suppress the console subsystem so users see the app window flow instead of a terminal.
 
@@ -509,3 +509,11 @@ Reference screenshot:
 
 - `docs/reports/screenshots/2026-05-13-office-ui-layout-1366x768.png`
 - `docs/reports/screenshots/2026-05-13-startup-splash-a-picture.png`
+
+## 2026-05-15 Batch Selection, Removal Confirmation, and Search Removal
+
+- File cards and page thumbnails support modifier-based batch targeting. `Ctrl`/`Cmd` toggles selection and `Shift` selects a contiguous range. Tool changes clear file/page selections so a previous batch target cannot accidentally affect a different tool.
+- Reorder, scissors, trash/page exclusion, and header/footer/watermark application use the current selected batch when the clicked or dragged target is part of that selection. Otherwise the operation applies only to the direct target.
+- File-level trash and file-card `除外` use the same guarded removal flow. The app shows an in-app confirmation dialog; Enter/Esc and arrow-key selection work, but the UI does not display keyboard-operation help text.
+- Search/replace is retired from the active UI, frontend state, export snapshot, and Python export pipeline. Future text workflows should be reintroduced only if they have a clear UX and engine contract.
+- Copy-protected PDFs that can be opened with an empty user password should proceed through inspection, thumbnail rendering, and export without requiring an input password. Password-required PDFs still surface the password-required error path.

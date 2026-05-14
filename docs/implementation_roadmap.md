@@ -803,6 +803,26 @@ Remaining:
 - E2E JSON: `docs/reports/e2e/2026-05-13-small-window-runtime/ui-result.json`
 - E2E output PDFs: `docs/reports/e2e/2026-05-13-small-window-runtime/outputs/`
 
+## 2026-05-15 v0.1.1 release build
+
+Implemented:
+
+- Bumped app, Tauri, Cargo, splash, and Python worker version metadata to `0.1.1`.
+- Rebuilt the release executable, NSIS installer, and MSI installer.
+- Added a release reference document so the installer can be found through GitHub Releases without committing binary installer artifacts into Git.
+
+Verification:
+
+- `npm run tauri build`: passed and generated:
+  - `src-tauri/target/release/pdf-workbench.exe`
+  - `src-tauri/target/release/bundle/nsis/PDF Workbench_0.1.1_x64-setup.exe`
+  - `src-tauri/target/release/bundle/msi/PDF Workbench_0.1.1_x64_ja-JP.msi`
+
+Evidence:
+
+- Release reference: `docs/releases/v0.1.1.md`
+- Report: `docs/reports/2026-05-15-v0.1.1-release.md`
+
 Remaining:
 
 - Validate the NSIS/MSI installer on a separate clean Windows PC that has Microsoft Office installed but no development Python, Node, or Rust toolchains.

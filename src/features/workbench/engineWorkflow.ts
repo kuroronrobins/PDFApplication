@@ -241,7 +241,6 @@ export function isProcessingEngineCancelled(error: unknown): boolean {
 
 function snapshotForExport(): WorkbenchSnapshot {
   const state = useWorkbenchStore.getState();
-  const query = state.searchReplace.query.trim();
   const outputPassword = state.security.outputPassword?.trim();
   return {
     files: state.files.map((file) => ({ ...file, metadata: file.metadata ? { ...file.metadata } : undefined })),
@@ -254,12 +253,6 @@ function snapshotForExport(): WorkbenchSnapshot {
     activeTool: state.activeTool,
     decorations: state.decorations.map((decoration) => ({ ...decoration })),
     selectedDecorationId: state.selectedDecorationId,
-    searchReplace: {
-      ...state.searchReplace,
-      enabled: query.length > 0,
-      search: query,
-      replacement: state.searchReplace.replacement,
-    } as WorkbenchSnapshot["searchReplace"],
     security: {
       ...state.security,
       encryptOutput: state.security.outputEncrypted,

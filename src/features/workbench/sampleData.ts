@@ -2,7 +2,6 @@ import type {
   Decoration,
   ExportJobState,
   PageItem,
-  SearchReplaceState,
   SecurityState,
   WorkbenchFile,
   WorkbenchLog,
@@ -21,6 +20,7 @@ export const initialFiles: WorkbenchFile[] = [
     progress: 42,
     expanded: false,
     excluded: false,
+    selected: false,
     engineState: "synthetic",
     metadata: { encrypted: false, pageSizeLabel: "A4" },
   },
@@ -35,6 +35,7 @@ export const initialFiles: WorkbenchFile[] = [
     cacheState: "queued",
     expanded: false,
     excluded: false,
+    selected: false,
     engineState: "synthetic",
     metadata: { encrypted: false, pageSizeLabel: "A4" },
   },
@@ -50,6 +51,7 @@ export const initialFiles: WorkbenchFile[] = [
     progress: 18,
     expanded: false,
     excluded: false,
+    selected: false,
     engineState: "synthetic",
     metadata: { encrypted: false, pageSizeLabel: "16:9" },
   },
@@ -66,6 +68,7 @@ export const initialFiles: WorkbenchFile[] = [
     progress: 100,
     expanded: true,
     excluded: false,
+    selected: false,
     engineState: "synthetic",
     metadata: {
       encrypted: false,
@@ -86,7 +89,6 @@ export const initialPagesByFile: Record<string, PageItem[]> = {
     excluded: index === 3,
     selected: index === 5,
     splitAfter: index === 9,
-    searchHit: [1, 5, 8].includes(index),
   })),
 };
 
@@ -113,14 +115,6 @@ export const initialDecorations: Decoration[] = [
     color: "#d56a6a",
   },
 ];
-
-export const initialSearchReplace: SearchReplaceState = {
-  query: "契約",
-  replacement: "合意",
-  target: "all",
-  matchCount: 3,
-  appliedCount: 0,
-};
 
 export const initialSecurity: SecurityState = {
   inputPasswordRequired: false,

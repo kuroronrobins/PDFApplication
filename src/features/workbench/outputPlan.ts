@@ -2,7 +2,6 @@ import type {
   Decoration,
   OutputPlan,
   PageItem,
-  SearchReplaceState,
   SecurityState,
   WorkbenchFile,
 } from "./types";
@@ -30,7 +29,6 @@ export function buildOutputPlan(
   files: WorkbenchFile[],
   pagesByFile: Record<string, PageItem[]>,
   decorations: Decoration[] = [],
-  searchReplace?: SearchReplaceState,
   security?: SecurityState,
 ): OutputPlan {
   const activeFiles = files.filter((file) => !file.excluded);
@@ -67,7 +65,6 @@ export function buildOutputPlan(
     excludedPageCount,
     splitCount,
     decorationCount: decorations.length,
-    searchReplaceCount: searchReplace?.appliedCount ?? 0,
     encrypted: security?.outputEncrypted ?? false,
   };
 }
