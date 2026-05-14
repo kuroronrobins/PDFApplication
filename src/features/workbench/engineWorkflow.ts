@@ -1,6 +1,6 @@
 import {
   cancelProcessingEngineJob,
-  convertOfficeFile,
+  convertOfficeFileStreaming,
   createProcessingJobId,
   exportWorkspaceToPathStreaming,
   inspectPdfFile,
@@ -104,7 +104,23 @@ async function processFileInternal(file: WorkbenchFile, sessionDir: string): Pro
 
     let pdfPath = sourcePath;
     if (file.kind !== "pdf") {
-      const converted = await convertOfficeFile(sourcePath, sessionDir, `${file.id}.pdf`);
+      const convertJobId = createProcessingJobId("convert");
+      const converted = await convertOfficeFileStreaming(
+        sourcePath,
+        sessionDir,
+        `${file.id}.pdf`,
+        convertJobId,
+        (event) => {
+          if (event.type === "progress") {
+            const progress = Math.max(8, Math.min(56, Math.round(event.progress * 0.56)));
+            useWorkbenchStore
+              .getState()
+              .setFileCacheProgress(file.id, "converting", progress, event.message);
+          } else if (event.type === "log" && event.message) {
+            useWorkbenchStore.getState().addLog(event.level ?? "info", event.message);
+          }
+        },
+      );
       pdfPath = converted.outputPath ?? converted.cachePath ?? "";
       if (!pdfPath) {
         throw new Error("Office変換後のPDFパスを取得できませんでした。");

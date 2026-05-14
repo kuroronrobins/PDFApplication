@@ -212,6 +212,41 @@ async function runTypedEngine<T>(request: ProcessingEngineRequest): Promise<T> {
   return response.data as T;
 }
 
+async function runProcessingEngineJob<T>(
+  request: ProcessingEngineRequest,
+  jobId: string,
+  onEvent: (event: ProcessingEngineEvent) => void,
+): Promise<T> {
+  let unlisten: UnlistenFn | undefined;
+  return new Promise<T>((resolve, reject) => {
+    listenProcessingEngineEvents((event) => {
+      if (event.jobId !== jobId) {
+        return;
+      }
+
+      onEvent(event);
+      if (event.type === "result") {
+        unlisten?.();
+        resolve(event.data as T);
+      } else if (event.type === "error") {
+        unlisten?.();
+        reject(engineError(event));
+      } else if (event.type === "cancelled") {
+        unlisten?.();
+        reject(new ProcessingEngineCancelledError(event.message));
+      }
+    })
+      .then((nextUnlisten) => {
+        unlisten = nextUnlisten;
+        return startProcessingEngineJob({ ...request, jobId });
+      })
+      .catch((error) => {
+        unlisten?.();
+        reject(error);
+      });
+  });
+}
+
 export async function convertOfficeFile(
   sourcePath: string,
   sessionDir: string,
@@ -223,6 +258,29 @@ export async function convertOfficeFile(
     sessionDir,
     outputName,
   });
+}
+
+export async function convertOfficeFileStreaming(
+  sourcePath: string,
+  sessionDir: string,
+  outputName: string,
+  jobId: string,
+  onEvent: (event: ProcessingEngineEvent) => void,
+): Promise<ConvertOfficeResult> {
+  if (!isTauriRuntime()) {
+    return convertOfficeFile(sourcePath, sessionDir, outputName);
+  }
+
+  return runProcessingEngineJob<ConvertOfficeResult>(
+    {
+      kind: "convert_office",
+      sourcePath,
+      sessionDir,
+      outputName,
+    },
+    jobId,
+    onEvent,
+  );
 }
 
 export async function inspectPdfFile(
@@ -277,40 +335,16 @@ export async function exportWorkspaceToPathStreaming(
     return exportWorkspaceToPath(outputPath, workspace, passwordMap);
   }
 
-  let unlisten: UnlistenFn | undefined;
-  return new Promise<ExportWorkspaceResult>((resolve, reject) => {
-    listenProcessingEngineEvents((event) => {
-      if (event.jobId !== jobId) {
-        return;
-      }
-
-      onEvent(event);
-      if (event.type === "result") {
-        unlisten?.();
-        resolve(event.data as ExportWorkspaceResult);
-      } else if (event.type === "error") {
-        unlisten?.();
-        reject(engineError(event));
-      } else if (event.type === "cancelled") {
-        unlisten?.();
-        reject(new ProcessingEngineCancelledError(event.message));
-      }
-    })
-      .then((nextUnlisten) => {
-        unlisten = nextUnlisten;
-        return startProcessingEngineJob({
-          kind: "export_workspace",
-          jobId,
-          outputPath,
-          workspace,
-          passwordMap,
-        });
-      })
-      .catch((error) => {
-        unlisten?.();
-        reject(error);
-      });
-  });
+  return runProcessingEngineJob<ExportWorkspaceResult>(
+    {
+      kind: "export_workspace",
+      outputPath,
+      workspace,
+      passwordMap,
+    },
+    jobId,
+    onEvent,
+  );
 }
 
 export async function openOutputPath(path: string): Promise<void> {

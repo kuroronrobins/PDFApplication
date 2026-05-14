@@ -35,6 +35,7 @@ type WorkbenchState = WorkbenchSnapshot & {
   exportPath?: string;
   lastOutputFiles: string[];
   exportJob: ExportJobState;
+  backgroundProcessingPausedUntil: number;
   logs: WorkbenchLog[];
   history: WorkbenchSnapshot[];
   future: WorkbenchSnapshot[];
@@ -202,6 +203,25 @@ function createLog(level: WorkbenchLog["level"], message: string): WorkbenchLog 
 
 function inputKey(info: InputFileInfo): string {
   return info.path || `${info.name}:${info.sizeBytes ?? "unknown"}`;
+}
+
+const inputFileCollator = new Intl.Collator("ja", {
+  numeric: true,
+  sensitivity: "base",
+});
+
+function sortInputFilesForInsertion(inputFiles: InputFileInfo[]): InputFileInfo[] {
+  return inputFiles
+    .map((info, index) => ({ info, index }))
+    .sort((left, right) => {
+      const nameOrder = inputFileCollator.compare(left.info.name, right.info.name);
+      if (nameOrder !== 0) {
+        return nameOrder;
+      }
+      const pathOrder = inputFileCollator.compare(left.info.path, right.info.path);
+      return pathOrder !== 0 ? pathOrder : left.index - right.index;
+    })
+    .map((entry) => entry.info);
 }
 
 function fileKey(file: WorkbenchFile): string {
@@ -434,6 +454,7 @@ export const useWorkbenchStore = create<WorkbenchState>((set, get) => ({
     initialized: false,
   },
   exportJob: initialExportJob,
+  backgroundProcessingPausedUntil: 0,
   lastOutputFiles: [],
   logs: [],
   history: [],
@@ -502,9 +523,10 @@ export const useWorkbenchStore = create<WorkbenchState>((set, get) => ({
     if (inputFiles.length === 0) {
       return;
     }
+    const sortedInputFiles = sortInputFilesForInsertion(inputFiles);
 
     const current = get();
-    const incomingRealFiles = inputFiles.some(
+    const incomingRealFiles = sortedInputFiles.some(
       (info) => info.kind !== "unsupported" && !isVirtualSource(info.path),
     );
     const replaceSampleWorkspace =
@@ -522,7 +544,7 @@ export const useWorkbenchStore = create<WorkbenchState>((set, get) => ({
     const existingKeys = new Set(files.map(fileKey));
     let addedCount = 0;
 
-    inputFiles.forEach((info) => {
+    sortedInputFiles.forEach((info) => {
       const key = inputKey(info);
 
       if (info.kind === "unsupported") {
@@ -605,7 +627,10 @@ export const useWorkbenchStore = create<WorkbenchState>((set, get) => ({
           : cloneSearchReplace(current.searchReplace),
         security: cloneSecurity(current.security),
       },
-      { logs },
+      {
+        logs,
+        backgroundProcessingPausedUntil: Date.now() + 1200,
+      },
     );
   },
 

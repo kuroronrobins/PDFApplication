@@ -1,6 +1,8 @@
 use serde_json::Value;
 use std::collections::HashMap;
 use std::io::{BufRead, BufReader, Read, Write};
+#[cfg(windows)]
+use std::os::windows::process::CommandExt;
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
 use std::sync::{
@@ -11,6 +13,16 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use tauri::{AppHandle, Emitter};
 
 const ENGINE_EVENT: &str = "processing-engine-event";
+#[cfg(windows)]
+const CREATE_NO_WINDOW: u32 = 0x08000000;
+
+#[cfg(windows)]
+fn suppress_console_window(command: &mut Command) {
+    command.creation_flags(CREATE_NO_WINDOW);
+}
+
+#[cfg(not(windows))]
+fn suppress_console_window(_command: &mut Command) {}
 
 struct PythonCandidate {
     executable: String,
@@ -235,6 +247,7 @@ fn external_python_candidates() -> Vec<PythonCandidate> {
 
 fn command_for_python(candidate: &PythonCandidate, worker_root: &PathBuf) -> Command {
     let mut command = Command::new(&candidate.executable);
+    suppress_console_window(&mut command);
     command
         .args(&candidate.args)
         .arg("-m")
@@ -268,6 +281,7 @@ fn command_for_python(candidate: &PythonCandidate, worker_root: &PathBuf) -> Com
 
 fn command_for_worker_exe(worker_exe: &Path) -> Command {
     let mut command = Command::new(worker_exe);
+    suppress_console_window(&mut command);
     command
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())

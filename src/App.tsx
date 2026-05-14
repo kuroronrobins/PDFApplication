@@ -1,9 +1,11 @@
 import {
+  useCallback,
   useEffect,
   useRef,
   useState,
   type ChangeEvent,
   type DragEvent,
+  type SyntheticEvent,
 } from "react";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
@@ -112,6 +114,16 @@ type FileDropTarget = {
   position: "before" | "after";
 };
 
+type DragHitRect = {
+  id: string;
+  left: number;
+  right: number;
+  top: number;
+  bottom: number;
+  centerX: number;
+  centerY: number;
+};
+
 type FilePointerDragRef = {
   fileId: string;
   pointerId: number;
@@ -119,6 +131,16 @@ type FilePointerDragRef = {
   startY: number;
   target: FileDropTarget | null;
   active: boolean;
+  hitRects: DragHitRect[];
+  scrollLeft: number;
+};
+
+type FileAutoScrollRef = {
+  frame: number | null;
+  velocity: number;
+  x: number;
+  y: number;
+  lastTime: number | null;
 };
 
 type FileDragPreview = {
@@ -139,7 +161,11 @@ type PagePointerDragRef = {
   startY: number;
   target: PageDropTarget | null;
   active: boolean;
+  hitRects: DragHitRect[];
+  scrollLeft: number;
 };
+
+type InternalDragActiveHandler = (active: boolean) => void;
 
 type ExportPreviewPage = PageItem & {
   fileName: string;
@@ -239,38 +265,16 @@ function localAssetSrc(path?: string): string | undefined {
   return isTauriRuntime() ? convertFileSrc(path) : path;
 }
 
-function baseNameFromPath(path?: string): string {
-  return path?.split(/[\\/]/).pop() || "result.pdf";
-}
-
-function plannedOutputNames(outputPlan: OutputPlan, outputPath?: string): string[] {
-  if (outputPlan.outputCount === 0) {
-    return [];
-  }
-
-  const selectedName = baseNameFromPath(outputPath);
-  const normalizedName = selectedName.toLowerCase().endsWith(".pdf")
-    ? selectedName
-    : `${selectedName}.pdf`;
-  const stem = normalizedName.replace(/\.pdf$/i, "");
-
-  if (outputPlan.outputCount === 1) {
-    return [normalizedName];
-  }
-
-  return Array.from(
-    { length: outputPlan.outputCount },
-    (_, index) => `${stem}_${String(index + 1).padStart(3, "0")}.pdf`,
-  );
+function plannedOutputNames(outputPlan: OutputPlan): string[] {
+  return outputPlan.outputFiles;
 }
 
 function buildExportPreviewGroups(
   files: WorkbenchFile[],
   pagesByFile: Record<string, PageItem[]>,
   outputPlan: OutputPlan,
-  outputPath?: string,
 ): ExportPreviewGroup[] {
-  const outputNames = plannedOutputNames(outputPlan, outputPath);
+  const outputNames = plannedOutputNames(outputPlan);
   if (outputNames.length === 0) {
     return [];
   }
@@ -325,10 +329,9 @@ function buildOutputPageNumberMap(
   files: WorkbenchFile[],
   pagesByFile: Record<string, PageItem[]>,
   outputPlan: OutputPlan,
-  outputPath?: string,
 ): Record<string, OutputPageNumberInfo> {
   const pageNumbers: Record<string, OutputPageNumberInfo> = {};
-  for (const group of buildExportPreviewGroups(files, pagesByFile, outputPlan, outputPath)) {
+  for (const group of buildExportPreviewGroups(files, pagesByFile, outputPlan)) {
     group.pages.forEach((page, pageIndex) => {
       pageNumbers[page.id] = {
         outputPageNumber: pageIndex + 1,
@@ -386,13 +389,11 @@ function AppBar() {
   const canRedo = useWorkbenchStore((state) => state.canRedo);
   const addInputFiles = useWorkbenchStore((state) => state.addInputFiles);
   const addLog = useWorkbenchStore((state) => state.addLog);
-  const setExportPath = useWorkbenchStore((state) => state.setExportPath);
   const startExportJob = useWorkbenchStore((state) => state.startExportJob);
   const setExportJobProgress = useWorkbenchStore((state) => state.setExportJobProgress);
   const completeExportJob = useWorkbenchStore((state) => state.completeExportJob);
   const failExportJob = useWorkbenchStore((state) => state.failExportJob);
   const exportJob = useWorkbenchStore((state) => state.exportJob);
-  const exportPath = useWorkbenchStore((state) => state.exportPath);
   const cacheSession = useWorkbenchStore((state) => state.cacheSession);
   const outputPlan = useWorkbenchStore((state) => state.outputPlan);
 
@@ -422,21 +423,6 @@ function AppBar() {
     }
   };
 
-  const handleOutputFile = async () => {
-    try {
-      if (!isTauriRuntime()) {
-        setExportPath("result.pdf");
-        return;
-      }
-      const path = await openOutputFileDialog(exportPath ?? "result.pdf");
-      if (path) {
-        setExportPath(path);
-      }
-    } catch (error) {
-      addLog("error", `出力先を設定できませんでした: ${errorMessage(error)}`);
-    }
-  };
-
   const handleFallbackChange = (event: ChangeEvent<HTMLInputElement>) => {
     if (event.target.files && event.target.files.length > 0) {
       addInputFiles(browserFilesToInputInfo(event.target.files));
@@ -459,20 +445,18 @@ function AppBar() {
       return;
     }
 
-    let outputPath = exportPath;
-    if (!outputPath) {
-      try {
-        const selected = await openOutputFileDialog("result.pdf");
-        if (!selected) {
-          addLog("warn", "出力先の選択がキャンセルされました。");
-          return;
-        }
-        outputPath = selected;
-        setExportPath(selected);
-      } catch (error) {
-        addLog("error", `出力先を設定できませんでした: ${errorMessage(error)}`);
+    let outputPath: string;
+    try {
+      const selected = await openOutputFileDialog(outputPlan.defaultOutputFileName);
+      if (!selected) {
+        addLog("warn", "出力ファイルの選択がキャンセルされました。");
         return;
       }
+      outputPath = selected;
+      addLog("info", `出力ファイルを指定しました: ${selected}`);
+    } catch (error) {
+      addLog("error", `出力ファイルを指定できませんでした: ${errorMessage(error)}`);
+      return;
     }
 
     if (!cacheSession.path) {
@@ -540,10 +524,6 @@ function AppBar() {
           accept={supportedExtensions.map((extension) => `.${extension}`).join(",")}
           onChange={handleFallbackChange}
         />
-        <button onClick={handleOutputFile} title={exportPath ?? "出力先未設定"}>
-          <FileOutput size={17} />
-          出力ファイル
-        </button>
         <button
           className="icon-button"
           aria-label="元に戻す"
@@ -862,78 +842,196 @@ function FileCard({
   );
 }
 
-function FileStrip() {
+function FileStrip({
+  onInternalDragActiveChange = () => undefined,
+}: {
+  onInternalDragActiveChange?: InternalDragActiveHandler;
+}) {
   const files = useWorkbenchStore((state) => state.files);
   const pagesByFile = useWorkbenchStore((state) => state.pagesByFile);
   const outputPlan = useWorkbenchStore((state) => state.outputPlan);
-  const exportPath = useWorkbenchStore((state) => state.exportPath);
   const moveFileToIndex = useWorkbenchStore((state) => state.moveFileToIndex);
   const [draggingFileId, setDraggingFileId] = useState<string | null>(null);
   const [dropTarget, setDropTarget] = useState<FileDropTarget | null>(null);
   const [dragPreview, setDragPreview] = useState<FileDragPreview | null>(null);
   const pointerDragRef = useRef<FilePointerDragRef | null>(null);
-  const outputPageNumbers = buildOutputPageNumberMap(files, pagesByFile, outputPlan, exportPath);
+  const fileStripRef = useRef<HTMLDivElement | null>(null);
+  const autoScrollRef = useRef<FileAutoScrollRef>({
+    frame: null,
+    velocity: 0,
+    x: 0,
+    y: 0,
+    lastTime: null,
+  });
+  const outputPageNumbers = buildOutputPageNumberMap(files, pagesByFile, outputPlan);
 
   const firstThumbnailPath = (fileId: string) =>
     pagesByFile[fileId]?.find((page) => Boolean(page.thumbnailPath))?.thumbnailPath;
 
-  const fileDropTargetFromPoint = (
-    clientX: number,
-    clientY: number,
-  ): FileDropTarget | null => {
-    const cards = Array.from(
-      document.querySelectorAll<HTMLElement>("[data-file-card-id]"),
-    );
-    if (cards.length === 0) {
+  const captureFileHitRects = (): DragHitRect[] =>
+    Array.from(document.querySelectorAll<HTMLElement>("[data-file-card-id]"))
+      .map((card) => {
+        const rect = card.getBoundingClientRect();
+        const id = card.dataset.fileCardId;
+        if (!id) {
+          return null;
+        }
+        return {
+          id,
+          left: rect.left,
+          right: rect.right,
+          top: rect.top,
+          bottom: rect.bottom,
+          centerX: rect.left + rect.width / 2,
+          centerY: rect.top + rect.height / 2,
+        };
+      })
+      .filter((rect): rect is DragHitRect => Boolean(rect));
+
+  const fileDropTargetFromPoint = (clientX: number, clientY: number): FileDropTarget | null => {
+    const drag = pointerDragRef.current;
+    const hitRects = drag?.hitRects ?? [];
+    if (hitRects.length === 0) {
       return null;
     }
 
-    const hitCard = cards.find((card) => {
-      const rect = card.getBoundingClientRect();
-      return (
+    const scrollDelta = (fileStripRef.current?.scrollLeft ?? drag?.scrollLeft ?? 0) - (drag?.scrollLeft ?? 0);
+    const adjustedRects = hitRects.map((rect) => ({
+      ...rect,
+      left: rect.left - scrollDelta,
+      right: rect.right - scrollDelta,
+      centerX: rect.centerX - scrollDelta,
+    }));
+    const hitRect = adjustedRects.find(
+      (rect) =>
         clientX >= rect.left &&
         clientX <= rect.right &&
         clientY >= rect.top &&
-        clientY <= rect.bottom
-      );
-    });
-
-    const targetCard =
-      hitCard ??
-      cards.reduce<HTMLElement | null>((closest, card) => {
-        const rect = card.getBoundingClientRect();
-        const centerX = rect.left + rect.width / 2;
-        const centerY = rect.top + rect.height / 2;
-        const distance = Math.hypot(clientX - centerX, clientY - centerY);
+        clientY <= rect.bottom,
+    );
+    const targetRect =
+      hitRect ??
+      adjustedRects.reduce<DragHitRect | null>((closest, rect) => {
         if (!closest) {
-          card.dataset.pointerDistance = String(distance);
-          return card;
+          return rect;
         }
-        const closestDistance = Number(closest.dataset.pointerDistance ?? Infinity);
-        if (distance < closestDistance) {
-          card.dataset.pointerDistance = String(distance);
-          return card;
-        }
-        return closest;
+        const distance = Math.hypot(clientX - rect.centerX, clientY - rect.centerY);
+        const closestDistance = Math.hypot(
+          clientX - closest.centerX,
+          clientY - closest.centerY,
+        );
+        return distance < closestDistance ? rect : closest;
       }, null);
 
-    cards.forEach((card) => {
-      delete card.dataset.pointerDistance;
-    });
-
-    if (!targetCard?.dataset.fileCardId) {
+    if (!targetRect) {
       return null;
     }
 
-    const rect = targetCard.getBoundingClientRect();
     return {
-      fileId: targetCard.dataset.fileCardId,
-      position: clientX > rect.left + rect.width / 2 ? "after" : "before",
+      fileId: targetRect.id,
+      position: clientX > targetRect.centerX ? "after" : "before",
     };
   };
 
+  const updateDragTarget = (clientX: number, clientY: number) => {
+    const drag = pointerDragRef.current;
+    if (!drag?.active) {
+      return;
+    }
+    const nextTarget = fileDropTargetFromPoint(clientX, clientY);
+    drag.target = nextTarget;
+    setDropTarget(nextTarget);
+    setDragPreview({ fileId: drag.fileId, x: clientX, y: clientY });
+  };
+
+  const stopFileAutoScroll = () => {
+    const autoScroll = autoScrollRef.current;
+    if (autoScroll.frame !== null) {
+      window.cancelAnimationFrame(autoScroll.frame);
+    }
+    autoScroll.frame = null;
+    autoScroll.velocity = 0;
+    autoScroll.lastTime = null;
+  };
+
+  const runFileAutoScroll = (timestamp: number) => {
+    const autoScroll = autoScrollRef.current;
+    const strip = fileStripRef.current;
+    const drag = pointerDragRef.current;
+    if (!strip || !drag?.active || autoScroll.velocity === 0) {
+      stopFileAutoScroll();
+      return;
+    }
+
+    const elapsedMs =
+      autoScroll.lastTime === null ? 16.7 : timestamp - autoScroll.lastTime;
+    autoScroll.lastTime = timestamp;
+    const deltaSeconds = Math.min(0.05, Math.max(0.001, elapsedMs / 1000));
+    const maxScrollLeft = Math.max(0, strip.scrollWidth - strip.clientWidth);
+    const nextScrollLeft = Math.max(
+      0,
+      Math.min(maxScrollLeft, strip.scrollLeft + autoScroll.velocity * deltaSeconds),
+    );
+
+    if (Math.abs(nextScrollLeft - strip.scrollLeft) < 0.5) {
+      stopFileAutoScroll();
+      return;
+    }
+
+    strip.scrollLeft = nextScrollLeft;
+    updateDragTarget(autoScroll.x, autoScroll.y);
+    autoScroll.frame = window.requestAnimationFrame(runFileAutoScroll);
+  };
+
+  const updateFileAutoScroll = (clientX: number, clientY: number) => {
+    const strip = fileStripRef.current;
+    if (!strip) {
+      return;
+    }
+
+    const rect = strip.getBoundingClientRect();
+    const edgeSize = Math.min(96, Math.max(52, rect.width * 0.12));
+    const maxSpeed = 1080;
+    let velocity = 0;
+
+    if (clientX < rect.left + edgeSize) {
+      const intensity = Math.min(
+        1,
+        Math.max(0, (rect.left + edgeSize - clientX) / edgeSize),
+      );
+      velocity = -Math.round(intensity * maxSpeed);
+    } else if (clientX > rect.right - edgeSize) {
+      const intensity = Math.min(
+        1,
+        Math.max(0, (clientX - (rect.right - edgeSize)) / edgeSize),
+      );
+      velocity = Math.round(intensity * maxSpeed);
+    }
+
+    const maxScrollLeft = Math.max(0, strip.scrollWidth - strip.clientWidth);
+    if ((velocity < 0 && strip.scrollLeft <= 0) || (velocity > 0 && strip.scrollLeft >= maxScrollLeft)) {
+      velocity = 0;
+    }
+
+    const autoScroll = autoScrollRef.current;
+    autoScroll.x = clientX;
+    autoScroll.y = clientY;
+    autoScroll.velocity = velocity;
+
+    if (velocity === 0) {
+      stopFileAutoScroll();
+      return;
+    }
+
+    if (autoScroll.frame === null) {
+      autoScroll.frame = window.requestAnimationFrame(runFileAutoScroll);
+    }
+  };
+
   const resetPointerDrag = () => {
+    stopFileAutoScroll();
     pointerDragRef.current = null;
+    onInternalDragActiveChange(false);
     setDraggingFileId(null);
     setDropTarget(null);
     setDragPreview(null);
@@ -943,6 +1041,7 @@ function FileStrip() {
     event: React.PointerEvent<HTMLElement>,
     fileId: string,
   ) => {
+    onInternalDragActiveChange(true);
     pointerDragRef.current = {
       fileId,
       pointerId: event.pointerId,
@@ -950,6 +1049,8 @@ function FileStrip() {
       startY: event.clientY,
       target: null,
       active: false,
+      hitRects: [],
+      scrollLeft: fileStripRef.current?.scrollLeft ?? 0,
     };
     event.currentTarget.setPointerCapture(event.pointerId);
   };
@@ -968,13 +1069,15 @@ function FileStrip() {
       return false;
     }
 
+    if (!drag.active) {
+      drag.hitRects = captureFileHitRects();
+      drag.scrollLeft = fileStripRef.current?.scrollLeft ?? 0;
+    }
     drag.active = true;
     event.preventDefault();
-    const nextTarget = fileDropTargetFromPoint(event.clientX, event.clientY);
-    drag.target = nextTarget;
     setDraggingFileId(drag.fileId);
-    setDropTarget(nextTarget);
-    setDragPreview({ fileId: drag.fileId, x: event.clientX, y: event.clientY });
+    updateDragTarget(event.clientX, event.clientY);
+    updateFileAutoScroll(event.clientX, event.clientY);
     return true;
   };
 
@@ -1019,6 +1122,14 @@ function FileStrip() {
     resetPointerDrag();
   };
 
+  useEffect(
+    () => () => {
+      stopFileAutoScroll();
+      onInternalDragActiveChange(false);
+    },
+    [onInternalDragActiveChange],
+  );
+
   const dragPreviewFile = dragPreview
     ? files.find((file) => file.id === dragPreview.fileId)
     : undefined;
@@ -1034,7 +1145,10 @@ function FileStrip() {
           <p>{files.length}件、結合順をカード単位で編集中</p>
         </div>
       </div>
-      <div className="file-strip">
+      <div
+        className={["file-strip", draggingFileId ? "is-pointer-dragging" : ""].join(" ")}
+        ref={fileStripRef}
+      >
         {files.length === 0 ? (
           <div className="empty-file-strip">
             <Upload size={28} />
@@ -1384,10 +1498,16 @@ function PageCard({
       type="button"
       data-file-id={fileId}
       data-page-id={page.id}
+      draggable={false}
     >
       <div className={["page-sheet", page.thumbnailPath ? "has-thumbnail" : ""].join(" ")}>
         {page.thumbnailPath && (
-          <img className="page-thumbnail" src={localAssetSrc(page.thumbnailPath)} alt="" />
+          <img
+            className="page-thumbnail"
+            src={localAssetSrc(page.thumbnailPath)}
+            alt=""
+            draggable={false}
+          />
         )}
         <div className="header-zone">ヘッダー</div>
         <div className="page-lines">
@@ -1627,11 +1747,14 @@ function InfoPanel({ file, onClose }: { file?: WorkbenchFile; onClose: () => voi
   );
 }
 
-function ExpandedTimeline() {
+function ExpandedTimeline({
+  onInternalDragActiveChange = () => undefined,
+}: {
+  onInternalDragActiveChange?: InternalDragActiveHandler;
+}) {
   const files = useWorkbenchStore((state) => state.files);
   const pagesByFile = useWorkbenchStore((state) => state.pagesByFile);
   const outputPlan = useWorkbenchStore((state) => state.outputPlan);
-  const exportPath = useWorkbenchStore((state) => state.exportPath);
   const decorations = useWorkbenchStore((state) => state.decorations);
   const activeTool = useWorkbenchStore((state) => state.activeTool);
   const movePageToIndex = useWorkbenchStore((state) => state.movePageToIndex);
@@ -1642,7 +1765,7 @@ function ExpandedTimeline() {
   );
   const expandedFile = files.find((file) => file.expanded && file.cacheState === "ready");
   const pages = expandedFile ? pagesByFile[expandedFile.id] ?? [] : [];
-  const outputPageNumbers = buildOutputPageNumberMap(files, pagesByFile, outputPlan, exportPath);
+  const outputPageNumbers = buildOutputPageNumberMap(files, pagesByFile, outputPlan);
   const [draggingPageId, setDraggingPageId] = useState<string | null>(null);
   const [dropTarget, setDropTarget] = useState<PageDropTarget | null>(null);
   const [settingsPanelHidden, setSettingsPanelHidden] = useState(false);
@@ -1659,37 +1782,76 @@ function ExpandedTimeline() {
     return event.clientX > rect.left + rect.width / 2 ? "after" : "before";
   };
 
-  const pageDropTargetFromPoint = (
-    clientX: number,
-    clientY: number,
-  ): PageDropTarget | null => {
-    const cards = Array.from(document.querySelectorAll<HTMLElement>("[data-page-id]"));
-    if (cards.length === 0) {
+  const capturePageHitRects = (): DragHitRect[] =>
+    Array.from(document.querySelectorAll<HTMLElement>("[data-page-id]"))
+      .map((card) => {
+        const rect = card.getBoundingClientRect();
+        const id = card.dataset.pageId;
+        if (!id) {
+          return null;
+        }
+        return {
+          id,
+          left: rect.left,
+          right: rect.right,
+          top: rect.top,
+          bottom: rect.bottom,
+          centerX: rect.left + rect.width / 2,
+          centerY: rect.top + rect.height / 2,
+        };
+      })
+      .filter((rect): rect is DragHitRect => Boolean(rect));
+
+  const pageDropTargetFromPoint = (clientX: number, clientY: number): PageDropTarget | null => {
+    const drag = pagePointerDragRef.current;
+    const hitRects = drag?.hitRects ?? [];
+    if (hitRects.length === 0) {
       return null;
     }
 
-    const hitCard = cards.find((card) => {
-      const rect = card.getBoundingClientRect();
-      return (
+    const scrollContainer = document.querySelector<HTMLElement>(".page-timeline");
+    const scrollDelta =
+      (scrollContainer?.scrollLeft ?? drag?.scrollLeft ?? 0) - (drag?.scrollLeft ?? 0);
+    const adjustedRects = hitRects.map((rect) => ({
+      ...rect,
+      left: rect.left - scrollDelta,
+      right: rect.right - scrollDelta,
+      centerX: rect.centerX - scrollDelta,
+    }));
+    const hitRect = adjustedRects.find(
+      (rect) =>
         clientX >= rect.left &&
         clientX <= rect.right &&
         clientY >= rect.top &&
-        clientY <= rect.bottom
-      );
-    });
-    if (!hitCard?.dataset.pageId) {
+        clientY <= rect.bottom,
+    );
+    const targetRect =
+      hitRect ??
+      adjustedRects.reduce<DragHitRect | null>((closest, rect) => {
+        if (!closest) {
+          return rect;
+        }
+        const distance = Math.hypot(clientX - rect.centerX, clientY - rect.centerY);
+        const closestDistance = Math.hypot(
+          clientX - closest.centerX,
+          clientY - closest.centerY,
+        );
+        return distance < closestDistance ? rect : closest;
+      }, null);
+
+    if (!targetRect) {
       return null;
     }
 
-    const rect = hitCard.getBoundingClientRect();
     return {
-      pageId: hitCard.dataset.pageId,
-      position: clientX > rect.left + rect.width / 2 ? "after" : "before",
+      pageId: targetRect.id,
+      position: clientX > targetRect.centerX ? "after" : "before",
     };
   };
 
   const resetPagePointerDrag = () => {
     pagePointerDragRef.current = null;
+    onInternalDragActiveChange(false);
     setDraggingPageId(null);
     setDropTarget(null);
   };
@@ -1698,6 +1860,7 @@ function ExpandedTimeline() {
     event: React.PointerEvent<HTMLButtonElement>,
     pageId: string,
   ) => {
+    onInternalDragActiveChange(true);
     pagePointerDragRef.current = {
       pageId,
       pointerId: event.pointerId,
@@ -1705,6 +1868,8 @@ function ExpandedTimeline() {
       startY: event.clientY,
       target: null,
       active: false,
+      hitRects: [],
+      scrollLeft: document.querySelector<HTMLElement>(".page-timeline")?.scrollLeft ?? 0,
     };
     event.currentTarget.setPointerCapture(event.pointerId);
   };
@@ -1723,6 +1888,10 @@ function ExpandedTimeline() {
       return false;
     }
 
+    if (!drag.active) {
+      drag.hitRects = capturePageHitRects();
+      drag.scrollLeft = document.querySelector<HTMLElement>(".page-timeline")?.scrollLeft ?? 0;
+    }
     drag.active = true;
     event.preventDefault();
     const nextTarget = pageDropTargetFromPoint(event.clientX, event.clientY);
@@ -1788,6 +1957,13 @@ function ExpandedTimeline() {
     event.dataTransfer.dropEffect = "copy";
     setDropTarget({ pageId, position: positionFromEvent(event) });
   };
+
+  useEffect(
+    () => () => {
+      onInternalDragActiveChange(false);
+    },
+    [onInternalDragActiveChange],
+  );
 
   const handlePageDrop = (event: DragEvent<HTMLButtonElement>, pageId: string) => {
     event.preventDefault();
@@ -1891,7 +2067,6 @@ function OutputBar({
   onToggleLog: () => void;
 }) {
   const outputPlan = useWorkbenchStore((state) => state.outputPlan);
-  const exportPath = useWorkbenchStore((state) => state.exportPath);
   const files = useWorkbenchStore((state) => state.files);
   const exportJob = useWorkbenchStore((state) => state.exportJob);
   const lastOutputFiles = useWorkbenchStore((state) => state.lastOutputFiles);
@@ -1949,7 +2124,7 @@ function OutputBar({
         : exportJob.status === "idle"
           ? ""
           : exportJob.message;
-  const outputNames = plannedOutputNames(outputPlan, exportPath);
+  const outputNames = plannedOutputNames(outputPlan);
   const firstOutputFile = lastOutputFiles[0];
   const openFirstOutput = async () => {
     if (!firstOutputFile) {
@@ -2037,13 +2212,13 @@ function ExportPreviewModal({
   const files = useWorkbenchStore((state) => state.files);
   const pagesByFile = useWorkbenchStore((state) => state.pagesByFile);
   const outputPlan = useWorkbenchStore((state) => state.outputPlan);
-  const exportPath = useWorkbenchStore((state) => state.exportPath);
   const decorations = useWorkbenchStore((state) => state.decorations);
   const exportJob = useWorkbenchStore((state) => state.exportJob);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [previewInfoOpen, setPreviewInfoOpen] = useState(false);
+  const [pageAspectRatios, setPageAspectRatios] = useState<Record<string, number>>({});
   const thumbnailRefs = useRef<Record<string, HTMLButtonElement | null>>({});
-  const groups = buildExportPreviewGroups(files, pagesByFile, outputPlan, exportPath);
+  const groups = buildExportPreviewGroups(files, pagesByFile, outputPlan);
   const pages = flattenExportPreviewGroups(groups);
   const pendingFiles = files.filter(
     (file) =>
@@ -2112,6 +2287,22 @@ function ExportPreviewModal({
     setCurrentIndex(Math.max(0, Math.min(pages.length - 1, nextIndex)));
   };
   const currentThumbnailSrc = localAssetSrc(currentPage?.previewPath ?? currentPage?.thumbnailPath);
+  const currentAspectRatio = currentKey ? pageAspectRatios[currentKey] : undefined;
+  const rememberPageAspectRatio = (
+    pageKey: string,
+    event: SyntheticEvent<HTMLImageElement>,
+  ) => {
+    const { naturalWidth, naturalHeight } = event.currentTarget;
+    if (naturalWidth <= 0 || naturalHeight <= 0) {
+      return;
+    }
+    const nextRatio = naturalWidth / naturalHeight;
+    setPageAspectRatios((current) =>
+      Math.abs((current[pageKey] ?? 0) - nextRatio) < 0.001
+        ? current
+        : { ...current, [pageKey]: nextRatio },
+    );
+  };
 
   return (
     <div className="modal-backdrop" role="presentation">
@@ -2167,9 +2358,22 @@ function ExportPreviewModal({
           </button>
           <div className="preview-canvas">
             {currentPage ? (
-              <div className="preview-live-page">
+              <div
+                className="preview-live-page"
+                style={
+                  currentAspectRatio
+                    ? { aspectRatio: String(currentAspectRatio) }
+                    : undefined
+                }
+              >
                 {currentThumbnailSrc ? (
-                  <img className="preview-live-thumbnail" src={currentThumbnailSrc} alt="" draggable={false} />
+                  <img
+                    className="preview-live-thumbnail"
+                    src={currentThumbnailSrc}
+                    alt=""
+                    draggable={false}
+                    onLoad={(event) => rememberPageAspectRatio(currentKey, event)}
+                  />
                 ) : (
                   <div className="preview-live-placeholder">
                     <FileText size={48} />
@@ -2218,9 +2422,21 @@ function ExportPreviewModal({
                     type="button"
                     title={`${page.outputName} / ${page.fileName} p${page.pageNumber}`}
                   >
-                    <div className={["filmstrip-paper", thumbnailSrc ? "has-thumbnail" : ""].join(" ")}>
+                    <div
+                      className={["filmstrip-paper", thumbnailSrc ? "has-thumbnail" : ""].join(" ")}
+                      style={
+                        pageAspectRatios[pageKey]
+                          ? { aspectRatio: String(pageAspectRatios[pageKey]) }
+                          : undefined
+                      }
+                    >
                       {thumbnailSrc ? (
-                        <img src={thumbnailSrc} alt="" draggable={false} />
+                        <img
+                          src={thumbnailSrc}
+                          alt=""
+                          draggable={false}
+                          onLoad={(event) => rememberPageAspectRatio(pageKey, event)}
+                        />
                       ) : (
                         <FileText size={20} />
                       )}
@@ -2264,7 +2480,6 @@ function LegacyExportPreviewModal({
   const files = useWorkbenchStore((state) => state.files);
   const pagesByFile = useWorkbenchStore((state) => state.pagesByFile);
   const outputPlan = useWorkbenchStore((state) => state.outputPlan);
-  const exportPath = useWorkbenchStore((state) => state.exportPath);
   const decorations = useWorkbenchStore((state) => state.decorations);
   const exportJob = useWorkbenchStore((state) => state.exportJob);
 
@@ -2272,7 +2487,7 @@ function LegacyExportPreviewModal({
     return null;
   }
 
-  const groups = buildExportPreviewGroups(files, pagesByFile, outputPlan, exportPath);
+  const groups = buildExportPreviewGroups(files, pagesByFile, outputPlan);
   const pendingFiles = files.filter(
     (file) =>
       !file.excluded && ["queued", "converting", "stale"].includes(file.cacheState),
@@ -2400,6 +2615,13 @@ export function App() {
   const [alphaLicense, setAlphaLicense] = useState<AlphaLicenseStatus | null>(null);
   const [e2eBootstrap, setE2eBootstrap] = useState<E2eBootstrapInfo | null>(null);
   const e2eStartedRef = useRef(false);
+  const internalDragActiveRef = useRef(false);
+  const markInternalDragActive = useCallback((active: boolean) => {
+    internalDragActiveRef.current = active;
+    if (active) {
+      setDropActive(false);
+    }
+  }, []);
   const addInputFiles = useWorkbenchStore((state) => state.addInputFiles);
   const addLog = useWorkbenchStore((state) => state.addLog);
   const undo = useWorkbenchStore((state) => state.undo);
@@ -2408,6 +2630,9 @@ export function App() {
   const setActiveTool = useWorkbenchStore((state) => state.setActiveTool);
   const setCacheSession = useWorkbenchStore((state) => state.setCacheSession);
   const cacheSession = useWorkbenchStore((state) => state.cacheSession);
+  const backgroundProcessingPausedUntil = useWorkbenchStore(
+    (state) => state.backgroundProcessingPausedUntil,
+  );
   const tickBackgroundJobs = useWorkbenchStore((state) => state.tickBackgroundJobs);
   const tickExportJob = useWorkbenchStore((state) => state.tickExportJob);
   const loadDevelopmentFixture = useWorkbenchStore(
@@ -2622,6 +2847,12 @@ export function App() {
       if (!alphaLicense?.valid) {
         return;
       }
+      if (
+        internalDragActiveRef.current ||
+        Date.now() < backgroundProcessingPausedUntil
+      ) {
+        return;
+      }
       if (isTauriRuntime() && cacheSession.path) {
         processNextPendingEngineFile(cacheSession.path);
         return;
@@ -2629,7 +2860,7 @@ export function App() {
       tickBackgroundJobs();
     }, 900);
     return () => window.clearInterval(timer);
-  }, [alphaLicense?.valid, cacheSession.path, tickBackgroundJobs]);
+  }, [alphaLicense?.valid, backgroundProcessingPausedUntil, cacheSession.path, tickBackgroundJobs]);
 
   useEffect(() => {
     if (isTauriRuntime()) {
@@ -2683,6 +2914,10 @@ export function App() {
     getCurrentWebview()
       .onDragDropEvent((event) => {
         const payload = event.payload;
+        if (internalDragActiveRef.current) {
+          setDropActive(false);
+          return;
+        }
         if (payload.type === "enter" || payload.type === "over") {
           setDropActive(true);
           return;
@@ -2733,6 +2968,11 @@ export function App() {
     Array.from(event.dataTransfer.types).includes("Files");
 
   const handleWorkbenchDragOver = (event: DragEvent<HTMLElement>) => {
+    if (internalDragActiveRef.current) {
+      event.preventDefault();
+      setDropActive(false);
+      return;
+    }
     if (!hasFileDrag(event)) {
       return;
     }
@@ -2750,6 +2990,11 @@ export function App() {
   };
 
   const handleWorkbenchDrop = async (event: DragEvent<HTMLElement>) => {
+    if (internalDragActiveRef.current) {
+      event.preventDefault();
+      setDropActive(false);
+      return;
+    }
     if (!event.dataTransfer.files.length) {
       if (hasFileDrag(event)) {
         event.preventDefault();
@@ -2781,8 +3026,8 @@ export function App() {
         onDragLeave={handleWorkbenchDragLeave}
         onDrop={handleWorkbenchDrop}
       >
-        <FileStrip />
-        <ExpandedTimeline />
+        <FileStrip onInternalDragActiveChange={markInternalDragActive} />
+        <ExpandedTimeline onInternalDragActiveChange={markInternalDragActive} />
       </main>
       <OutputBar logOpen={logOpen} onToggleLog={() => setLogOpen((open) => !open)} />
       <LogDrawerPreview open={logOpen} />

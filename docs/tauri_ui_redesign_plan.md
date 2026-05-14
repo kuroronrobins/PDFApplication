@@ -477,6 +477,21 @@ Reference screenshot:
 
 - `docs/reports/screenshots/2026-05-13-startup-splash-a-picture.png`
 
+## 2026-05-15 Export Destination and Preview Accuracy Update
+
+- The top-bar output-file preset button is removed. Export destination is selected at the moment of export every time.
+- Planned output names are generated from the first non-excluded input file in merge order. The default suffix is `_PDF化.pdf`; split outputs append `_001`, `_002`, and later numbers to the same stem.
+- If all files are excluded and a new active first file is added, the bottom output plan must immediately update to that new file's derived name.
+- Office conversion must run as a background worker job and keep the UI operable. The UI should show staged progress rather than blocking the workbench during Microsoft Office COM conversion.
+- Installed Windows builds must suppress child-process console windows for Python and worker executable launches.
+- The export preview must not show wrapper whitespace that is not part of the actual rendered page. It should size the page frame from already-rendered preview image dimensions, avoiding slow pre-preview export rendering.
+
+## 2026-05-15 File Strip Scrolling and Primary Button UX Update
+
+- Primary blue export actions must stay visually primary on hover. Hover should deepen the blue, raise the button slightly, and strengthen the shadow instead of turning the button white.
+- File cards in the file-order area should be a single horizontal strip. Large file sets scroll horizontally rather than wrapping into hidden lower rows.
+- During file-card pointer drag reorder, dragging near the left or right edge of the strip should auto-scroll the strip and keep recalculating the drop target so users can move files across long workspaces without releasing the drag.
+
 ## 2026-05-13 Office COM, Alpha License, and Layout Hardening
 
 今回のUI/起動/Office方針更新:

@@ -148,6 +148,7 @@ export type CacheSession = {
 
 export type OutputPlan = {
   outputCount: number;
+  defaultOutputFileName: string;
   outputFiles: string[];
   activePageCount: number;
   excludedPageCount: number;

@@ -7,6 +7,25 @@ import type {
   WorkbenchFile,
 } from "./types";
 
+function extensionlessName(name: string): string {
+  return name.replace(/\.[^./\\]+$/, "").trim();
+}
+
+function sanitizeFileStem(stem: string): string {
+  return stem
+    .replace(/[<>:"/\\|?*\u0000-\u001f]/g, "_")
+    .replace(/\s+/g, " ")
+    .replace(/[. ]+$/g, "")
+    .trim();
+}
+
+function defaultOutputStem(files: WorkbenchFile[]): string {
+  const firstActiveFile = files.find((file) => !file.excluded);
+  const sourceStem = firstActiveFile ? extensionlessName(firstActiveFile.name) : "result";
+  const safeStem = sanitizeFileStem(sourceStem) || "result";
+  return `${safeStem}_PDF化`;
+}
+
 export function buildOutputPlan(
   files: WorkbenchFile[],
   pagesByFile: Record<string, PageItem[]>,
@@ -28,12 +47,21 @@ export function buildOutputPlan(
     return page.splitAfter && !isLastActivePage;
   }).length;
   const outputCount = activeFiles.length === 0 ? 0 : Math.max(1, splitCount + 1);
-  const outputFiles = Array.from({ length: outputCount }, (_, index) =>
-    `result_${String(index + 1).padStart(3, "0")}.pdf`,
-  );
+  const outputStem = defaultOutputStem(files);
+  const defaultOutputFileName = `${outputStem}.pdf`;
+  const outputFiles =
+    outputCount <= 1
+      ? outputCount === 1
+        ? [defaultOutputFileName]
+        : []
+      : Array.from(
+          { length: outputCount },
+          (_, index) => `${outputStem}_${String(index + 1).padStart(3, "0")}.pdf`,
+        );
 
   return {
     outputCount,
+    defaultOutputFileName,
     outputFiles,
     activePageCount: activePages.length,
     excludedPageCount,

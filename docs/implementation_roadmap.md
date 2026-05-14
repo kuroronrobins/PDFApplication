@@ -753,6 +753,53 @@ Evidence:
 - Screenshots:
   - `docs/reports/screenshots/2026-05-13-small-window-860x560.png`
   - `docs/reports/screenshots/2026-05-13-small-window-1366x768.png`
+
+## 2026-05-15 Export destination, Office background conversion, and exact preview sizing
+
+Implemented:
+
+- Removed the persistent top-bar output-file selection action. Export destination is now selected every time the user starts an export.
+- The save dialog default filename is derived from the first non-excluded file in merge order, using the `_PDF化.pdf` suffix. Split outputs are previewed as `_001`, `_002`, and so on.
+- The bottom output bar now uses the same workspace-derived output naming, so excluding all files and then adding a new first file updates the planned name automatically.
+- Windows Python worker and bundled worker executable launches now use `CREATE_NO_WINDOW`, so release/installed builds should not show a black console window when Python or Office COM processing starts.
+- Office conversion now uses the streaming worker job path instead of the synchronous `run_processing_engine` path. The UI starts the worker and keeps responding while file-card progress is updated from worker events.
+- `convert_office` emits staged progress events for Office conversion startup, Office background launch, and PDF completion.
+- Export preview page containers now learn the rendered image's natural aspect ratio and size the live preview/filmstrip paper to that ratio. This removes wrapper-side whitespace that is not part of the rendered output without generating a fresh export preview PDF.
+
+Verification:
+
+- `npm run typecheck`: passed.
+- `python -m compileall src-python\pdf_workbench_engine`: passed.
+- `cargo fmt --check`: passed.
+- `cargo check`: passed.
+- `npm run tauri build`: passed outside sandbox and regenerated the release exe plus NSIS/MSI bundles.
+- Headless Edge main-workbench screenshot captured: `docs/reports/screenshots/2026-05-15-output-save-preview-main-1366x768.png`.
+
+Remaining:
+
+- Manual installed-build verification should confirm that Office conversion no longer opens a black console window and that the UI stays operable during a real Word/Excel/PowerPoint COM conversion.
+- A headless DevTools attempt to click into the preview modal timed out in this environment. The preview sizing code is covered by type/build checks, but final visual confirmation should be done in the running app with a real PDF page whose aspect ratio is not A4.
+
+## 2026-05-15 File strip scrolling and export button hover UX
+
+Implemented:
+
+- Primary blue export buttons now keep their primary blue identity on hover, darken slightly, lift by 1px, and use a stronger shadow. Disabled export buttons no longer use the same hover treatment.
+- The generic app-action hover rule now excludes `.export-button`, preventing the main export action and preview confirmation action from turning white.
+- The file-order area now uses a single-row horizontal flex strip with stable scrollbar space instead of an auto-fill grid that can wrap cards into clipped lower rows.
+- File cards have fixed flex bases for normal and compact layouts, so large file sets remain reachable by horizontal scrolling.
+- File-card pointer drag reorder now auto-scrolls the file strip when the pointer approaches the left or right edge, while continuously recalculating the insertion target and drag ghost position.
+
+Verification:
+
+- `npm run typecheck`: passed.
+- `npm run build`: passed outside sandbox after the known Vite/Rolldown `spawn EPERM` limitation was avoided.
+- `npm run tauri build`: passed and regenerated the release executable plus NSIS/MSI installers.
+- Headless Edge screenshot captured: `docs/reports/screenshots/2026-05-15-file-strip-scroll-export-button-1366x768.png`.
+
+Remaining:
+
+- Manual pointer verification should be done with more files than fit horizontally to confirm edge auto-scroll feel, because headless screenshot verification cannot reproduce the long drag gesture.
 - E2E JSON: `docs/reports/e2e/2026-05-13-small-window-runtime/ui-result.json`
 - E2E output PDFs: `docs/reports/e2e/2026-05-13-small-window-runtime/outputs/`
 
