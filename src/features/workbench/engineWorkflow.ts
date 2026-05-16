@@ -4,6 +4,7 @@ import {
   createProcessingJobId,
   exportWorkspaceToDestinationStreaming,
   type ExportDestination,
+  renderExportDecorationOverlayFromManifest,
   renderExportDecorationManifestPage,
   renderExportDecorationOverlayPage,
   inspectPdfFile,
@@ -331,6 +332,16 @@ export async function renderCurrentExportDecorationOverlayWithEngine(
     outputIndex,
     pageIndex,
     passwordMapForExport(snapshot),
+  );
+}
+
+export async function renderCurrentExportDecorationOverlayFromManifestWithEngine(
+  sessionDir: string,
+  manifest: DecorationLayoutManifest,
+): Promise<DecorationOverlayRenderResult> {
+  return renderExportDecorationOverlayFromManifest(
+    manifest,
+    joinWorkerPath(sessionDir, "export-preview"),
   );
 }
 

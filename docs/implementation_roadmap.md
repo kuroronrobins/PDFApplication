@@ -1005,6 +1005,20 @@ Follow-up fix:
 - The large preview page frame now uses the measured preview canvas size and the current page aspect ratio to set explicit width and height. This prevents the page from collapsing to a tiny center box when the preview image is absolutely positioned for overlay alignment.
 - If the high-resolution preview image fails to load, the modal falls back to the existing thumbnail image so the large preview does not remain blank.
 
+## 2026-05-16 Preview navigation, export, and panel responsiveness fixes
+
+Implemented:
+
+- Fixed a Python worker runtime failure in decorated export by restoring the missing `os` import used by `os.replace`.
+- Added an export smoke check that writes a decorated PDF with header and footer through the active `export_workspace` worker path.
+- Preview navigation now shows the selected page from the lightweight thumbnail immediately and preloads the high-resolution preview image for the current and adjacent pages as a non-blocking refinement.
+- Preview filmstrip current-location scrolling now uses immediate positioning instead of smooth animation, so the selected-page marker does not lag behind arrow navigation.
+- Re-clicking an already-selected header/footer/watermark tool reopens the compact settings panel via a tool activation counter. Decoration settings can appear even before a page click applies the tool.
+
+Verification:
+
+- See `docs/reports/2026-05-16-preview-navigation-export-panel-fixes.md`.
+
 ## 2026-05-16 Preview fit and decoration application cleanup
 
 Implemented:
@@ -1018,3 +1032,17 @@ Implemented:
 Verification:
 
 - See `docs/reports/2026-05-16-preview-fit-decoration-panel.md`.
+
+## 2026-05-16 Preview navigation queue and load control
+
+Implemented:
+
+- Export preview page movement now updates the selected page immediately and defers decoration manifest/transparent PNG refinement until navigation has settled.
+- Preview refinement now prioritizes the current page, then sequentially prefetches adjacent pages after a short idle delay. Intermediate pages crossed during rapid arrow-key movement do not launch new worker jobs.
+- High-resolution preview image loading now follows the same settled-page rule, so rapid navigation keeps using lightweight thumbnails instead of decoding multiple large images at once.
+- Transparent decoration PNG generation can now reuse an existing PDF-coordinate manifest through a dedicated worker command, avoiding repeated scratch-PDF creation for the overlay-only step.
+- Filmstrip thumbnail cards were split into memoized items to reduce repeated rendering during active-page changes.
+
+Verification:
+
+- See `docs/reports/2026-05-16-preview-navigation-queue.md`.

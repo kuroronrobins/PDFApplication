@@ -170,6 +170,14 @@ def overlay_handle(request: dict[str, Any]) -> dict[str, Any]:
     workspace, output_dir, output_index, page_index, overlay_zoom = _requested_page(request)
     password_map = request.get("passwordMap") if isinstance(request.get("passwordMap"), dict) else {}
     manifest = _manifest_for_page(workspace, output_dir, output_index, page_index, overlay_zoom, password_map)
+    return _overlay_from_manifest(manifest, output_dir, overlay_zoom)
+
+
+def _overlay_from_manifest(
+    manifest: dict[str, Any],
+    output_dir: Path,
+    overlay_zoom: float,
+) -> dict[str, Any]:
     if not manifest.get("items"):
         return {
             **manifest,
@@ -192,3 +200,29 @@ def overlay_handle(request: dict[str, Any]) -> dict[str, Any]:
         **_render_overlay_png(manifest, overlay_file, overlay_zoom),
         "cached": False,
     }
+
+
+def overlay_manifest_handle(request: dict[str, Any]) -> dict[str, Any]:
+    output_dir = as_path(request.get("outputDir"), "outputDir")
+    manifest = request.get("manifest")
+    if not isinstance(manifest, dict):
+        raise EngineError("invalid_manifest", "manifest is required")
+
+    overlay_zoom = request.get("overlayZoom")
+    overlay_zoom_value = (
+        float(overlay_zoom)
+        if isinstance(overlay_zoom, (int, float))
+        else float(manifest.get("renderZoom") or 2.25)
+    )
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    cache_key = manifest.get("cacheKey")
+    if not isinstance(cache_key, str) or not cache_key:
+        encoded = json.dumps(manifest, ensure_ascii=False, sort_keys=True, default=str).encode("utf-8")
+        cache_key = hashlib.sha256(encoded).hexdigest()
+    manifest = {
+        **manifest,
+        "cacheKey": cache_key,
+        "renderZoom": overlay_zoom_value,
+    }
+    return _overlay_from_manifest(manifest, output_dir, overlay_zoom_value)

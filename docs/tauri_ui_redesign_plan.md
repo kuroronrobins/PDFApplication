@@ -546,6 +546,8 @@ Reference screenshot:
 - The export preview in the Tauri runtime now uses a PDF-coordinate decoration manifest as the first-class preview contract. The Python worker resolves the same output page, split-output numbering, page geometry, text fitting, font family, and decoration positions used by export, but returns only lightweight layout data first.
 - Editing remains the priority path. Header/footer/watermark edits update the workbench state immediately and do not invoke the Python worker or block the central editing screen.
 - The preview modal must never wait for full preview-PDF generation during arrow-key or button page navigation. It displays the existing page preview image and places an SVG decoration layer from the manifest as soon as the lightweight manifest arrives.
+- Page navigation state must update before any refinement work. The current page label, selected filmstrip item, and large page frame change immediately; high-resolution image decode, manifest fetch, transparent PNG generation, and filmstrip auto-scroll are never allowed to block the current-page switch.
+- The large preview first uses the already available thumbnail when needed, then swaps to the high-resolution preview image after it has been preloaded. This keeps arrow-key and button navigation visually immediate even on large files.
 - A transparent PyMuPDF-rendered PNG decoration layer is generated only as an asynchronous refinement for the current and neighboring pages. When it arrives, it replaces the SVG layer without shifting the page, controls, or filmstrip.
 - User-visible waiting in the preview modal is limited to source preparation states such as Office/PDF conversion. Decoration overlay generation must not show a blocking `作成中` overlay over the page.
 - The obsolete completed-page preview PNG path is removed. Preview refinement now stores only the decoration manifest and transparent decoration PNG in the session preview cache.
@@ -555,4 +557,14 @@ Reference screenshot:
 - The large preview page frame must receive explicit measured width and height. Preview images and decoration overlays may be absolutely positioned inside that frame, but they must not be responsible for creating the frame size.
 - If the high-resolution page preview image cannot be loaded, the modal falls back to the already-visible filmstrip thumbnail rather than leaving the large preview blank.
 - Header/footer settings appear as soon as the header/footer tool is selected. Users edit the text and position first, then click a file or page to apply the current setting.
+- Re-clicking the same header/footer/page-number/watermark tool must also reopen the compact settings panel if the user had hidden it. Tool activation is an event, not only a change of active tool value.
 - A single page cannot keep multiple header/footer/page-number values in the same visual slot. Applying a different value to the same page and slot replaces the previous effective value, including values inherited from all-page or file-level decorations.
+
+## 2026-05-16 Preview Navigation Queue Update
+
+- Arrow-key and button page movement is the highest-priority preview path. It updates the current page index, large lightweight page image, page label, and active filmstrip item without starting Python worker jobs or high-resolution image decoding on every key event.
+- Decoration manifest and transparent PNG refinement starts only after the user stops on a page for a short settle delay. If the user keeps moving, the pending refinement is skipped and no new worker process is launched for those intermediate pages.
+- Preview refinement runs with current-page priority and a single sequential queue. Adjacent page prefetch begins only after the current page refinement has had a chance to complete and after a short idle delay.
+- High-resolution preview image loading follows the same rule: current page first after navigation settles, adjacent pages later. During rapid movement, the existing thumbnail remains the immediate display source.
+- Transparent decoration PNG generation can now consume an already-resolved PDF-coordinate manifest. This avoids rebuilding a scratch one-page PDF and recomputing the manifest when only the PyMuPDF transparent overlay is needed.
+- Filmstrip thumbnail items are memoized so changing the active page does not force every thumbnail and decoration layer to do full work again.

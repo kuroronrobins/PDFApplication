@@ -1,6 +1,8 @@
 import {
+  memo,
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
   type ChangeEvent,
@@ -65,6 +67,7 @@ import {
   processAllPendingEngineFiles,
   processNextPendingEngineFile,
   renderCurrentExportDecorationManifestWithEngine,
+  renderCurrentExportDecorationOverlayFromManifestWithEngine,
   renderCurrentExportDecorationOverlayWithEngine,
   resetCurrentExportCancellation,
 } from "./features/workbench/engineWorkflow";
@@ -201,8 +204,9 @@ type PreviewCanvasSize = {
 
 const decorationPreviewSessionCache = new Map<string, DecorationPreviewState>();
 const decorationPreviewSessionPromises = new Map<string, Promise<DecorationLayoutManifest | DecorationOverlayRenderResult>>();
-const decorationPreviewOverlayDelayMs = 140;
 const decorationPreviewMaxCachedPages = 96;
+const previewNavigationSettleMs = 140;
+const previewNeighborPrefetchDelayMs = 260;
 const defaultPreviewPageAspectRatio = 1 / Math.SQRT2;
 
 type OutputPageNumberInfo = {
@@ -523,6 +527,7 @@ function requestDecorationOverlayPage(
   sessionPath: string,
   previewSignature: string,
   page: ExportPreviewFilmstripPage,
+  manifest?: DecorationLayoutManifest,
 ): Promise<DecorationOverlayRenderResult> {
   const cacheKey = decorationPreviewCacheKey(previewSignature, page);
   const cached = decorationPreviewSessionCache.get(cacheKey);
@@ -536,11 +541,13 @@ function requestDecorationOverlayPage(
     return existingPromise as Promise<DecorationOverlayRenderResult>;
   }
 
-  const promise = renderCurrentExportDecorationOverlayWithEngine(
-    sessionPath,
-    page.outputIndex,
-    page.outputPageNumber - 1,
-  )
+  const promise = (manifest
+    ? renderCurrentExportDecorationOverlayFromManifestWithEngine(sessionPath, manifest)
+    : renderCurrentExportDecorationOverlayWithEngine(
+        sessionPath,
+        page.outputIndex,
+        page.outputPageNumber - 1,
+      ))
     .then((overlay) => {
       rememberDecorationPreviewCache(cacheKey, {
         status: "ready",
@@ -1884,6 +1891,81 @@ function DecorationPreviewLayer({
   return null;
 }
 
+type PreviewFilmstripItemProps = {
+  page: ExportPreviewFilmstripPage;
+  pageKey: string;
+  index: number;
+  active: boolean;
+  aspectRatio?: number;
+  decorationPreview?: DecorationPreviewState;
+  onSelect: (index: number) => void;
+  onImageLoad: (pageKey: string, event: SyntheticEvent<HTMLImageElement>) => void;
+  setThumbnailRef: (pageKey: string, node: HTMLButtonElement | null) => void;
+};
+
+const PreviewFilmstripItem = memo(function PreviewFilmstripItem({
+  page,
+  pageKey,
+  index,
+  active,
+  aspectRatio,
+  decorationPreview,
+  onSelect,
+  onImageLoad,
+  setThumbnailRef,
+}: PreviewFilmstripItemProps) {
+  const decorationManifest = decorationPreview?.manifest ?? decorationPreview?.overlay;
+  const decorationOverlaySrc = localAssetSrc(decorationPreview?.overlay?.overlayPath ?? undefined);
+  const thumbnailSrc = localAssetSrc(page.thumbnailPath);
+  const manifestAspectRatio =
+    decorationManifest?.pageWidthPt && decorationManifest.pageHeightPt
+      ? decorationManifest.pageWidthPt / decorationManifest.pageHeightPt
+      : undefined;
+  const paperAspectRatio = manifestAspectRatio ?? aspectRatio;
+
+  return (
+    <div className="filmstrip-item-wrap">
+      {page.startsOutput && (
+        <div className="filmstrip-split-marker">
+          <Scissors size={14} />
+          <span>{page.outputName}</span>
+        </div>
+      )}
+      <button
+        ref={(node) => {
+          setThumbnailRef(pageKey, node);
+        }}
+        className={["filmstrip-thumb", active ? "is-active" : ""].join(" ")}
+        onClick={() => onSelect(index)}
+        type="button"
+        title={`${page.outputName} / ${page.fileName} p${page.pageNumber}`}
+      >
+        <div
+          className={["filmstrip-paper", thumbnailSrc ? "has-thumbnail" : ""].join(" ")}
+          style={paperAspectRatio ? { aspectRatio: String(paperAspectRatio) } : undefined}
+        >
+          {thumbnailSrc ? (
+            <img
+              src={thumbnailSrc}
+              alt=""
+              draggable={false}
+              onLoad={(event) => onImageLoad(pageKey, event)}
+            />
+          ) : (
+            <FileText size={20} />
+          )}
+          <DecorationPreviewLayer
+            manifest={decorationManifest}
+            overlaySrc={decorationOverlaySrc}
+            idPrefix={`filmstrip-${pageKey}`}
+          />
+        </div>
+        <span>{kindLabel(page.fileKind)} p{page.outputPageNumber}</span>
+      </button>
+    </div>
+  );
+});
+
 function PageCard({
   page,
   fileId,
@@ -2204,6 +2286,7 @@ function ExpandedTimeline({
   const outputPlan = useWorkbenchStore((state) => state.outputPlan);
   const decorations = useWorkbenchStore((state) => state.decorations);
   const activeTool = useWorkbenchStore((state) => state.activeTool);
+  const toolActivationId = useWorkbenchStore((state) => state.toolActivationId);
   const movePageToIndex = useWorkbenchStore((state) => state.movePageToIndex);
   const togglePageExcluded = useWorkbenchStore((state) => state.togglePageExcluded);
   const togglePageSplit = useWorkbenchStore((state) => state.togglePageSplit);
@@ -2220,7 +2303,7 @@ function ExpandedTimeline({
 
   useEffect(() => {
     setSettingsPanelHidden(false);
-  }, [activeTool, expandedFile?.id]);
+  }, [activeTool, expandedFile?.id, toolActivationId]);
 
   const positionFromEvent = (
     event: DragEvent<HTMLButtonElement>,
@@ -2492,8 +2575,8 @@ function ExpandedTimeline({
         )}
       </div>
 
-      {pages.length > 0 && !settingsPanelHidden && activePanel}
-      {pages.length > 0 && settingsPanelHidden && hasActivePanel && (
+      {!settingsPanelHidden && activePanel}
+      {settingsPanelHidden && hasActivePanel && (
         <button className="floating-panel-reopen" onClick={() => setSettingsPanelHidden(false)}>
           <BadgeInfo size={15} />
           設定
@@ -2660,22 +2743,36 @@ function ExportPreviewModal({
   const exportJob = useWorkbenchStore((state) => state.exportJob);
   const cacheSession = useWorkbenchStore((state) => state.cacheSession);
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [settledPreviewIndex, setSettledPreviewIndex] = useState(0);
   const [previewInfoOpen, setPreviewInfoOpen] = useState(false);
   const [pageAspectRatios, setPageAspectRatios] = useState<Record<string, number>>({});
   const [decorationPreviewPages, setDecorationPreviewPages] = useState<Record<string, DecorationPreviewState>>({});
   const [previewCanvasSize, setPreviewCanvasSize] = useState<PreviewCanvasSize | null>(null);
   const [previewImageFallbacks, setPreviewImageFallbacks] = useState<Record<string, boolean>>({});
+  const [previewHighResReady, setPreviewHighResReady] = useState<Record<string, boolean>>({});
   const previewCanvasRef = useRef<HTMLDivElement | null>(null);
   const thumbnailRefs = useRef<Record<string, HTMLButtonElement | null>>({});
   const decorationPreviewPagesRef = useRef<Record<string, DecorationPreviewState>>({});
+  const previewHighResReadyRef = useRef<Record<string, boolean>>({});
+  const previewImageFallbacksRef = useRef<Record<string, boolean>>({});
   const decorationPreviewGenerationRef = useRef(0);
-  const groups = buildExportPreviewGroups(files, pagesByFile, outputPlan);
-  const pages = flattenExportPreviewGroups(groups);
-  const pendingFiles = files.filter(
-    (file) =>
-      !file.excluded && ["queued", "converting", "stale"].includes(file.cacheState),
+  const groups = useMemo(
+    () => buildExportPreviewGroups(files, pagesByFile, outputPlan),
+    [files, outputPlan, pagesByFile],
   );
-  const previewSignature = exportPreviewSignature(files, pagesByFile, decorations, outputPlan);
+  const pages = useMemo(() => flattenExportPreviewGroups(groups), [groups]);
+  const pendingFiles = useMemo(
+    () =>
+      files.filter(
+        (file) =>
+          !file.excluded && ["queued", "converting", "stale"].includes(file.cacheState),
+      ),
+    [files],
+  );
+  const previewSignature = useMemo(
+    () => exportPreviewSignature(files, pagesByFile, decorations, outputPlan),
+    [decorations, files, outputPlan, pagesByFile],
+  );
   const decorationPreviewAvailable =
     isTauriRuntime() && Boolean(cacheSession.path) && pendingFiles.length === 0 && pages.length > 0;
 
@@ -2685,6 +2782,9 @@ function ExportPreviewModal({
     }
     setPreviewInfoOpen(false);
     setCurrentIndex((index) =>
+      pages.length === 0 ? 0 : Math.min(Math.max(index, 0), pages.length - 1),
+    );
+    setSettledPreviewIndex((index) =>
       pages.length === 0 ? 0 : Math.min(Math.max(index, 0), pages.length - 1),
     );
   }, [open, pages.length]);
@@ -2723,11 +2823,115 @@ function ExportPreviewModal({
   }, [decorationPreviewPages]);
 
   useEffect(() => {
+    previewHighResReadyRef.current = previewHighResReady;
+  }, [previewHighResReady]);
+
+  useEffect(() => {
+    previewImageFallbacksRef.current = previewImageFallbacks;
+  }, [previewImageFallbacks]);
+
+  const commitDecorationPreviewState = useCallback(
+    (key: string, nextState: DecorationPreviewState) => {
+      setDecorationPreviewPages((current) => {
+        const currentState = current[key];
+        if (
+          currentState?.status === "ready" &&
+          (nextState.status === "manifest" || nextState.status === "error")
+        ) {
+          return current;
+        }
+        if (
+          currentState?.status === nextState.status &&
+          currentState.manifest === nextState.manifest &&
+          currentState.overlay === nextState.overlay
+        ) {
+          return current;
+        }
+        const next = { ...current, [key]: { ...currentState, ...nextState } };
+        decorationPreviewPagesRef.current = next;
+        return next;
+      });
+    },
+    [],
+  );
+
+  const refineDecorationPreviewPage = useCallback(
+    async (
+      page: ExportPreviewFilmstripPage,
+      generation: number,
+      shouldAbort: () => boolean,
+    ) => {
+      if (!cacheSession.path || shouldAbort()) {
+        return;
+      }
+      const sessionPath = cacheSession.path;
+      const key = decorationPreviewKey(page);
+      const cacheKey = decorationPreviewCacheKey(previewSignature, page);
+      const cached = decorationPreviewSessionCache.get(cacheKey);
+      if (cached?.status === "ready" && cached.overlay) {
+        commitDecorationPreviewState(key, cached);
+        return;
+      }
+
+      let manifest = cached?.manifest;
+      if (!manifest) {
+        try {
+          manifest = await requestDecorationManifestPage(sessionPath, previewSignature, page);
+        } catch {
+          if (!shouldAbort() && decorationPreviewGenerationRef.current === generation) {
+            commitDecorationPreviewState(key, { status: "error" });
+          }
+          return;
+        }
+      }
+
+      if (shouldAbort() || decorationPreviewGenerationRef.current !== generation) {
+        return;
+      }
+
+      const manifestState: DecorationPreviewState = { status: "manifest", manifest };
+      rememberDecorationPreviewCache(cacheKey, manifestState);
+      commitDecorationPreviewState(key, manifestState);
+
+      if (manifest.items.length === 0 || shouldAbort()) {
+        return;
+      }
+
+      try {
+        const overlay = await requestDecorationOverlayPage(
+          sessionPath,
+          previewSignature,
+          page,
+          manifest,
+        );
+        if (shouldAbort() || decorationPreviewGenerationRef.current !== generation) {
+          return;
+        }
+        const readyState: DecorationPreviewState = {
+          status: "ready",
+          manifest: overlay,
+          overlay,
+        };
+        rememberDecorationPreviewCache(cacheKey, readyState);
+        commitDecorationPreviewState(key, readyState);
+      } catch {
+        if (!shouldAbort() && decorationPreviewGenerationRef.current === generation) {
+          commitDecorationPreviewState(key, { status: "error", manifest });
+        }
+      }
+    },
+    [cacheSession.path, commitDecorationPreviewState, previewSignature],
+  );
+
+  useEffect(() => {
     decorationPreviewGenerationRef.current += 1;
     const cachedPages = cachedDecorationPreviewPages(previewSignature, pages);
     decorationPreviewPagesRef.current = cachedPages;
     setDecorationPreviewPages(cachedPages);
+    previewImageFallbacksRef.current = {};
+    previewHighResReadyRef.current = {};
     setPreviewImageFallbacks({});
+    setPreviewHighResReady({});
   }, [open, pages.length, previewSignature]);
 
   useEffect(() => {
@@ -2769,161 +2973,214 @@ function ExportPreviewModal({
   }, [open]);
 
   useEffect(() => {
-    if (!open || !decorationPreviewAvailable || !cacheSession.path || !currentPage || !currentKey) {
+    if (!open) {
       return;
     }
-
-    const sessionPath = cacheSession.path;
-    const page = currentPage;
-    const key = currentKey;
-    const cacheKey = decorationPreviewCacheKey(previewSignature, page);
-    const cached = decorationPreviewSessionCache.get(cacheKey);
-    if (cached?.manifest) {
-      const next = { ...decorationPreviewPagesRef.current, [key]: cached };
-      decorationPreviewPagesRef.current = next;
-      setDecorationPreviewPages(next);
-      return;
-    }
-
-    const generation = decorationPreviewGenerationRef.current;
-    let cancelled = false;
-    void requestDecorationManifestPage(sessionPath, previewSignature, page)
-      .then((manifest) => {
-        if (cancelled || decorationPreviewGenerationRef.current !== generation) {
-          return;
-        }
-        const manifestState: DecorationPreviewState = { status: "manifest", manifest };
-        rememberDecorationPreviewCache(cacheKey, manifestState);
-        setDecorationPreviewPages((current) => {
-          const currentState = current[key];
-          if (currentState?.status === "ready") {
-            return current;
-          }
-          const next = { ...current, [key]: { ...currentState, ...manifestState } };
-          decorationPreviewPagesRef.current = next;
-          return next;
-        });
-      })
-      .catch(() => {
-        if (cancelled || decorationPreviewGenerationRef.current !== generation) {
-          return;
-        }
-        const errorState: DecorationPreviewState = { status: "error" };
-        setDecorationPreviewPages((current) => {
-          if (current[key]?.status === "ready" || current[key]?.status === "manifest") {
-            return current;
-          }
-          const next = { ...current, [key]: errorState };
-          decorationPreviewPagesRef.current = next;
-          return next;
-        });
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [
-    cacheSession.path,
-    currentKey,
-    currentPage,
-    decorationPreviewAvailable,
-    open,
-    previewSignature,
-  ]);
+    const timer = window.setTimeout(() => {
+      setSettledPreviewIndex(currentIndex);
+    }, previewNavigationSettleMs);
+    return () => window.clearTimeout(timer);
+  }, [currentIndex, open]);
 
   useEffect(() => {
-    if (!open || !decorationPreviewAvailable || !cacheSession.path || !currentPage || !currentKey) {
+    if (
+      !open ||
+      !decorationPreviewAvailable ||
+      !cacheSession.path ||
+      pages.length === 0 ||
+      settledPreviewIndex !== currentIndex
+    ) {
       return;
     }
 
-    const sessionPath = cacheSession.path;
     const generation = decorationPreviewGenerationRef.current;
+    const targetPage = pages[settledPreviewIndex];
+    if (!targetPage) {
+      return;
+    }
+
     let cancelled = false;
-    const targetPages = [pages[currentIndex], pages[currentIndex - 1], pages[currentIndex + 1]].filter(
-      (page): page is ExportPreviewFilmstripPage => Boolean(page),
-    );
-    const timer = window.setTimeout(() => {
-      for (const page of targetPages) {
+    const timers: number[] = [];
+    const shouldAbort = () =>
+      cancelled || decorationPreviewGenerationRef.current !== generation;
+    const wait = (ms: number) =>
+      new Promise<void>((resolve) => {
+        const timer = window.setTimeout(resolve, ms);
+        timers.push(timer);
+      });
+
+    void (async () => {
+      await refineDecorationPreviewPage(targetPage, generation, shouldAbort);
+      if (shouldAbort()) {
+        return;
+      }
+
+      await wait(previewNeighborPrefetchDelayMs);
+      const neighborPages = [
+        pages[settledPreviewIndex - 1],
+        pages[settledPreviewIndex + 1],
+      ].filter((page): page is ExportPreviewFilmstripPage => Boolean(page));
+      for (const page of neighborPages) {
+        if (shouldAbort()) {
+          return;
+        }
         const key = decorationPreviewKey(page);
         if (decorationPreviewPagesRef.current[key]?.status === "ready") {
           continue;
         }
-        const cacheKey = decorationPreviewCacheKey(previewSignature, page);
-        void requestDecorationOverlayPage(sessionPath, previewSignature, page)
-          .then((overlay) => {
-            if (cancelled || decorationPreviewGenerationRef.current !== generation) {
-              return;
-            }
-            const readyState: DecorationPreviewState = {
-              status: "ready",
-              manifest: overlay,
-              overlay,
-            };
-            rememberDecorationPreviewCache(cacheKey, readyState);
-            setDecorationPreviewPages((current) => {
-              const next = { ...current, [key]: readyState };
-              decorationPreviewPagesRef.current = next;
-              return next;
-            });
-          })
-          .catch(() => {
-            if (cancelled || decorationPreviewGenerationRef.current !== generation) {
-              return;
-            }
-            const errorState: DecorationPreviewState = { status: "error" };
-            setDecorationPreviewPages((current) => {
-              if (current[key]?.status === "ready") {
-                return current;
-              }
-              const next = { ...current, [key]: { ...current[key], ...errorState } };
-              decorationPreviewPagesRef.current = next;
-              return next;
-            });
-          });
+        await refineDecorationPreviewPage(page, generation, shouldAbort);
       }
-    }, decorationPreviewOverlayDelayMs);
+    })();
 
     return () => {
       cancelled = true;
-      window.clearTimeout(timer);
+      timers.forEach((timer) => window.clearTimeout(timer));
     };
   }, [
     cacheSession.path,
     currentIndex,
-    currentKey,
-    currentPage,
     decorationPreviewAvailable,
     open,
-    pages.length,
-    previewSignature,
+    pages,
+    refineDecorationPreviewPage,
+    settledPreviewIndex,
   ]);
+
+  useEffect(() => {
+    if (!open || pages.length === 0 || settledPreviewIndex !== currentIndex) {
+      return;
+    }
+    let cancelled = false;
+    const timers: number[] = [];
+    const loadHighResPage = (page: ExportPreviewFilmstripPage | undefined) => {
+      if (!page || cancelled) {
+        return;
+      }
+      const key = decorationPreviewKey(page);
+      if (
+        previewHighResReadyRef.current[key] ||
+        previewImageFallbacksRef.current[key] ||
+        !page.previewPath ||
+        !page.thumbnailPath ||
+        page.previewPath === page.thumbnailPath
+      ) {
+        return;
+      }
+      const src = localAssetSrc(page.previewPath);
+      if (!src) {
+        return;
+      }
+      const image = new Image();
+      image.onload = () => {
+        if (cancelled) {
+          return;
+        }
+        previewHighResReadyRef.current = {
+          ...previewHighResReadyRef.current,
+          [key]: true,
+        };
+        setPreviewHighResReady((current) =>
+          current[key] ? current : { ...current, [key]: true },
+        );
+      };
+      image.onerror = () => {
+        if (cancelled) {
+          return;
+        }
+        previewImageFallbacksRef.current = {
+          ...previewImageFallbacksRef.current,
+          [key]: true,
+        };
+        setPreviewImageFallbacks((current) =>
+          current[key] ? current : { ...current, [key]: true },
+        );
+      };
+      image.src = src;
+    };
+
+    loadHighResPage(pages[settledPreviewIndex]);
+    const timer = window.setTimeout(() => {
+      loadHighResPage(pages[settledPreviewIndex - 1]);
+      loadHighResPage(pages[settledPreviewIndex + 1]);
+    }, previewNeighborPrefetchDelayMs);
+    timers.push(timer);
+
+    return () => {
+      cancelled = true;
+      timers.forEach((timer) => window.clearTimeout(timer));
+    };
+  }, [currentIndex, open, pages, settledPreviewIndex]);
 
   useEffect(() => {
     if (!open || !currentKey) {
       return;
     }
     thumbnailRefs.current[currentKey]?.scrollIntoView({
-      behavior: "smooth",
+      behavior: "auto",
       block: "nearest",
       inline: "center",
     });
   }, [currentKey, open]);
 
-  if (!open) {
-    return null;
-  }
-
-  const goToPage = (nextIndex: number) => {
+  const goToPage = useCallback((nextIndex: number) => {
     if (pages.length === 0) {
       setCurrentIndex(0);
       return;
     }
-    setCurrentIndex(Math.max(0, Math.min(pages.length - 1, nextIndex)));
-  };
+    const boundedIndex = Math.max(0, Math.min(pages.length - 1, nextIndex));
+    setCurrentIndex((current) => (current === boundedIndex ? current : boundedIndex));
+  }, [pages.length]);
+
+  const rememberPageAspectRatio = useCallback(
+    (pageKey: string, event: SyntheticEvent<HTMLImageElement>) => {
+      const { naturalWidth, naturalHeight } = event.currentTarget;
+      if (naturalWidth <= 0 || naturalHeight <= 0) {
+        return;
+      }
+      const nextRatio = naturalWidth / naturalHeight;
+      setPageAspectRatios((current) =>
+        Math.abs((current[pageKey] ?? 0) - nextRatio) < 0.001
+          ? current
+          : { ...current, [pageKey]: nextRatio },
+      );
+    },
+    [],
+  );
+
+  const setThumbnailRef = useCallback(
+    (pageKey: string, node: HTMLButtonElement | null) => {
+      thumbnailRefs.current[pageKey] = node;
+    },
+    [],
+  );
+
+  const fallbackToThumbnailPreview = useCallback(() => {
+    if (!currentPage || !currentKey || !currentPage.previewPath || !currentPage.thumbnailPath) {
+      return;
+    }
+    if (currentPage.previewPath === currentPage.thumbnailPath) {
+      return;
+    }
+    previewImageFallbacksRef.current = {
+      ...previewImageFallbacksRef.current,
+      [currentKey]: true,
+    };
+    setPreviewImageFallbacks((current) =>
+      current[currentKey] ? current : { ...current, [currentKey]: true },
+    );
+  }, [currentKey, currentPage]);
+
+  if (!open) {
+    return null;
+  }
+
   const currentImagePath =
     currentPage && currentKey && previewImageFallbacks[currentKey]
       ? currentPage.thumbnailPath
-      : currentPage?.previewPath ?? currentPage?.thumbnailPath;
+      : currentPage?.previewPath &&
+          (previewHighResReady[currentKey] || !currentPage.thumbnailPath)
+        ? currentPage.previewPath
+        : currentPage?.thumbnailPath ?? currentPage?.previewPath;
   const currentThumbnailSrc = localAssetSrc(currentImagePath);
   const currentDecorationPreview = currentKey ? decorationPreviewPages[currentKey] : undefined;
   const currentDecorationManifest =
@@ -2936,32 +3193,6 @@ function ExportPreviewModal({
   const currentAspectRatio =
     currentManifestAspectRatio ?? (currentKey ? pageAspectRatios[currentKey] : undefined);
   const currentPageFrameStyle = previewPageFrameStyle(currentAspectRatio, previewCanvasSize);
-  const rememberPageAspectRatio = (
-    pageKey: string,
-    event: SyntheticEvent<HTMLImageElement>,
-  ) => {
-    const { naturalWidth, naturalHeight } = event.currentTarget;
-    if (naturalWidth <= 0 || naturalHeight <= 0) {
-      return;
-    }
-    const nextRatio = naturalWidth / naturalHeight;
-    setPageAspectRatios((current) =>
-      Math.abs((current[pageKey] ?? 0) - nextRatio) < 0.001
-        ? current
-        : { ...current, [pageKey]: nextRatio },
-    );
-  };
-  const fallbackToThumbnailPreview = () => {
-    if (!currentPage || !currentKey || !currentPage.previewPath || !currentPage.thumbnailPath) {
-      return;
-    }
-    if (currentPage.previewPath === currentPage.thumbnailPath) {
-      return;
-    }
-    setPreviewImageFallbacks((current) =>
-      current[currentKey] ? current : { ...current, [currentKey]: true },
-    );
-  };
 
   return (
     <div className="modal-backdrop" role="presentation">
@@ -3061,58 +3292,19 @@ function ExportPreviewModal({
           {pages.length > 0 ? (
             pages.map((page, index) => {
               const pageKey = decorationPreviewKey(page);
-              const decorationPreview = decorationPreviewPages[pageKey];
-              const decorationManifest = decorationPreview?.manifest ?? decorationPreview?.overlay;
-              const decorationOverlaySrc = localAssetSrc(decorationPreview?.overlay?.overlayPath ?? undefined);
-              const thumbnailSrc = localAssetSrc(page.thumbnailPath);
-              const manifestAspectRatio =
-                decorationManifest?.pageWidthPt && decorationManifest.pageHeightPt
-                  ? decorationManifest.pageWidthPt / decorationManifest.pageHeightPt
-                  : undefined;
               return (
-                <div className="filmstrip-item-wrap" key={pageKey}>
-                  {page.startsOutput && (
-                    <div className="filmstrip-split-marker">
-                      <Scissors size={14} />
-                      <span>{page.outputName}</span>
-                    </div>
-                  )}
-                  <button
-                    ref={(node) => {
-                      thumbnailRefs.current[pageKey] = node;
-                    }}
-                    className={["filmstrip-thumb", index === currentIndex ? "is-active" : ""].join(" ")}
-                    onClick={() => goToPage(index)}
-                    type="button"
-                    title={`${page.outputName} / ${page.fileName} p${page.pageNumber}`}
-                  >
-                    <div
-                      className={["filmstrip-paper", thumbnailSrc ? "has-thumbnail" : ""].join(" ")}
-                      style={
-                        manifestAspectRatio || pageAspectRatios[pageKey]
-                          ? { aspectRatio: String(manifestAspectRatio ?? pageAspectRatios[pageKey]) }
-                          : undefined
-                      }
-                    >
-                      {thumbnailSrc ? (
-                        <img
-                          src={thumbnailSrc}
-                          alt=""
-                          draggable={false}
-                          onLoad={(event) => rememberPageAspectRatio(pageKey, event)}
-                        />
-                      ) : (
-                        <FileText size={20} />
-                      )}
-                      <DecorationPreviewLayer
-                        manifest={decorationManifest}
-                        overlaySrc={decorationOverlaySrc}
-                        idPrefix={`filmstrip-${pageKey}`}
-                      />
-                    </div>
-                    <span>{kindLabel(page.fileKind)} p{page.outputPageNumber}</span>
-                  </button>
-                </div>
+                <PreviewFilmstripItem
+                  key={pageKey}
+                  page={page}
+                  pageKey={pageKey}
+                  index={index}
+                  active={index === currentIndex}
+                  aspectRatio={pageAspectRatios[pageKey]}
+                  decorationPreview={decorationPreviewPages[pageKey]}
+                  onSelect={goToPage}
+                  onImageLoad={rememberPageAspectRatio}
+                  setThumbnailRef={setThumbnailRef}
+                />
               );
             })
           ) : (

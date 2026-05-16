@@ -31,6 +31,7 @@ import type {
 
 type WorkbenchState = WorkbenchSnapshot & {
   cacheSession: CacheSession;
+  toolActivationId: number;
   exportPath?: string;
   outputSettings: OutputSettings;
   lastOutputFiles: string[];
@@ -553,6 +554,7 @@ export const useWorkbenchStore = create<WorkbenchState>((set, get) => ({
   },
   exportJob: initialExportJob,
   backgroundProcessingPausedUntil: 0,
+  toolActivationId: 0,
   lastOutputFiles: [],
   logs: [],
   history: [],
@@ -564,17 +566,20 @@ export const useWorkbenchStore = create<WorkbenchState>((set, get) => ({
   setActiveTool: (tool) => {
     const current = get();
     set(
-      derive(
-        clearAllSelections({
-          files: current.files.map((file) => ({ ...file })),
-          pagesByFile: clonePages(current.pagesByFile),
-          activeTool: tool,
-          decorations: current.decorations.map((decoration) => ({ ...decoration })),
-          selectedDecorationId: current.selectedDecorationId,
-          security: cloneSecurity(current.security),
-        }),
-        current.outputSettings,
-      ),
+      {
+        ...derive(
+          clearAllSelections({
+            files: current.files.map((file) => ({ ...file })),
+            pagesByFile: clonePages(current.pagesByFile),
+            activeTool: tool,
+            decorations: current.decorations.map((decoration) => ({ ...decoration })),
+            selectedDecorationId: current.selectedDecorationId,
+            security: cloneSecurity(current.security),
+          }),
+          current.outputSettings,
+        ),
+        toolActivationId: current.toolActivationId + 1,
+      },
     );
   },
 
@@ -592,6 +597,7 @@ export const useWorkbenchStore = create<WorkbenchState>((set, get) => ({
     };
     set({
       ...derive(snapshot, initialOutputSettings),
+      toolActivationId: 0,
       logs: initialLogs.map((log) => ({ ...log })),
       lastOutputFiles: [],
       history: [],

@@ -1,0 +1,14 @@
+{
+  "fixtureUrl": "http://127.0.0.1:5173/?fixture=workbench",
+  "rapidArrowPresses": 12,
+  "pressMs": 253,
+  "after60Ms": {
+    "meta": "2ファイル37ページ見積_PDF化_001.pdf p13",
+    "active": "Word p13"
+  },
+  "after410Ms": {
+    "meta": "2ファイル37ページ見積_PDF化_001.pdf p13",
+    "active": "Word p13"
+  },
+  "consoleErrors": []
+}

@@ -390,6 +390,18 @@ export async function renderExportDecorationOverlayPage(
   });
 }
 
+export async function renderExportDecorationOverlayFromManifest(
+  manifest: DecorationLayoutManifest,
+  outputDir: string,
+): Promise<DecorationOverlayRenderResult> {
+  return runTypedEngine<DecorationOverlayRenderResult>({
+    kind: "render_export_decoration_overlay_manifest",
+    manifest,
+    outputDir,
+    overlayZoom: manifest.renderZoom || 2.25,
+  });
+}
+
 export async function exportWorkspaceToPath(
   outputPath: string,
   workspace: WorkbenchSnapshot,

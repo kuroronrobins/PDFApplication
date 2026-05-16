@@ -15,6 +15,9 @@ from .jobs.render_decoration_overlay_page import (
 from .jobs.render_decoration_overlay_page import (
     overlay_handle as render_export_decoration_overlay_page,
 )
+from .jobs.render_decoration_overlay_page import (
+    overlay_manifest_handle as render_export_decoration_overlay_manifest,
+)
 from .jobs.render_thumbnail import handle as render_thumbnail
 from .jobs.render_thumbnails import handle as render_thumbnails
 from .schemas import error, result
@@ -38,6 +41,7 @@ HANDLERS: dict[str, Handler] = {
     "render_thumbnails": render_thumbnails,
     "render_export_decoration_manifest_page": render_export_decoration_manifest_page,
     "render_export_decoration_overlay_page": render_export_decoration_overlay_page,
+    "render_export_decoration_overlay_manifest": render_export_decoration_overlay_manifest,
     "export_workspace": export_workspace,
 }
 
