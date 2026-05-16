@@ -1,0 +1,45 @@
+{
+  "actionsInsideCard": true,
+  "actionsInsideStrip": true,
+  "cardInsideStrip": true,
+  "cardRows": "22px 136px 22px 17px 27px",
+  "detailFontSize": "11px",
+  "fileActions": {
+    "bottom": 398,
+    "height": 27,
+    "left": 38,
+    "top": 371,
+    "width": 169
+  },
+  "fileCard": {
+    "bottom": 404,
+    "height": 250,
+    "left": 31,
+    "top": 154,
+    "width": 184
+  },
+  "fileCardThumbnailRatio": 0.343,
+  "fileNameFontSize": "13px",
+  "filePreview": {
+    "bottom": 323,
+    "height": 136,
+    "left": 65,
+    "top": 187,
+    "width": 116
+  },
+  "fileStrip": {
+    "bottom": 404,
+    "height": 250,
+    "left": 17,
+    "top": 154,
+    "width": 1247
+  },
+  "footerZoneCount": 0,
+  "headerZoneCount": 0,
+  "rowGap": "3px",
+  "url": "http://127.0.0.1:5173/?fixture=workbench",
+  "visibleFileCards": 4,
+  "visiblePageCards": 12,
+  "consoleErrorSample": [],
+  "screenshotPath": "C:/Users/kuroron/Documents/RD/20260215_PDFApplication/docs/reports/screenshots/2026-05-16-fixed-card-density-1366x768.png"
+}

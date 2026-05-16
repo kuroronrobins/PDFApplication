@@ -14,11 +14,28 @@ def _import_pypdf() -> Any:
     return PdfReader, PdfWriter
 
 
+def _silence_fitz_diagnostics(fitz: Any) -> None:
+    tools = getattr(fitz, "TOOLS", None)
+    if tools is None:
+        return
+
+    # Keep the worker stdout JSON-only. Some recoverable MuPDF diagnostics are
+    # otherwise printed before the JSON response and break Rust-side parsing.
+    for method_name in ("mupdf_display_errors", "mupdf_display_warnings"):
+        method = getattr(tools, method_name, None)
+        if callable(method):
+            try:
+                method(False)
+            except Exception:
+                pass
+
+
 def _import_fitz() -> Any:
     try:
         import fitz
     except ImportError as exc:  # pragma: no cover - depends on local env
         raise dependency_missing("PyMuPDF", "PDFの描画") from exc
+    _silence_fitz_diagnostics(fitz)
     return fitz
 
 
@@ -29,10 +46,48 @@ def ensure_input_file(path: Path) -> None:
         raise EngineError("input_not_file", f"入力パスがファイルではありません: {path}", target=str(path))
 
 
+    try:
+        stat = path.stat()
+    except OSError as exc:
+        raise EngineError(
+            "input_not_readable",
+            f"入力ファイルを確認できません: {path.name}",
+            target=str(path),
+            detail=str(exc),
+        ) from exc
+    if stat.st_size == 0:
+        raise EngineError("empty_input_file", f"入力ファイルが空です: {path.name}", target=str(path))
+    try:
+        with path.open("rb") as handle:
+            handle.read(1)
+    except PermissionError as exc:
+        raise EngineError(
+            "input_not_readable",
+            f"入力ファイルを読み取る権限がありません: {path.name}",
+            target=str(path),
+            detail=str(exc),
+        ) from exc
+    except OSError as exc:
+        raise EngineError(
+            "input_not_readable",
+            f"入力ファイルを読み取れません: {path.name}",
+            target=str(path),
+            detail=str(exc),
+        ) from exc
+
+
 def open_pdf_reader(path: Path, password: str = "") -> Any:
     ensure_input_file(path)
     PdfReader, _ = _import_pypdf()
-    reader = PdfReader(str(path))
+    try:
+        reader = PdfReader(str(path))
+    except Exception as exc:
+        raise EngineError(
+            "pdf_inspect_failed",
+            f"PDFを解析できません: {path.name}",
+            target=str(path),
+            detail=str(exc),
+        ) from exc
     if reader.is_encrypted:
         decrypt_password = password
         if not decrypt_password:
@@ -55,7 +110,15 @@ def open_pdf_reader(path: Path, password: str = "") -> Any:
 def open_fitz_document(path: Path, password: str = "") -> Any:
     ensure_input_file(path)
     fitz = _import_fitz()
-    doc = fitz.open(str(path))
+    try:
+        doc = fitz.open(str(path))
+    except Exception as exc:
+        raise EngineError(
+            "pdf_open_failed",
+            f"PDFを開けません: {path.name}",
+            target=str(path),
+            detail=str(exc),
+        ) from exc
     if doc.needs_pass:
         authenticate_password = password
         if not authenticate_password:
@@ -74,6 +137,30 @@ def open_fitz_document(path: Path, password: str = "") -> Any:
             doc.close()
             raise EngineError("pdf_password_invalid", f"PDFパスワードが正しくありません: {path.name}", target=str(path))
     return doc
+
+
+def _render_pixmap(page: Any, fitz: Any, zoom: float, input_file: Path, page_number: int) -> Any:
+    try:
+        return page.get_pixmap(matrix=fitz.Matrix(zoom, zoom), alpha=False)
+    except Exception as exc:
+        raise EngineError(
+            "pdf_render_failed",
+            f"PDFページを描画できません: {input_file.name} p{page_number}",
+            target=f"{input_file} p{page_number}",
+            detail=str(exc),
+        ) from exc
+
+
+def _save_pixmap(pix: Any, out_path: Path, input_file: Path, page_number: int) -> None:
+    try:
+        pix.save(str(out_path))
+    except Exception as exc:
+        raise EngineError(
+            "thumbnail_write_failed",
+            f"プレビュー画像を保存できません: {input_file.name} p{page_number}",
+            target=str(out_path),
+            detail=str(exc),
+        ) from exc
 
 
 def inspect_pdf(input_file: Path, password: str = "") -> dict[str, Any]:
@@ -111,10 +198,10 @@ def render_thumbnail(
             )
         page = doc[page_number - 1]
         fitz = _import_fitz()
-        pix = page.get_pixmap(matrix=fitz.Matrix(zoom, zoom), alpha=False)
+        pix = _render_pixmap(page, fitz, zoom, input_file, page_number)
         output_dir.mkdir(parents=True, exist_ok=True)
         out_path = output_dir / f"{input_file.stem}-p{page_number}.png"
-        pix.save(str(out_path))
+        _save_pixmap(pix, out_path, input_file, page_number)
         result = {
             "thumbnailPath": str(out_path),
             "pageNumber": page_number,
@@ -122,10 +209,10 @@ def render_thumbnail(
             "height": pix.height,
         }
         if preview_zoom and preview_zoom > zoom:
-            preview_pix = page.get_pixmap(matrix=fitz.Matrix(preview_zoom, preview_zoom), alpha=False)
+            preview_pix = _render_pixmap(page, fitz, preview_zoom, input_file, page_number)
             preview_path = output_dir / "preview" / f"{input_file.stem}-p{page_number}.png"
             preview_path.parent.mkdir(parents=True, exist_ok=True)
-            preview_pix.save(str(preview_path))
+            _save_pixmap(preview_pix, preview_path, input_file, page_number)
             result.update(
                 {
                     "previewPath": str(preview_path),
@@ -164,9 +251,9 @@ def render_thumbnails(
                     target=str(input_file),
                 )
             page = doc[page_number - 1]
-            pix = page.get_pixmap(matrix=fitz.Matrix(zoom, zoom), alpha=False)
+            pix = _render_pixmap(page, fitz, zoom, input_file, page_number)
             out_path = output_dir / f"{input_file.stem}-p{page_number}.png"
-            pix.save(str(out_path))
+            _save_pixmap(pix, out_path, input_file, page_number)
             item = {
                 "thumbnailPath": str(out_path),
                 "pageNumber": page_number,
@@ -174,10 +261,10 @@ def render_thumbnails(
                 "height": pix.height,
             }
             if preview_zoom and preview_zoom > zoom:
-                preview_pix = page.get_pixmap(matrix=fitz.Matrix(preview_zoom, preview_zoom), alpha=False)
+                preview_pix = _render_pixmap(page, fitz, preview_zoom, input_file, page_number)
                 preview_path = output_dir / "preview" / f"{input_file.stem}-p{page_number}.png"
                 preview_path.parent.mkdir(parents=True, exist_ok=True)
-                preview_pix.save(str(preview_path))
+                _save_pixmap(preview_pix, preview_path, input_file, page_number)
                 item.update(
                     {
                         "previewPath": str(preview_path),

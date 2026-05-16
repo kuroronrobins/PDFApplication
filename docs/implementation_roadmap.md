@@ -1046,3 +1046,72 @@ Implemented:
 Verification:
 
 - See `docs/reports/2026-05-16-preview-navigation-queue.md`.
+
+## 2026-05-16 Panel focus, file-thumbnail decorations, confirmation arrows, and encryption wording
+
+Implemented:
+
+- Header/footer/page-number token and position controls now keep the decoration text field active. `{page}` and `{total}` insert at the caret and restore focus immediately after the click.
+- File-card thumbnails now render header/footer/page-number indicators in the same left/center/right layout used by the page surface. The file-order badge was moved outside the preview paper so decoration labels no longer stack under the badge styling.
+- Page exclude/restore requests now open the guarded confirmation dialog from page cards, selected page batches, and trash drops. Arrow keys switch the selected dialog action, Enter executes it, and Escape closes the dialog.
+- The encryption panel now separates exported-PDF protection from input-PDF unlock passwords. The output password field is disabled while export encryption is off.
+
+Verification:
+
+- See `docs/reports/2026-05-16-panel-thumbnail-confirm-security.md`.
+
+## 2026-05-16 Thumbnail density and decoration placeholder cleanup
+
+Implemented:
+
+- Removed the built-in header/footer placeholder boxes from page thumbnails. Actual decorations are still shown through the decoration layer, so applied text no longer overlaps default labels.
+- Increased file-card thumbnail density by removing the permanently reserved status column and rendering cache/progress state as a compact overlay.
+- Tuned file-card row heights so the larger thumbnail still leaves the file name, metadata, and action buttons visible without clipping.
+- Moved section subtitle text beside the section title for both file-order and page-timeline sections.
+
+Verification:
+
+- See `docs/reports/2026-05-16-thumbnail-density-cleanup.md`.
+
+## 2026-05-16 Fixed card density increase without variable grids
+
+Implemented:
+
+- Kept the page timeline on the existing fixed grid model.
+- Consolidated file-card extension, page count, and file size into one readable 11px metadata row.
+- Increased the standard file-card preview frame to `116 x 136` while keeping the file name at 13px and action buttons at a usable 27px height.
+- Confirmed the fixed card and its action buttons remain inside the file strip at the 1366px browser fixture check.
+- Balanced the file-strip tray with 6px top and bottom padding, then adjusted the fixed preview frame to `108 x 122` so the card and buttons still fit inside the tray without smaller text.
+
+Verification:
+
+- See `docs/reports/2026-05-16-fixed-card-density.md`.
+- See `docs/reports/2026-05-16-file-strip-padding-balance.md`.
+
+## 2026-05-16 PyMuPDF diagnostic output hardening
+
+Implemented:
+
+- Suppressed PyMuPDF's direct MuPDF error/warning display in the active PDF document service so worker stdout remains a JSON-only protocol.
+- Confirmed the reported PDF is readable, not encrypted, and renders all 18 thumbnail/preview pages through the real worker path.
+- Confirmed the thumbnail worker stdout now starts with the JSON result payload instead of recoverable MuPDF structure-tree diagnostics.
+
+Verification:
+
+- See `docs/reports/2026-05-16-mupdf-diagnostic-output-hardening.md`.
+
+## 2026-05-17 App-side IO robustness hardening
+
+Implemented:
+
+- File add now receives Tauri-side validation metadata and rejects missing paths, non-files, zero-byte files, cloud placeholders, Office temporary files, incomplete downloads, unsupported extensions, and extension/signature mismatches before creating file cards.
+- Export now preflights destination folders and filenames before worker execution. It validates writable folders, duplicate split-output names, Windows-invalid names, reserved names, directory/file conflicts, and locked existing outputs.
+- Split-output custom naming now reuses the applied save destination directly and runs the same destination preflight before export starts.
+- Rust worker parsing now tolerates recoverable stdout noise by extracting the first JSON object and otherwise reports a bounded `worker_protocol_error` with stdout/stderr prefixes.
+- Python worker input handling now classifies missing, unreadable, empty, unopenable, and render-failed PDFs instead of falling through to generic crashes.
+- Office conversion now verifies the generated PDF can be inspected and has pages before marking the cache ready.
+- Final export copies to a temporary file in the destination folder and replaces the target only after the generated PDF exists, reducing the chance of corrupting an existing output on failure.
+
+Verification:
+
+- See `docs/reports/2026-05-17-app-side-io-robustness-hardening.md`.

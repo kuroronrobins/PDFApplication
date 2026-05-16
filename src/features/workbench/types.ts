@@ -54,6 +54,10 @@ export type InputFileInfo = {
   extension: string;
   sizeBytes?: number;
   kind: InputFileKind;
+  available?: boolean;
+  validationCode?: string;
+  validationMessage?: string;
+  signatureKind?: string;
 };
 
 export type PdfMetadata = {

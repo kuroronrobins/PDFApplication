@@ -136,6 +136,18 @@ export type ExportDestination =
   | { outputPath: string }
   | { outputDir: string; outputNames: string[] };
 
+export type PreflightIssue = {
+  level: "error" | "warn";
+  code: string;
+  message: string;
+  target?: string;
+};
+
+export type PreflightResult = {
+  ok: boolean;
+  issues: PreflightIssue[];
+};
+
 export async function prepareCacheSession(): Promise<CacheSession | null> {
   if (!isTauriRuntime()) {
     return {
@@ -460,6 +472,27 @@ export async function exportWorkspaceToDestinationStreaming(
     jobId,
     onEvent,
   );
+}
+
+export async function preflightExportDestination(
+  destination: ExportDestination,
+): Promise<PreflightResult> {
+  if (!isTauriRuntime()) {
+    return { ok: true, issues: [] };
+  }
+  return invoke<PreflightResult>("preflight_export_destination", { destination });
+}
+
+export async function ensureExportDestinationReady(
+  destination: ExportDestination,
+): Promise<PreflightResult> {
+  const result = await preflightExportDestination(destination);
+  if (!result.ok) {
+    const issue = result.issues.find((item) => item.level === "error") ?? result.issues[0];
+    const target = issue?.target ? ` (${issue.target})` : "";
+    throw new Error(`${issue?.message ?? "保存先を使用できません。"}${target}`);
+  }
+  return result;
 }
 
 export async function openOutputPath(path: string): Promise<void> {

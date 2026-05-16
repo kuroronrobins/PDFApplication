@@ -289,6 +289,37 @@ fn command_for_worker_exe(worker_exe: &Path) -> Command {
     command
 }
 
+fn truncate_for_error(text: &str, max_chars: usize) -> String {
+    let mut value: String = text.chars().take(max_chars).collect();
+    if text.chars().count() > max_chars {
+        value.push_str("...");
+    }
+    value
+}
+
+fn parse_worker_json(label: &str, stdout: &[u8], stderr: &[u8]) -> Result<Value, String> {
+    match serde_json::from_slice::<Value>(stdout) {
+        Ok(value) => return Ok(value),
+        Err(initial_error) => {
+            let stdout_text = String::from_utf8_lossy(stdout);
+            if let Some(start) = stdout_text.find('{') {
+                let candidate = &stdout_text[start..];
+                let mut stream = serde_json::Deserializer::from_str(candidate).into_iter::<Value>();
+                if let Some(Ok(value)) = stream.next() {
+                    return Ok(value);
+                }
+            }
+
+            let stderr_text = String::from_utf8_lossy(stderr);
+            Err(format!(
+                "{label} worker_protocol_error: JSON parse failed: {initial_error}. stdout prefix: {} stderr prefix: {}",
+                truncate_for_error(&stdout_text, 240),
+                truncate_for_error(&stderr_text, 240),
+            ))
+        }
+    }
+}
+
 fn run_command(mut command: Command, label: &str, request_json: &[u8]) -> Result<Value, String> {
     let mut child = command
         .spawn()
@@ -313,8 +344,7 @@ fn run_command(mut command: Command, label: &str, request_json: &[u8]) -> Result
         return Err(format!("{label} returned empty output. {stderr}"));
     }
 
-    serde_json::from_slice::<Value>(&output.stdout)
-        .map_err(|error| format!("{label} JSON parse failed: {error}"))
+    parse_worker_json(label, &output.stdout, &output.stderr)
 }
 
 pub fn run(request: Value, resource_dir: Option<PathBuf>) -> Result<Value, String> {

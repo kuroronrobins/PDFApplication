@@ -1,0 +1,44 @@
+{
+  "actionsInsideCard": true,
+  "actionsInsideStrip": true,
+  "fileActions": {
+    "height": 26,
+    "left": 38,
+    "top": 363,
+    "width": 169
+  },
+  "fileCard": {
+    "height": 241,
+    "left": 31,
+    "top": 154,
+    "width": 184
+  },
+  "fileCardThumbnailRatio": 0.242,
+  "filePreview": {
+    "height": 112,
+    "left": 75,
+    "top": 189,
+    "width": 96
+  },
+  "fileStrip": {
+    "height": 250,
+    "left": 17,
+    "top": 154,
+    "width": 1247
+  },
+  "firstPageHasDefaultFooterText": false,
+  "firstPageHasDefaultHeaderText": false,
+  "footerZoneCount": 0,
+  "headerZoneCount": 0,
+  "sectionHeading": {
+    "height": 30,
+    "left": 17,
+    "top": 125,
+    "width": 1247
+  },
+  "url": "http://127.0.0.1:5173/?fixture=workbench",
+  "visibleFileCards": 4,
+  "visiblePageCards": 12,
+  "consoleErrorSample": [],
+  "screenshotPath": "C:/Users/kuroron/Documents/RD/20260215_PDFApplication/docs/reports/screenshots/2026-05-16-thumbnail-density-cleanup-1366x768.png"
+}

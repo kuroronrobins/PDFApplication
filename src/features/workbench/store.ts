@@ -663,6 +663,18 @@ export const useWorkbenchStore = create<WorkbenchState>((set, get) => ({
     sortedInputFiles.forEach((info) => {
       const key = inputKey(info);
 
+      if (info.available === false || info.validationCode) {
+        logs.unshift(
+          createLog(
+            "warn",
+            `${info.name} は追加できませんでした: ${
+              info.validationMessage ?? "入力ファイルを確認してください。"
+            }${info.validationCode ? ` (${info.validationCode})` : ""}`,
+          ),
+        );
+        return;
+      }
+
       if (info.kind === "unsupported") {
         logs.unshift(
           createLog(

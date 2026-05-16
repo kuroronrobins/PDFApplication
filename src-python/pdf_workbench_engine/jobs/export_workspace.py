@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import errno
+import os
 from pathlib import Path
 from typing import Any
 from uuid import uuid4
@@ -9,6 +11,16 @@ from ..schemas import as_path
 from ..services.pdf_decorations import apply_decorations
 from ..services.pdf_pages import write_page_sequence
 from ..services.pdf_security import encrypt_pdf
+
+RESERVED_WINDOWS_NAMES = {
+    "CON",
+    "PRN",
+    "AUX",
+    "NUL",
+    *(f"COM{index}" for index in range(1, 10)),
+    *(f"LPT{index}" for index in range(1, 10)),
+}
+INVALID_OUTPUT_CHARS = set('<>:"/\\|?*')
 
 
 def _emit_progress(
@@ -93,6 +105,50 @@ def _build_groups(workspace: dict[str, Any]) -> list[list[dict[str, Any]]]:
     return groups
 
 
+def _is_reserved_windows_name(name: str) -> bool:
+    stem = name.rstrip(" .").split(".", 1)[0].upper()
+    return stem in RESERVED_WINDOWS_NAMES
+
+
+def _validate_output_name(name: str) -> None:
+    if not name or name != name.strip() or name.endswith(".") or name.endswith(" "):
+        raise EngineError("invalid_output_name", "出力ファイル名が不正です。", target=name)
+    if any(char in INVALID_OUTPUT_CHARS or ord(char) < 32 for char in name):
+        raise EngineError("invalid_output_name", "出力ファイル名に使用できない文字が含まれています。", target=name)
+    if _is_reserved_windows_name(name):
+        raise EngineError("reserved_output_name", "Windowsの予約名は出力ファイル名に使用できません。", target=name)
+    if name in {".", ".."}:
+        raise EngineError("invalid_output_name", "出力ファイル名が不正です。", target=name)
+
+
+def _safe_copy_to_final(source_file: Path, final_file: Path) -> None:
+    final_file.parent.mkdir(parents=True, exist_ok=True)
+    temp_file = final_file.parent / f".pdf-workbench-final-{uuid4().hex}-{final_file.name}"
+    try:
+        temp_file.write_bytes(source_file.read_bytes())
+        os.replace(temp_file, final_file)
+    except PermissionError as exc:
+        raise EngineError(
+            "output_file_locked",
+            f"出力先ファイルに書き込めません。開いている場合は閉じてください: {final_file.name}",
+            target=str(final_file),
+            detail=str(exc),
+        ) from exc
+    except OSError as exc:
+        code = "disk_full" if exc.errno == errno.ENOSPC else "atomic_replace_failed"
+        raise EngineError(
+            code,
+            f"出力ファイルを保存できません: {final_file.name}",
+            target=str(final_file),
+            detail=str(exc),
+        ) from exc
+    finally:
+        try:
+            temp_file.unlink()
+        except OSError:
+            pass
+
+
 def _apply_post_processing(
     output_file: Path,
     workspace: dict[str, Any],
@@ -142,8 +198,7 @@ def _apply_post_processing(
         )
 
     if current != final_file:
-        final_file.parent.mkdir(parents=True, exist_ok=True)
-        final_file.write_bytes(current.read_bytes())
+        _safe_copy_to_final(current, final_file)
     return final_file
 
 
@@ -157,6 +212,7 @@ def _requested_output_file(request: dict[str, Any]) -> Path:
 
     if output_file.suffix.lower() != ".pdf":
         output_file = output_file.with_suffix(".pdf")
+    _validate_output_name(output_file.name)
     return output_file
 
 
@@ -176,20 +232,21 @@ def _requested_custom_output_files(
         if request.get("outputDir")
         else fallback_base_file.parent
     )
-    invalid_chars = set('<>:"/\\|?*')
+    invalid_chars = INVALID_OUTPUT_CHARS
     seen: set[str] = set()
     output_files: list[Path] = []
 
     for raw_name in raw_names:
         if not isinstance(raw_name, str):
             raise EngineError("invalid_output_name", "出力ファイル名が不正です。")
-        name = raw_name.strip()
-        if not name:
+        name = raw_name
+        if not name.strip():
             raise EngineError("invalid_output_name", "空の出力ファイル名は使用できません。")
         if any(char in invalid_chars or ord(char) < 32 for char in name):
             raise EngineError("invalid_output_name", "出力ファイル名に使用できない文字が含まれています。", target=name)
         if not name.lower().endswith(".pdf"):
             name = f"{name}.pdf"
+        _validate_output_name(name)
         stem = name[:-4].strip()
         if not stem or stem in {".", ".."}:
             raise EngineError("invalid_output_name", "出力ファイル名が不正です。", target=name)
@@ -217,7 +274,6 @@ def handle(request: dict[str, Any]) -> dict[str, Any]:
 
     emit = request.get("_emit")
     job_id = request.get("jobId") if isinstance(request.get("jobId"), str) else None
-    output_dir.mkdir(parents=True, exist_ok=True)
     password_map = request.get("passwordMap") if isinstance(request.get("passwordMap"), dict) else {}
     _emit_progress(emit, job_id, "PDF解析", 8, "ワークスペースから出力対象ページを解析しています。")
     groups = _build_groups(workspace)
@@ -225,6 +281,15 @@ def handle(request: dict[str, Any]) -> dict[str, Any]:
     custom_output_files = _requested_custom_output_files(request, len(groups), output_file)
     if custom_output_files is not None:
         output_dir = custom_output_files[0].parent
+    try:
+        output_dir.mkdir(parents=True, exist_ok=True)
+    except OSError as exc:
+        raise EngineError(
+            "invalid_output_dir",
+            f"出力先フォルダを作成できません: {output_dir}",
+            target=str(output_dir),
+            detail=str(exc),
+        ) from exc
 
     outputs: list[str] = []
     scratch_prefix = f".pdf-workbench-{uuid4().hex}"

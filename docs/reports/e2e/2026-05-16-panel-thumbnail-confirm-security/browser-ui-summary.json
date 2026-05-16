@@ -1,0 +1,54 @@
+{
+  "tokenFocus": {
+    "activeIsPanelInput": true,
+    "activeTag": "INPUT",
+    "activeValue": "社外秘{page}",
+    "selectionStart": 9,
+    "value": "社外秘{page}"
+  },
+  "confirmArrows": {
+    "before": {
+      "selected": [
+        {
+          "selected": true,
+          "text": "キャンセル"
+        },
+        {
+          "selected": false,
+          "text": "除外"
+        }
+      ],
+      "title": "ページを除外"
+    },
+    "afterRight": {
+      "selected": [
+        {
+          "selected": false,
+          "text": "キャンセル"
+        },
+        {
+          "selected": true,
+          "text": "除外"
+        }
+      ]
+    },
+    "afterLeft": {
+      "selected": [
+        {
+          "selected": true,
+          "text": "キャンセル"
+        },
+        {
+          "selected": false,
+          "text": "除外"
+        }
+      ]
+    }
+  },
+  "security": {
+    "disabledCount": 1,
+    "panelText": "暗号化書き出しPDFの保護と、保護された入力PDFを開くための設定です。書き出すPDFを保護開くパスワード書き出したPDFを開くときに要求します。入力PDFの解除パスワード元PDFが保護されている場合だけ使用します。"
+  },
+  "screenshotPath": "C:/Users/kuroron/Documents/RD/20260215_PDFApplication/docs/reports/screenshots/2026-05-16-panel-thumbnail-confirm-security-1366x768.png",
+  "errorLogs": []
+}

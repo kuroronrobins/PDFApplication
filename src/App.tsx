@@ -48,6 +48,7 @@ import {
   checkAlphaLicense,
   cleanupCacheSession,
   completeStartup,
+  ensureExportDestinationReady,
   getE2eBootstrap,
   openOutputPath,
   prepareCacheSession,
@@ -58,6 +59,7 @@ import {
   type DecorationLayoutManifest,
   type DecorationOverlayRenderResult,
   type E2eBootstrapInfo,
+  type ExportDestination,
 } from "./features/workbench/backend";
 import {
   cancelCurrentExportWithEngine,
@@ -627,39 +629,53 @@ function ConfirmDialog({
   onClose: () => void;
 }) {
   const [selectedAction, setSelectedAction] = useState<"cancel" | "confirm">("cancel");
+  const selectedActionRef = useRef<"cancel" | "confirm">("cancel");
+  const dialogRef = useRef<HTMLElement | null>(null);
+
+  const selectAction = useCallback((action: "cancel" | "confirm") => {
+    selectedActionRef.current = action;
+    setSelectedAction(action);
+  }, []);
 
   useEffect(() => {
     if (!dialog) {
       return undefined;
     }
-    setSelectedAction("cancel");
+    selectAction("cancel");
+    window.requestAnimationFrame(() => {
+      dialogRef.current?.focus();
+    });
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         event.preventDefault();
+        event.stopPropagation();
         onClose();
+          return;
+        }
+      if (event.key === "ArrowLeft" || event.key === "ArrowUp") {
+        event.preventDefault();
+        event.stopPropagation();
+        selectAction("cancel");
         return;
       }
-      if (
-        event.key === "ArrowLeft" ||
-        event.key === "ArrowRight" ||
-        event.key === "ArrowUp" ||
-        event.key === "ArrowDown"
-      ) {
+      if (event.key === "ArrowRight" || event.key === "ArrowDown") {
         event.preventDefault();
-        setSelectedAction((current) => (current === "cancel" ? "confirm" : "cancel"));
+        event.stopPropagation();
+        selectAction("confirm");
         return;
       }
       if (event.key === "Enter") {
         event.preventDefault();
-        if (selectedAction === "confirm") {
+        event.stopPropagation();
+        if (selectedActionRef.current === "confirm") {
           dialog.onConfirm();
         }
         onClose();
       }
     };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [dialog, onClose, selectedAction]);
+    window.addEventListener("keydown", handleKeyDown, { capture: true });
+    return () => window.removeEventListener("keydown", handleKeyDown, { capture: true });
+  }, [dialog, onClose, selectAction]);
 
   if (!dialog) {
     return null;
@@ -672,6 +688,8 @@ function ConfirmDialog({
         role="dialog"
         aria-modal="true"
         aria-label={dialog.title}
+        ref={dialogRef}
+        tabIndex={-1}
       >
         <div>
           <h2>{dialog.title}</h2>
@@ -681,7 +699,7 @@ function ConfirmDialog({
           <button
             className={selectedAction === "cancel" ? "is-key-selected" : ""}
             onClick={onClose}
-            onMouseEnter={() => setSelectedAction("cancel")}
+            onMouseEnter={() => selectAction("cancel")}
             type="button"
           >
             {dialog.cancelLabel}
@@ -695,7 +713,7 @@ function ConfirmDialog({
               dialog.onConfirm();
               onClose();
             }}
-            onMouseEnter={() => setSelectedAction("confirm")}
+            onMouseEnter={() => selectAction("confirm")}
             type="button"
           >
             {dialog.confirmLabel}
@@ -772,15 +790,30 @@ function AppBar() {
       return;
     }
 
-    let outputPath: string;
+    let destination: ExportDestination;
     try {
-      const selected = await openOutputFileDialog(outputPlan.defaultOutputFileName);
-      if (!selected) {
+      if (outputPlan.customOutputNamesApplied && outputPlan.outputDestinationDir) {
+        destination = {
+          outputDir: outputPlan.outputDestinationDir,
+          outputNames: outputPlan.outputFiles,
+        };
+        addLog("info", `設定済みの保存先を使用します: ${outputPlan.outputDestinationDir}`);
+      } else {
+        const selected = await openOutputFileDialog(outputPlan.defaultOutputFileName);
+        if (!selected) {
         addLog("warn", "出力ファイルの選択がキャンセルされました。");
         return;
       }
-      outputPath = selected;
+        destination = { outputPath: selected };
       addLog("info", `出力ファイルを指定しました: ${selected}`);
+      }
+
+      const preflight = await ensureExportDestinationReady(destination);
+      preflight.issues
+        .filter((issue) => issue.level === "warn")
+        .forEach((issue) =>
+          addLog("warn", `${issue.message}${issue.target ? `: ${issue.target}` : ""}`),
+        );
     } catch (error) {
       addLog("error", `出力ファイルを指定できませんでした: ${errorMessage(error)}`);
       return;
@@ -800,7 +833,7 @@ function AppBar() {
         return;
       }
       setExportJobProgress(66, "結合", "PDFを書き出し中");
-      const result = await exportCurrentWorkspaceWithEngine(outputPath);
+      const result = await exportCurrentWorkspaceWithEngine(destination);
       completeExportJob(result.outputFiles);
     } catch (error) {
       if (isProcessingEngineCancelled(error)) {
@@ -1124,18 +1157,20 @@ function FileCard({
         </div>
       </div>
       <div className="file-preview">
-        <div className={["preview-paper", thumbnailSrc ? "has-thumbnail" : ""].join(" ")}>
-          {thumbnailSrc ? (
-            <img className="file-thumbnail" src={thumbnailSrc} alt="" draggable={false} />
-          ) : ready ? (
-            <FileText size={32} />
-          ) : (
-            <Loader2 size={32} />
-          )}
-          {outputPreviewPage && (
-            <PageDecorations page={outputPreviewPage} decorations={previewDecorations} />
-          )}
-          <span>{index + 1}</span>
+        <div className="file-preview-paper-wrap">
+          <div className={["preview-paper", thumbnailSrc ? "has-thumbnail" : ""].join(" ")}>
+            {thumbnailSrc ? (
+              <img className="file-thumbnail" src={thumbnailSrc} alt="" draggable={false} />
+            ) : ready ? (
+              <FileText size={32} />
+            ) : (
+              <Loader2 size={32} />
+            )}
+            {outputPreviewPage && (
+              <PageDecorations page={outputPreviewPage} decorations={previewDecorations} />
+            )}
+          </div>
+          <span className="file-order-badge">{index + 1}</span>
         </div>
         {statusLabel && (
           <div className="file-preview-side">
@@ -1146,10 +1181,7 @@ function FileCard({
       <div className="file-name" title={file.name}>
         {file.name}
       </div>
-      <div className="file-meta">
-        <span className="file-page-count">{pageCountLabel(file)}</span>
-      </div>
-      <div className={["file-submeta", file.errorMessage ? "has-error" : ""].join(" ")}>
+      <div className={["file-detail-row", file.errorMessage ? "has-error" : ""].join(" ")}>
         {file.errorMessage ? (
           <span className="file-error" title={file.errorMessage}>
             {file.errorMessage}
@@ -1157,6 +1189,7 @@ function FileCard({
         ) : (
           <>
             <span>{file.extension?.toUpperCase() ?? "形式未取得"}</span>
+            <span>{pageCountLabel(file)}</span>
             <span>{formatSize(file.sizeBytes)}</span>
           </>
         )}
@@ -1706,15 +1739,18 @@ function PageDecorations({
   const watermark = visibleDecorations.find(
     (decoration) => decoration.kind === "watermark",
   );
+  const hasHeaderDecorations = (["left", "center", "right"] as DecorationSlot[]).some(
+    (slot) => headerSlots[slot].length > 0,
+  );
+  const hasFooterDecorations = (["left", "center", "right"] as DecorationSlot[]).some(
+    (slot) => footerSlots[slot].length > 0,
+  );
   const renderSlot = (slot: DecorationSlot, items: Decoration[]) => {
-    const primary = items[0];
+    const primary = items[items.length - 1];
     return (
       <div className={["decor-slot", `slot-${slot}`, primary ? "has-decoration" : ""].join(" ")} key={slot}>
         {primary && (
-          <>
-            <span style={{ color: primary.color }}>{decorationTextForPage(primary, page)}</span>
-            {items.length > 1 && <small>+{items.length - 1}</small>}
-          </>
+          <span style={{ color: primary.color }}>{decorationTextForPage(primary, page)}</span>
         )}
       </div>
     );
@@ -1722,12 +1758,16 @@ function PageDecorations({
 
   return (
     <>
-      <div className="decor-row decor-row-header">
-        {(["left", "center", "right"] as DecorationSlot[]).map((slot) => renderSlot(slot, headerSlots[slot]))}
-      </div>
-      <div className="decor-row decor-row-footer">
-        {(["left", "center", "right"] as DecorationSlot[]).map((slot) => renderSlot(slot, footerSlots[slot]))}
-      </div>
+      {hasHeaderDecorations && (
+        <div className="decor-row decor-row-header">
+          {(["left", "center", "right"] as DecorationSlot[]).map((slot) => renderSlot(slot, headerSlots[slot]))}
+        </div>
+      )}
+      {hasFooterDecorations && (
+        <div className="decor-row decor-row-footer">
+          {(["left", "center", "right"] as DecorationSlot[]).map((slot) => renderSlot(slot, footerSlots[slot]))}
+        </div>
+      )}
       {watermark && (
         <div
           className="placed-watermark"
@@ -1978,6 +2018,7 @@ function PageCard({
   onPointerDragMove,
   onPointerDragEnd,
   onPointerDragCancel,
+  onRequestToggleExcluded,
 }: {
   page: PageItem;
   fileId: string;
@@ -1990,10 +2031,10 @@ function PageCard({
   onPointerDragMove: (event: React.PointerEvent<HTMLButtonElement>, pageId: string) => boolean;
   onPointerDragEnd: (event: React.PointerEvent<HTMLButtonElement>, pageId: string) => boolean;
   onPointerDragCancel: (event: React.PointerEvent<HTMLButtonElement>, pageId: string) => void;
+  onRequestToggleExcluded: (page: PageItem) => void;
 }) {
   const activeTool = useWorkbenchStore((state) => state.activeTool);
   const selectPage = useWorkbenchStore((state) => state.selectPage);
-  const togglePageExcluded = useWorkbenchStore((state) => state.togglePageExcluded);
   const togglePageSplit = useWorkbenchStore((state) => state.togglePageSplit);
   const applyDecorationToTarget = useWorkbenchStore(
     (state) => state.applyDecorationToTarget,
@@ -2005,7 +2046,7 @@ function PageCard({
       return;
     }
     if (activeTool === "trash") {
-      togglePageExcluded(page.id);
+      onRequestToggleExcluded(page);
       return;
     }
     if (activeTool === "scissors") {
@@ -2078,7 +2119,6 @@ function PageCard({
             draggable={false}
           />
         )}
-        <div className="header-zone">ヘッダー</div>
         <div className="page-lines">
           <span />
           <span />
@@ -2086,7 +2126,6 @@ function PageCard({
           <span />
         </div>
         <PageDecorations page={page} decorations={decorations} />
-        <div className="footer-zone">フッター</div>
       </div>
       <div className="page-label">
         p{page.pageNumber}
@@ -2111,6 +2150,7 @@ function DecorationPanel({
   const updateDecorationDraft = useWorkbenchStore(
     (state) => state.updateDecorationDraft,
   );
+  const textInputRef = useRef<HTMLInputElement | null>(null);
   const Icon =
     kind === "header" ? Type : kind === "footer" ? Highlighter : Stamp;
   const isWatermark = kind === "watermark";
@@ -2130,7 +2170,19 @@ function DecorationPanel({
     updateDecorationDraft(kind, { position });
   };
   const addToken = (token: string) => {
-    updateDecorationDraft(kind, { text: `${draft.text}${token}` });
+    const input = textInputRef.current;
+    const start = input?.selectionStart ?? draft.text.length;
+    const end = input?.selectionEnd ?? start;
+    const nextText = `${draft.text.slice(0, start)}${token}${draft.text.slice(end)}`;
+    const nextCaret = start + token.length;
+    updateDecorationDraft(kind, { text: nextText });
+    window.requestAnimationFrame(() => {
+      textInputRef.current?.focus();
+      textInputRef.current?.setSelectionRange(nextCaret, nextCaret);
+    });
+  };
+  const keepTextInputActive = (event: React.MouseEvent<HTMLButtonElement>) => {
+    event.preventDefault();
   };
 
   return (
@@ -2147,6 +2199,7 @@ function DecorationPanel({
       <label>
         文字
         <input
+          ref={textInputRef}
           value={draft.text}
           onChange={(event) => updateDecorationDraft(kind, { text: event.target.value })}
         />
@@ -2158,6 +2211,7 @@ function DecorationPanel({
               <button
                 className={draft.position === option.value ? "is-active" : ""}
                 onClick={() => setPosition(option.value)}
+                onMouseDown={keepTextInputActive}
                 type="button"
                 key={option.value}
               >
@@ -2166,10 +2220,10 @@ function DecorationPanel({
             ))}
           </div>
           <div className="token-controls">
-            <button onClick={() => addToken("{page}")} type="button">
+            <button onClick={() => addToken("{page}")} onMouseDown={keepTextInputActive} type="button">
               page
             </button>
-            <button onClick={() => addToken("{total}")} type="button">
+            <button onClick={() => addToken("{total}")} onMouseDown={keepTextInputActive} type="button">
               total
             </button>
           </div>
@@ -2206,6 +2260,7 @@ function DecorationPanel({
 function SecurityPanel({ onClose }: { onClose: () => void }) {
   const security = useWorkbenchStore((state) => state.security);
   const updateSecurity = useWorkbenchStore((state) => state.updateSecurity);
+  const outputEncryptionEnabled = security.outputEncrypted;
 
   return (
     <div className="floating-panel tool-panel">
@@ -2214,27 +2269,33 @@ function SecurityPanel({ onClose }: { onClose: () => void }) {
       </button>
       <div className="floating-title">
         <Shield size={16} />
-        鍵
+        暗号化
       </div>
+      <p className="security-panel-note">
+        書き出しPDFの保護と、保護された入力PDFを開くための設定です。
+      </p>
       <label className="check-row">
         <input
           type="checkbox"
           checked={security.outputEncrypted}
           onChange={(event) => updateSecurity({ outputEncrypted: event.target.checked })}
         />
-        出力PDFを暗号化
+        書き出すPDFを保護
       </label>
-      <label>
-        出力パスワード
+      <label className={!outputEncryptionEnabled ? "is-disabled-field" : ""}>
+        <span className="field-title">開くパスワード</span>
+        <small className="field-help">書き出したPDFを開くときに要求します。</small>
         <input
           type="password"
           value={security.outputPassword ?? ""}
           onChange={(event) => updateSecurity({ outputPassword: event.target.value })}
-          placeholder="未設定"
+          placeholder={outputEncryptionEnabled ? "パスワードを入力" : "保護OFF"}
+          disabled={!outputEncryptionEnabled}
         />
       </label>
       <label>
-        入力解除パスワード
+        <span className="field-title">入力PDFの解除パスワード</span>
+        <small className="field-help">元PDFが保護されている場合だけ使用します。</small>
         <input
           type="password"
           value={security.inputPassword ?? ""}
@@ -2278,8 +2339,10 @@ function InfoPanel({ file, onClose }: { file?: WorkbenchFile; onClose: () => voi
 
 function ExpandedTimeline({
   onInternalDragActiveChange = () => undefined,
+  onRequestTogglePagesExcluded,
 }: {
   onInternalDragActiveChange?: InternalDragActiveHandler;
+  onRequestTogglePagesExcluded: (pages: PageItem[]) => void;
 }) {
   const files = useWorkbenchStore((state) => state.files);
   const pagesByFile = useWorkbenchStore((state) => state.pagesByFile);
@@ -2288,7 +2351,6 @@ function ExpandedTimeline({
   const activeTool = useWorkbenchStore((state) => state.activeTool);
   const toolActivationId = useWorkbenchStore((state) => state.toolActivationId);
   const movePageToIndex = useWorkbenchStore((state) => state.movePageToIndex);
-  const togglePageExcluded = useWorkbenchStore((state) => state.togglePageExcluded);
   const togglePageSplit = useWorkbenchStore((state) => state.togglePageSplit);
   const applyDecorationToTarget = useWorkbenchStore(
     (state) => state.applyDecorationToTarget,
@@ -2495,12 +2557,24 @@ function ExpandedTimeline({
     [onInternalDragActiveChange],
   );
 
+  const requestPageExclusion = (page: PageItem) => {
+    const targets = page.selected ? pages.filter((item) => item.selected) : [page];
+    onRequestTogglePagesExcluded(targets.length > 0 ? targets : [page]);
+  };
+
+  const requestPageExclusionById = (pageId: string) => {
+    const page = pages.find((item) => item.id === pageId);
+    if (page) {
+      requestPageExclusion(page);
+    }
+  };
+
   const handlePageDrop = (event: DragEvent<HTMLButtonElement>, pageId: string) => {
     event.preventDefault();
     const toolId = event.dataTransfer.getData("application/pdf-workbench-tool") as ToolId;
     if (toolId) {
       if (toolId === "trash") {
-        togglePageExcluded(pageId);
+        requestPageExclusionById(pageId);
       } else if (toolId === "scissors") {
         togglePageSplit(pageId);
       } else if (decorationToolIds.includes(toolId as DecorationKind)) {
@@ -2567,6 +2641,7 @@ function ExpandedTimeline({
               onPointerDragMove={handlePagePointerDragMove}
               onPointerDragEnd={handlePagePointerDragEnd}
               onPointerDragCancel={handlePagePointerDragCancel}
+              onRequestToggleExcluded={requestPageExclusion}
               key={page.id}
             />
           ))
@@ -3386,6 +3461,7 @@ export function App() {
   const redo = useWorkbenchStore((state) => state.redo);
   const deleteSelectedPages = useWorkbenchStore((state) => state.deleteSelectedPages);
   const removeFile = useWorkbenchStore((state) => state.removeFile);
+  const togglePageExcluded = useWorkbenchStore((state) => state.togglePageExcluded);
   const setActiveTool = useWorkbenchStore((state) => state.setActiveTool);
   const setCacheSession = useWorkbenchStore((state) => state.setCacheSession);
   const cacheSession = useWorkbenchStore((state) => state.cacheSession);
@@ -3417,6 +3493,40 @@ export function App() {
       });
     },
     [removeFile],
+  );
+
+  const requestTogglePagesExcluded = useCallback(
+    (targets: PageItem[]) => {
+      if (targets.length === 0) {
+        return;
+      }
+      const shouldExclude = targets.some((page) => !page.excluded);
+      setConfirmDialog({
+        title:
+          targets.length > 1
+            ? shouldExclude
+              ? "複数ページを除外"
+              : "複数ページを戻す"
+            : shouldExclude
+              ? "ページを除外"
+              : "ページを戻す",
+        message:
+          targets.length > 1
+            ? `${targets.length}ページを${shouldExclude ? "書き出し対象外にします" : "書き出し対象に戻します"}。`
+            : `p${targets[0].pageNumber} を${shouldExclude ? "書き出し対象外にします" : "書き出し対象に戻します"}。`,
+        confirmLabel: shouldExclude ? "除外" : "戻す",
+        cancelLabel: "キャンセル",
+        danger: shouldExclude,
+        onConfirm: () => {
+          targets.forEach((page) => {
+            if (page.excluded !== shouldExclude) {
+              togglePageExcluded(page.id);
+            }
+          });
+        },
+      });
+    },
+    [togglePageExcluded],
   );
 
   useEffect(() => {
@@ -3810,7 +3920,10 @@ export function App() {
           onInternalDragActiveChange={markInternalDragActive}
           onRequestRemoveFiles={requestRemoveFiles}
         />
-        <ExpandedTimeline onInternalDragActiveChange={markInternalDragActive} />
+        <ExpandedTimeline
+          onInternalDragActiveChange={markInternalDragActive}
+          onRequestTogglePagesExcluded={requestTogglePagesExcluded}
+        />
       </main>
       <OutputBar logOpen={logOpen} onToggleLog={() => setLogOpen((open) => !open)} />
       <LogDrawerPreview open={logOpen} />

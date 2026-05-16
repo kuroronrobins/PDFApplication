@@ -568,3 +568,43 @@ Reference screenshot:
 - High-resolution preview image loading follows the same rule: current page first after navigation settles, adjacent pages later. During rapid movement, the existing thumbnail remains the immediate display source.
 - Transparent decoration PNG generation can now consume an already-resolved PDF-coordinate manifest. This avoids rebuilding a scratch one-page PDF and recomputing the manifest when only the PyMuPDF transparent overlay is needed.
 - Filmstrip thumbnail items are memoized so changing the active page does not force every thumbnail and decoration layer to do full work again.
+
+## 2026-05-16 Panel, Thumbnail, Confirmation, and Encryption UX
+
+- Header/footer/page-number panels must preserve the text input focus when users click position buttons or page-token buttons. Token insertion uses the current caret or selected range, then returns the caret after the inserted token so users can keep typing without a second click.
+- File-level thumbnails show decoration state in the same left, center, and right slots used by the page preview. Header and footer each have at most three visible slots, so every configured value is shown directly instead of collapsing into a small `+1` count.
+- File-card page-order badges are separated from the preview paper itself. Decoration labels inside the paper must not inherit the order-badge absolute positioning or overlap each other.
+- Page exclusion and restore actions go through the same confirmation dialog whether triggered from a page card, selected page batch, or trash drop. The confirmation dialog supports arrow-key selection between cancel and confirm, Enter to execute the selected action, and Escape to close.
+- Encryption settings distinguish the password required to open the exported PDF from the password used only to unlock protected input PDFs. The export-password input is disabled while output encryption is off, so the panel communicates the current effect without extra explanation screens.
+
+## 2026-05-16 Thumbnail Density and Decoration Placeholder Cleanup
+
+- Page thumbnails must not render default header/footer placeholder boxes. Only actual applied decorations are drawn, preventing the real header/footer text from overlapping a built-in sample label.
+- File cards should spend more of their occupied area on the source thumbnail. Cache/progress badges are overlays instead of reserving a permanent right-side column, and the thumbnail uses a larger contained paper frame.
+- File-card internal row heights must fit within the card height at compact desktop sizes. Increasing thumbnail size must not clip the remove/expand buttons.
+- Section subtitles such as file count and page-editing state sit beside the main section title instead of below it, returning vertical space to the file strip and page timeline.
+
+## 2026-05-16 Fixed File Card Density Increase
+
+- File-order cards keep a fixed strip/card layout. Page-timeline grids must not become viewport-dependent variable grids for this pass.
+- File-card readability takes priority over extreme compression: file names remain 13px, metadata remains 11px, and action buttons remain large enough for repeated desktop use.
+- File-card metadata is consolidated into one readable line containing extension, page count, and file size. The recovered row space is allocated to the thumbnail frame rather than shrinking text.
+- The fixed card thumbnail frame is increased to `116 x 136` in the standard desktop layout. The card still fits within the fixed file strip, and remove/expand buttons must remain fully visible.
+- The file strip tray needs visible top and bottom breathing room. The standard desktop layout uses balanced `6px` top and bottom tray padding, with the thumbnail frame adjusted to `108 x 122` so the card remains fully inside the tray without shrinking text.
+
+## 2026-05-16 PyMuPDF Diagnostic Output Hardening
+
+- Python worker stdout is a JSON-only protocol. Recoverable library diagnostics must not be printed to stdout before the JSON response.
+- PyMuPDF/MuPDF can emit recoverable structure-tree diagnostics such as malformed PDF structure warnings while still opening and rendering the file correctly.
+- The active PDF document service suppresses PyMuPDF's direct MuPDF error/warning display at import time. Worker exceptions are still returned through the normal JSON error envelope.
+- This hardening is especially important for thumbnail rendering because Rust parses the entire worker stdout as one JSON payload.
+
+## 2026-05-17 Input and Export Robustness Contract
+
+- File selection is a preflight boundary, not only a UI list operation. Tauri validates path existence, file-ness, size, readable header bytes, cloud-placeholder attributes, temporary Office/download names, supported extensions, and PDF/Office file signatures before cards are added.
+- Rejected inputs remain outside the workspace and are logged with a recoverable reason. The workbench should not create a card for a file that is known to be unreadable or structurally mismatched at selection time.
+- Export destination selection is also a preflight boundary. The app checks output folder creation/writability, locked existing outputs, duplicate split names, Windows-invalid characters, reserved device names, and file/folder conflicts before starting Office conversion or PDF assembly.
+- Custom split-output names own both destination folder and filenames. When those settings are applied, export uses that destination directly and runs preflight without showing another save dialog.
+- Worker stdout must stay machine-readable. If a dependency still prints recoverable diagnostics before JSON, Rust may salvage the first JSON payload, but a true parse failure is reported as `worker_protocol_error` with bounded stdout/stderr prefixes.
+- Python worker stages must return classified errors for input inspection, PDF open/render, Office conversion output validation, destination preparation, final save, and atomic replacement. Generic worker crashes should be the last resort.
+- Final user files should be touched only after scratch output is successfully produced. Existing destination files are replaced through a temporary same-directory file and `os.replace`, so partial worker failures do not overwrite a valid prior PDF.

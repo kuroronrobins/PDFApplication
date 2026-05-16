@@ -1,0 +1,44 @@
+{
+  "actionsInsideCard": true,
+  "bottomGap": 6,
+  "cardInsideStrip": true,
+  "cardRows": "22px 122px 22px 17px 27px",
+  "consoleErrorSample": [],
+  "detailFontSize": "11px",
+  "fileActions": {
+    "bottom": 390,
+    "height": 27,
+    "left": 38,
+    "top": 363,
+    "width": 169
+  },
+  "fileCard": {
+    "bottom": 398,
+    "height": 238,
+    "left": 31,
+    "top": 160,
+    "width": 184
+  },
+  "fileCardThumbnailRatio": 0.301,
+  "fileNameFontSize": "13px",
+  "filePreview": {
+    "bottom": 315,
+    "height": 122,
+    "left": 69,
+    "top": 193,
+    "width": 108
+  },
+  "fileStrip": {
+    "bottom": 404,
+    "height": 250,
+    "left": 17,
+    "top": 154,
+    "width": 1247
+  },
+  "rowGap": "3px",
+  "stripPaddingBottom": "6px",
+  "stripPaddingTop": "6px",
+  "topGap": 6,
+  "url": "http://127.0.0.1:5173/?fixture=workbench",
+  "screenshotPath": "C:/Users/kuroron/Documents/RD/20260215_PDFApplication/docs/reports/screenshots/2026-05-16-file-strip-padding-balance-1366x768.png"
+}
