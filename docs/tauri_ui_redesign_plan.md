@@ -517,3 +517,42 @@ Reference screenshot:
 - File-level trash and file-card `除外` use the same guarded removal flow. The app shows an in-app confirmation dialog; Enter/Esc and arrow-key selection work, but the UI does not display keyboard-operation help text.
 - Search/replace is retired from the active UI, frontend state, export snapshot, and Python export pipeline. Future text workflows should be reintroduced only if they have a clear UX and engine contract.
 - Copy-protected PDFs that can be opened with an empty user password should proceed through inspection, thumbnail rendering, and export without requiring an input password. Password-required PDFs still surface the password-required error path.
+
+## 2026-05-16 Split Output Naming and Bottom Bar Hardening
+
+- The bottom output file chips include an edit icon. Opening it shows a compact output-name editor for the current split output groups.
+- The output-name editor owns both file names and the save destination folder. When these settings are applied, export uses them directly and does not show the previous file-name save dialog or an additional folder picker at export time.
+- Reset in the output-name editor requires confirmation and restores automatic names/destination handling. If the workspace becomes blank because all file cards are removed, the custom output settings reset automatically.
+- Export worker requests may pass `outputDir` plus `outputNames[]`; the Python worker validates the count, duplicate names, and Windows-invalid characters before writing final PDFs.
+- The bottom job-status area must keep `書き出し完了`, the progress bar, and `開く` / `フォルダ` / `ログ` buttons on one line at 1366x768.
+- The log drawer uses an opaque foreground layer with explicit stacking above page decoration labels, while remaining above the bottom bar rather than overlapping it.
+
+## 2026-05-16 Status Pill and Header/Footer Fit Update
+
+- The top-right job status pill uses a fixed width so the app bar does not jump while export state changes. The visible label is a short stable status such as `待機中`, `処理中`, `完了`, `エラー`, or `中止`; the full status detail remains available through the title/accessible label.
+- Header, footer, and page-number preview labels use compact per-slot chips rather than wide fixed fields. Short text should not reserve excessive blank space, and long text must shrink/clip within the left, center, or right slot instead of overflowing into neighboring content.
+- Header/footer/page-number PDF output uses a Word-like natural style: small unified black text, no visible chip/background, and left/center/right text boxes in the top/bottom margin bands.
+- If the requested header/footer/page-number text cannot fit in the fixed-size slot, the PDF worker abbreviates it with `...` rather than changing font size per file or silently dropping the text.
+- The settings surface stays simple: users still choose decoration type, placement, and text. Header/footer collision handling is handled by margin-band placement, slot sizing, and fit-to-width abbreviation rather than adding detailed layout controls.
+
+## 2026-05-16 Natural Header/Footer Standard
+
+- Header, footer, and page-number output ignores per-decoration color/size differences and normalizes to 8.5pt black text. This avoids a visibly inconsistent batch when source files or past settings differ.
+- The preview follows the same direction: black text, transparent background, no bordered chip. The text remains clipped within its slot for density, but the visual treatment should resemble common Word headers/footers rather than app badges.
+- Watermark styling remains separate and can still use color and larger display treatment.
+
+## 2026-05-16 Exact Completed-State Preview
+
+- The export preview in the Tauri runtime now uses a PDF-coordinate decoration manifest as the first-class preview contract. The Python worker resolves the same output page, split-output numbering, page geometry, text fitting, font family, and decoration positions used by export, but returns only lightweight layout data first.
+- Editing remains the priority path. Header/footer/watermark edits update the workbench state immediately and do not invoke the Python worker or block the central editing screen.
+- The preview modal must never wait for full preview-PDF generation during arrow-key or button page navigation. It displays the existing page preview image and places an SVG decoration layer from the manifest as soon as the lightweight manifest arrives.
+- A transparent PyMuPDF-rendered PNG decoration layer is generated only as an asynchronous refinement for the current and neighboring pages. When it arrives, it replaces the SVG layer without shifting the page, controls, or filmstrip.
+- User-visible waiting in the preview modal is limited to source preparation states such as Office/PDF conversion. Decoration overlay generation must not show a blocking `作成中` overlay over the page.
+- The obsolete completed-page preview PNG path is removed. Preview refinement now stores only the decoration manifest and transparent decoration PNG in the session preview cache.
+- Browser fixture mode remains usable for modal layout checks. Exact manifest/transparent-PNG decoration preview requires the Tauri worker runtime because the browser fixture cannot call the Python worker.
+- Decoration overlay cache keys are based on workspace state, output page, source file size/mtime, and render zoom inside the session preview cache. Reopening the same completed-state preview should reuse the cached manifest/transparent PNG instead of rebuilding the scratch page.
+- The large preview page must be fit-to-canvas, not fit-to-viewport. The modal measures the actual preview canvas and scales every page ratio so the full page is visible for portrait, landscape, small, and unusual page sizes.
+- The large preview page frame must receive explicit measured width and height. Preview images and decoration overlays may be absolutely positioned inside that frame, but they must not be responsible for creating the frame size.
+- If the high-resolution page preview image cannot be loaded, the modal falls back to the already-visible filmstrip thumbnail rather than leaving the large preview blank.
+- Header/footer settings appear as soon as the header/footer tool is selected. Users edit the text and position first, then click a file or page to apply the current setting.
+- A single page cannot keep multiple header/footer/page-number values in the same visual slot. Applying a different value to the same page and slot replaces the previous effective value, including values inherited from all-page or file-level decorations.

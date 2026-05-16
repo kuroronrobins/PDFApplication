@@ -1,0 +1,26 @@
+{
+  "panelVisibleBeforePageClick": true,
+  "pageTextAfterReplacement": "ヘッダー SECOND_FOOTER フッター p1",
+  "hasFirstFooterAfterReplace": false,
+  "hasSecondFooterAfterReplace": true,
+  "duplicateMarkerVisible": false,
+  "previewModalVisible": true,
+  "canvasBox": {
+    "x": 179,
+    "y": 92,
+    "width": 1008,
+    "height": 483.125
+  },
+  "previewPageBox": {
+    "x": 526.5,
+    "y": 112.0625,
+    "width": 313,
+    "height": 443
+  },
+  "previewPageFullyInsideCanvas": true,
+  "documentOverflowX": false,
+  "documentOverflowY": false,
+  "exactStatusCount": 0,
+  "pageLabelDisplay": "none",
+  "previewText": "添付資料.pdfSECOND_FOOTERPDF p1"
+}

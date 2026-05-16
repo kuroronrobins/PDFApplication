@@ -19,6 +19,7 @@ import type {
   InputFileInfo,
   JobStep,
   OutputPlan,
+  OutputSettings,
   PageItem,
   PdfMetadata,
   SecurityState,
@@ -31,6 +32,7 @@ import type {
 type WorkbenchState = WorkbenchSnapshot & {
   cacheSession: CacheSession;
   exportPath?: string;
+  outputSettings: OutputSettings;
   lastOutputFiles: string[];
   exportJob: ExportJobState;
   backgroundProcessingPausedUntil: number;
@@ -48,6 +50,8 @@ type WorkbenchState = WorkbenchSnapshot & {
   addInputFiles: (inputFiles: InputFileInfo[]) => void;
   addLog: (level: WorkbenchLog["level"], message: string) => void;
   setExportPath: (path: string) => void;
+  applyOutputSettings: (destinationDir: string, outputNames: string[]) => void;
+  resetOutputSettings: () => void;
   toggleFileExpanded: (fileId: string) => void;
   toggleFileExcluded: (fileId: string) => void;
   removeFile: (fileId: string) => void;
@@ -146,15 +150,46 @@ function snapshotOf(state: WorkbenchSnapshot): WorkbenchSnapshot {
   };
 }
 
-function derive(snapshot: WorkbenchSnapshot) {
+const initialOutputSettings: OutputSettings = {
+  applied: false,
+  outputNames: [],
+};
+
+function cloneOutputSettings(outputSettings: OutputSettings): OutputSettings {
+  return {
+    applied: outputSettings.applied,
+    destinationDir: outputSettings.destinationDir,
+    outputNames: [...outputSettings.outputNames],
+  };
+}
+
+function normalizeOutputSettingsForSnapshot(
+  snapshot: WorkbenchSnapshot,
+  outputSettings: OutputSettings,
+): OutputSettings {
+  return snapshot.files.length === 0
+    ? cloneOutputSettings(initialOutputSettings)
+    : cloneOutputSettings(outputSettings);
+}
+
+function derive(
+  snapshot: WorkbenchSnapshot,
+  outputSettings: OutputSettings = initialOutputSettings,
+) {
+  const normalizedOutputSettings = normalizeOutputSettingsForSnapshot(
+    snapshot,
+    outputSettings,
+  );
   const outputPlan = buildOutputPlan(
     snapshot.files,
     snapshot.pagesByFile,
     snapshot.decorations,
     snapshot.security,
+    normalizedOutputSettings,
   );
   return {
     ...snapshot,
+    outputSettings: normalizedOutputSettings,
     outputPlan,
   };
 }
@@ -363,11 +398,11 @@ function defaultDecorationPosition(kind: DecorationKind): DecorationPosition {
 }
 
 function defaultDecorationColor(kind: DecorationKind): string {
-  return kind === "watermark" ? "#d56a6a" : "#355f92";
+  return kind === "watermark" ? "#d56a6a" : "#111111";
 }
 
 function defaultDecorationFontSize(kind: DecorationKind): number {
-  return kind === "watermark" ? 24 : 10;
+  return kind === "watermark" ? 24 : 8.5;
 }
 
 function createDecorationDrafts(): Record<DecorationKind, DecorationDraft> {
@@ -421,7 +456,25 @@ function sameDecorationSlot(
   kind: DecorationKind,
   position: DecorationPosition,
 ): boolean {
-  return decoration.kind === kind && decoration.position === position;
+  if (kind === "watermark" || decoration.kind === "watermark") {
+    return decoration.kind === "watermark" && kind === "watermark";
+  }
+  const requestedBand = kind === "header" ? "header" : "footer";
+  const decorationBand = decoration.kind === "header" ? "header" : "footer";
+  if (requestedBand !== decorationBand) {
+    return false;
+  }
+  return decorationSlotKey(decoration.position) === decorationSlotKey(position);
+}
+
+function decorationSlotKey(position: DecorationPosition): "left" | "center" | "right" {
+  if (position.endsWith("-left")) {
+    return "left";
+  }
+  if (position.endsWith("-right")) {
+    return "right";
+  }
+  return "center";
 }
 
 function createDecorationFromDraft(
@@ -462,7 +515,7 @@ function commitSnapshot(
   extra?: Partial<WorkbenchState>,
 ) {
   const previous = snapshotOf(current);
-  const next = derive(nextSnapshot);
+  const next = derive(nextSnapshot, extra?.outputSettings ?? current.outputSettings);
   set({
     ...next,
     ...extra,
@@ -493,7 +546,7 @@ const initialExportJob: ExportJobState = {
 };
 
 export const useWorkbenchStore = create<WorkbenchState>((set, get) => ({
-  ...derive(snapshotOf(initialSnapshot)),
+  ...derive(snapshotOf(initialSnapshot), initialOutputSettings),
   cacheSession: {
     id: randomId("session"),
     initialized: false,
@@ -520,6 +573,7 @@ export const useWorkbenchStore = create<WorkbenchState>((set, get) => ({
           selectedDecorationId: current.selectedDecorationId,
           security: cloneSecurity(current.security),
         }),
+        current.outputSettings,
       ),
     );
   },
@@ -537,7 +591,7 @@ export const useWorkbenchStore = create<WorkbenchState>((set, get) => ({
       security: cloneSecurity(initialSecurity),
     };
     set({
-      ...derive(snapshot),
+      ...derive(snapshot, initialOutputSettings),
       logs: initialLogs.map((log) => ({ ...log })),
       lastOutputFiles: [],
       history: [],
@@ -678,6 +732,9 @@ export const useWorkbenchStore = create<WorkbenchState>((set, get) => ({
       {
         logs,
         backgroundProcessingPausedUntil: Date.now() + 1200,
+        outputSettings: replaceSampleWorkspace
+          ? cloneOutputSettings(initialOutputSettings)
+          : current.outputSettings,
       },
     );
   },
@@ -694,6 +751,47 @@ export const useWorkbenchStore = create<WorkbenchState>((set, get) => ({
       lastOutputFiles: [],
       logs: [createLog("info", `出力先を設定しました: ${path}`), ...state.logs],
     }));
+  },
+
+  applyOutputSettings: (destinationDir, outputNames) => {
+    const current = get();
+    const outputSettings: OutputSettings = {
+      applied: true,
+      destinationDir,
+      outputNames: [...outputNames],
+    };
+    set({
+      outputSettings,
+      outputPlan: buildOutputPlan(
+        current.files,
+        current.pagesByFile,
+        current.decorations,
+        current.security,
+        outputSettings,
+      ),
+      lastOutputFiles: [],
+      logs: [
+        createLog("info", `出力名と保存先を設定しました: ${destinationDir}`),
+        ...current.logs,
+      ],
+    });
+  },
+
+  resetOutputSettings: () => {
+    const current = get();
+    const outputSettings = cloneOutputSettings(initialOutputSettings);
+    set({
+      outputSettings,
+      outputPlan: buildOutputPlan(
+        current.files,
+        current.pagesByFile,
+        current.decorations,
+        current.security,
+        outputSettings,
+      ),
+      lastOutputFiles: [],
+      logs: [createLog("info", "出力名と保存先の設定を自動生成へ戻しました。"), ...current.logs],
+    });
   },
 
   toggleFileExpanded: (fileId) => {
@@ -885,7 +983,7 @@ export const useWorkbenchStore = create<WorkbenchState>((set, get) => ({
         decorations: current.decorations.map((decoration) => ({ ...decoration })),
         selectedDecorationId: current.selectedDecorationId,
         security: cloneSecurity(current.security),
-      }),
+      }, current.outputSettings),
       logs: message ? [createLog("info", message), ...current.logs] : current.logs,
     });
   },
@@ -930,7 +1028,7 @@ export const useWorkbenchStore = create<WorkbenchState>((set, get) => ({
         decorations: current.decorations.map((decoration) => ({ ...decoration })),
         selectedDecorationId: current.selectedDecorationId,
         security: cloneSecurity(current.security),
-      }),
+      }, current.outputSettings),
       logs: [
         createLog(
           "info",
@@ -963,7 +1061,7 @@ export const useWorkbenchStore = create<WorkbenchState>((set, get) => ({
         decorations: current.decorations.map((decoration) => ({ ...decoration })),
         selectedDecorationId: current.selectedDecorationId,
         security: cloneSecurity(current.security),
-      }),
+      }, current.outputSettings),
       logs: [
         createLog("error", `${target?.name ?? fileId} の処理に失敗しました: ${message}`),
         ...current.logs,
@@ -1036,7 +1134,7 @@ export const useWorkbenchStore = create<WorkbenchState>((set, get) => ({
         decorations: current.decorations.map((decoration) => ({ ...decoration })),
         selectedDecorationId: current.selectedDecorationId,
         security: cloneSecurity(current.security),
-      }),
+      }, current.outputSettings),
       logs,
     });
   },
@@ -1053,6 +1151,7 @@ export const useWorkbenchStore = create<WorkbenchState>((set, get) => ({
           selectedDecorationId: current.selectedDecorationId,
           security: cloneSecurity(current.security),
         }),
+        current.outputSettings,
       ),
     );
   },
@@ -1077,7 +1176,7 @@ export const useWorkbenchStore = create<WorkbenchState>((set, get) => ({
         decorations: current.decorations.map((decoration) => ({ ...decoration })),
         selectedDecorationId: current.selectedDecorationId,
         security: cloneSecurity(current.security),
-      }),
+      }, current.outputSettings),
     );
   },
 
@@ -1105,7 +1204,7 @@ export const useWorkbenchStore = create<WorkbenchState>((set, get) => ({
         decorations: current.decorations.map((decoration) => ({ ...decoration })),
         selectedDecorationId: current.selectedDecorationId,
         security: cloneSecurity(current.security),
-      }),
+      }, current.outputSettings),
     );
   },
 
@@ -1291,17 +1390,16 @@ export const useWorkbenchStore = create<WorkbenchState>((set, get) => ({
             decoration.fileId &&
             targetFileIdSet.has(decoration.fileId) &&
             !decoration.pageId &&
-            sameDecorationSlot(decoration, kind, draft.position) &&
-            exactDecorationMatchesDraft(decoration, kind, draft),
+            sameDecorationSlot(decoration, kind, draft.position),
+        );
+        const exactFileDecorations = existingFileDecorations.filter((decoration) =>
+          exactDecorationMatchesDraft(decoration, kind, draft),
         );
         const removeAll = targetFileIds.every((targetId) =>
-          existingFileDecorations.some((decoration) => decoration.fileId === targetId),
+          exactFileDecorations.some((decoration) => decoration.fileId === targetId),
         );
         const decorations = current.decorations
           .filter((decoration) => {
-            if (!removeAll) {
-              return true;
-            }
             return !existingFileDecorations.some((item) => item.id === decoration.id);
           })
           .map((decoration) => ({ ...decoration }));
@@ -1362,28 +1460,35 @@ export const useWorkbenchStore = create<WorkbenchState>((set, get) => ({
 
         for (const decoration of decorations) {
           if (
-            decoration.target !== "file" ||
-            !decoration.fileId ||
             decoration.pageId ||
-            !exactDecorationMatchesDraft(decoration, kind, draft)
+            !sameDecorationSlot(decoration, kind, draft.position)
           ) {
             continue;
           }
-          const pageIdsInFile = targetPageIds.filter(
-            (targetId) => pageFileById.get(targetId) === decoration.fileId,
-          );
-          if (pageIdsInFile.length === 0) {
+          const scopedPageIds =
+            decoration.target === "all"
+              ? targetPageIds
+              : decoration.target === "file" && decoration.fileId
+                ? targetPageIds.filter((targetId) => pageFileById.get(targetId) === decoration.fileId)
+                : [];
+          if (scopedPageIds.length === 0) {
             continue;
           }
           const excludedPageIds = new Set(decoration.excludedPageIds ?? []);
-          const reapply = pageIdsInFile.every((targetId) => excludedPageIds.has(targetId));
-          for (const targetId of pageIdsInFile) {
+          const isExactFileDecoration = exactDecorationMatchesDraft(decoration, kind, draft);
+          const reapply =
+            isExactFileDecoration &&
+            scopedPageIds.every((targetId) => excludedPageIds.has(targetId));
+          for (const targetId of scopedPageIds) {
             if (reapply) {
               excludedPageIds.delete(targetId);
+              handledByFileDecoration.add(targetId);
+            } else if (isExactFileDecoration) {
+              excludedPageIds.add(targetId);
+              handledByFileDecoration.add(targetId);
             } else {
               excludedPageIds.add(targetId);
             }
-            handledByFileDecoration.add(targetId);
           }
           decoration.excludedPageIds = Array.from(excludedPageIds);
         }
@@ -1395,24 +1500,21 @@ export const useWorkbenchStore = create<WorkbenchState>((set, get) => ({
           (decoration) =>
             decoration.pageId &&
             remainingPageIds.includes(decoration.pageId) &&
-            sameDecorationSlot(decoration, kind, draft.position) &&
-            exactDecorationMatchesDraft(decoration, kind, draft),
+            sameDecorationSlot(decoration, kind, draft.position),
+        );
+        const exactPageDecorations = existingPageDecorations.filter((decoration) =>
+          exactDecorationMatchesDraft(decoration, kind, draft),
         );
         const removePageScoped =
           remainingPageIds.length > 0 &&
           remainingPageIds.every((targetId) =>
-            existingPageDecorations.some((decoration) => decoration.pageId === targetId),
+            exactPageDecorations.some((decoration) => decoration.pageId === targetId),
           );
-        let nextDecorations = decorations;
-        if (removePageScoped) {
-          nextDecorations = decorations.filter(
-            (decoration) => !existingPageDecorations.some((item) => item.id === decoration.id),
-          );
-        } else {
+        const nextDecorations = decorations.filter(
+          (decoration) => !existingPageDecorations.some((item) => item.id === decoration.id),
+        );
+        if (!removePageScoped) {
           for (const targetId of remainingPageIds) {
-            if (existingPageDecorations.some((decoration) => decoration.pageId === targetId)) {
-              continue;
-            }
             nextDecorations.push(createDecorationFromDraft(kind, draft, targetId));
           }
         }
@@ -1439,16 +1541,29 @@ export const useWorkbenchStore = create<WorkbenchState>((set, get) => ({
         return;
       }
     }
+    let baseDecorations = current.decorations.map((decoration) => ({ ...decoration }));
     if (pageId) {
       const pageFileId = findPageFile(current.pagesByFile, pageId);
-      const fileScopedDecoration = current.decorations.find(
+      const pageScopedSameSlot = current.decorations.some(
         (decoration) =>
-          decoration.target === "file" &&
-          decoration.fileId === pageFileId &&
-          !decoration.pageId &&
-          exactDecorationMatchesDraft(decoration, kind, draft),
+          decoration.pageId === pageId &&
+          sameDecorationSlot(decoration, kind, draft.position),
       );
-      if (pageFileId && fileScopedDecoration) {
+      const broadScopedSameSlot = current.decorations.filter(
+        (decoration) =>
+          !decoration.pageId &&
+          (decoration.target === "all" ||
+            (decoration.target === "file" && decoration.fileId === pageFileId)) &&
+          sameDecorationSlot(decoration, kind, draft.position),
+      );
+      const fileScopedDecoration = broadScopedSameSlot.find((decoration) =>
+        exactDecorationMatchesDraft(decoration, kind, draft),
+      );
+      if (
+        fileScopedDecoration &&
+        broadScopedSameSlot.length === 1 &&
+        !pageScopedSameSlot
+      ) {
         const excludedPageIds = new Set(fileScopedDecoration.excludedPageIds ?? []);
         const excluded = excludedPageIds.has(pageId);
         if (excluded) {
@@ -1486,8 +1601,24 @@ export const useWorkbenchStore = create<WorkbenchState>((set, get) => ({
         );
         return;
       }
+      if (pageFileId) {
+        baseDecorations = baseDecorations.map((decoration) => {
+          if (
+            decoration.pageId ||
+            !(decoration.target === "all" ||
+              (decoration.target === "file" && decoration.fileId === pageFileId)) ||
+            !sameDecorationSlot(decoration, kind, draft.position) ||
+            exactDecorationMatchesDraft(decoration, kind, draft)
+          ) {
+            return decoration;
+          }
+          const excludedPageIds = new Set(decoration.excludedPageIds ?? []);
+          excludedPageIds.add(pageId);
+          return { ...decoration, excludedPageIds: Array.from(excludedPageIds) };
+        });
+      }
     }
-    let scopedDecorations = current.decorations.filter((decoration) => {
+    let scopedDecorations = baseDecorations.filter((decoration) => {
       if (!sameDecorationSlot(decoration, kind, draft.position)) {
         return false;
       }
@@ -1502,26 +1633,26 @@ export const useWorkbenchStore = create<WorkbenchState>((set, get) => ({
     if (fileId && scopedDecorations.length === 0) {
       const pages = current.pagesByFile[fileId] ?? [];
       const pageIds = new Set(pages.map((page) => page.id));
-      const exactPageScopedDecorations = current.decorations.filter(
+      const pageScopedDecorations = baseDecorations.filter(
         (decoration) =>
           decoration.pageId &&
           pageIds.has(decoration.pageId) &&
-          exactDecorationMatchesDraft(decoration, kind, draft),
+          sameDecorationSlot(decoration, kind, draft.position),
       );
       if (
         pages.length > 0 &&
         pages.every((page) =>
-          exactPageScopedDecorations.some((decoration) => decoration.pageId === page.id),
+          pageScopedDecorations.some((decoration) => decoration.pageId === page.id),
         )
       ) {
-        scopedDecorations = exactPageScopedDecorations;
+        scopedDecorations = pageScopedDecorations;
       }
     }
     const exactScopedDecorations = scopedDecorations.filter((decoration) =>
       exactDecorationMatchesDraft(decoration, kind, draft),
     );
     const shouldRemove = scopedDecorations.length > 0 && scopedDecorations.length === exactScopedDecorations.length;
-    const decorations = current.decorations
+    const decorations = baseDecorations
       .filter((decoration) => !scopedDecorations.some((item) => item.id === decoration.id))
       .map((decoration) => ({ ...decoration }));
 
@@ -1775,7 +1906,7 @@ export const useWorkbenchStore = create<WorkbenchState>((set, get) => ({
       return;
     }
     const nextHistory = current.history.slice(0, -1);
-    const next = derive(snapshotOf(previous));
+    const next = derive(snapshotOf(previous), current.outputSettings);
     set({
       ...next,
       history: nextHistory,
@@ -1792,7 +1923,7 @@ export const useWorkbenchStore = create<WorkbenchState>((set, get) => ({
       return;
     }
     const nextFuture = current.future.slice(1);
-    const next = derive(snapshotOf(nextSnapshot));
+    const next = derive(snapshotOf(nextSnapshot), current.outputSettings);
     set({
       ...next,
       history: [...current.history, snapshotOf(current)],

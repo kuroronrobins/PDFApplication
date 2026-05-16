@@ -4,6 +4,7 @@ import {
   useRef,
   useState,
   type ChangeEvent,
+  type CSSProperties,
   type DragEvent,
   type SyntheticEvent,
 } from "react";
@@ -51,6 +52,9 @@ import {
   revealOutputPath,
   writeE2eResult,
   type AlphaLicenseStatus,
+  type DecorationLayoutItem,
+  type DecorationLayoutManifest,
+  type DecorationOverlayRenderResult,
   type E2eBootstrapInfo,
 } from "./features/workbench/backend";
 import {
@@ -60,6 +64,8 @@ import {
   isProcessingEngineCancelled,
   processAllPendingEngineFiles,
   processNextPendingEngineFile,
+  renderCurrentExportDecorationManifestWithEngine,
+  renderCurrentExportDecorationOverlayWithEngine,
   resetCurrentExportCancellation,
 } from "./features/workbench/engineWorkflow";
 import {
@@ -181,6 +187,23 @@ type ExportPreviewFilmstripPage = ExportPreviewPage & {
   globalIndex: number;
   startsOutput: boolean;
 };
+
+type DecorationPreviewState = {
+  status: "manifest" | "ready" | "error";
+  manifest?: DecorationLayoutManifest;
+  overlay?: DecorationOverlayRenderResult;
+};
+
+type PreviewCanvasSize = {
+  width: number;
+  height: number;
+};
+
+const decorationPreviewSessionCache = new Map<string, DecorationPreviewState>();
+const decorationPreviewSessionPromises = new Map<string, Promise<DecorationLayoutManifest | DecorationOverlayRenderResult>>();
+const decorationPreviewOverlayDelayMs = 140;
+const decorationPreviewMaxCachedPages = 96;
+const defaultPreviewPageAspectRatio = 1 / Math.SQRT2;
 
 type OutputPageNumberInfo = {
   outputPageNumber: number;
@@ -328,6 +351,211 @@ function flattenExportPreviewGroups(
       startsOutput: outputIndex > 0 && pageIndex === 0,
     })),
   );
+}
+
+function exportPreviewSignature(
+  files: WorkbenchFile[],
+  pagesByFile: Record<string, PageItem[]>,
+  decorations: Decoration[],
+  outputPlan: OutputPlan,
+): string {
+  return JSON.stringify({
+    files: files.map((file) => ({
+      id: file.id,
+      sourcePath: file.sourcePath,
+      cachePath: file.cachePath,
+      kind: file.kind,
+      excluded: file.excluded,
+      cacheState: file.cacheState,
+      engineState: file.engineState,
+    })),
+    pagesByFile: Object.fromEntries(
+      Object.entries(pagesByFile).map(([fileId, pages]) => [
+        fileId,
+        pages.map((page) => ({
+          id: page.id,
+          fileId: page.fileId,
+          sourceFileId: page.sourceFileId,
+          pageNumber: page.pageNumber,
+          originalPageNumber: page.originalPageNumber,
+          excluded: page.excluded,
+          selected: page.selected,
+          splitAfter: page.splitAfter,
+        })),
+      ]),
+    ),
+    decorations: decorations.map((decoration) => ({
+      id: decoration.id,
+      kind: decoration.kind,
+      text: decoration.text,
+      target: decoration.target,
+      position: decoration.position,
+      pageId: decoration.pageId,
+      fileId: decoration.fileId,
+      outputIndex: decoration.outputIndex,
+      excludedPageIds: decoration.excludedPageIds,
+      fontSize: decoration.fontSize,
+      opacity: decoration.opacity,
+      color: decoration.color,
+    })),
+    outputPlan: {
+      outputFiles: outputPlan.outputFiles,
+      activePageCount: outputPlan.activePageCount,
+      splitCount: outputPlan.splitCount,
+      decorationCount: outputPlan.decorationCount,
+    },
+  });
+}
+
+function decorationPreviewKey(page: ExportPreviewFilmstripPage): string {
+  return `${page.outputIndex}:${page.outputPageNumber}:${page.id}:${page.globalIndex}`;
+}
+
+function decorationPreviewCacheKey(previewSignature: string, page: ExportPreviewFilmstripPage): string {
+  return `${previewSignature}:${decorationPreviewKey(page)}`;
+}
+
+function rememberDecorationPreviewCache(cacheKey: string, state: DecorationPreviewState): void {
+  if (state.status === "error") {
+    return;
+  }
+  const current = decorationPreviewSessionCache.get(cacheKey);
+  const nextState =
+    current && state.status === "manifest" && current.status === "ready"
+      ? current
+      : { ...current, ...state };
+  decorationPreviewSessionCache.set(cacheKey, nextState);
+  while (decorationPreviewSessionCache.size > decorationPreviewMaxCachedPages) {
+    const oldestKey = decorationPreviewSessionCache.keys().next().value;
+    if (!oldestKey) {
+      break;
+    }
+    decorationPreviewSessionCache.delete(oldestKey);
+  }
+}
+
+function cachedDecorationPreviewPages(
+  previewSignature: string,
+  pages: ExportPreviewFilmstripPage[],
+): Record<string, DecorationPreviewState> {
+  return Object.fromEntries(
+    pages
+      .map((page) => {
+        const pageKey = decorationPreviewKey(page);
+        const cacheKey = decorationPreviewCacheKey(previewSignature, page);
+        const cached = decorationPreviewSessionCache.get(cacheKey);
+        return cached?.status === "ready" || cached?.status === "manifest"
+          ? ([pageKey, cached] as const)
+          : undefined;
+      })
+      .filter((entry): entry is readonly [string, DecorationPreviewState] => Boolean(entry)),
+  );
+}
+
+function previewPageFrameStyle(
+  aspectRatio: number | undefined,
+  canvasSize: PreviewCanvasSize | null,
+): CSSProperties {
+  const ratio =
+    typeof aspectRatio === "number" && Number.isFinite(aspectRatio) && aspectRatio > 0
+      ? aspectRatio
+      : defaultPreviewPageAspectRatio;
+
+  if (!canvasSize || canvasSize.width <= 0 || canvasSize.height <= 0) {
+    return {
+      aspectRatio: String(ratio),
+      width: "min(100%, 520px)",
+    };
+  }
+
+  const availableWidth = Math.max(96, canvasSize.width - 16);
+  const availableHeight = Math.max(96, canvasSize.height - 16);
+  let width = availableWidth;
+  let height = width / ratio;
+  if (height > availableHeight) {
+    height = availableHeight;
+    width = height * ratio;
+  }
+
+  return {
+    aspectRatio: String(ratio),
+    width: `${Math.max(32, Math.round(width))}px`,
+    height: `${Math.max(32, Math.round(height))}px`,
+  };
+}
+
+function requestDecorationManifestPage(
+  sessionPath: string,
+  previewSignature: string,
+  page: ExportPreviewFilmstripPage,
+): Promise<DecorationLayoutManifest> {
+  const cacheKey = decorationPreviewCacheKey(previewSignature, page);
+  const cached = decorationPreviewSessionCache.get(cacheKey);
+  if ((cached?.status === "manifest" || cached?.status === "ready") && cached.manifest) {
+    return Promise.resolve(cached.manifest);
+  }
+
+  const promiseKey = `${cacheKey}:manifest`;
+  const existingPromise = decorationPreviewSessionPromises.get(promiseKey);
+  if (existingPromise) {
+    return existingPromise as Promise<DecorationLayoutManifest>;
+  }
+
+  const promise = renderCurrentExportDecorationManifestWithEngine(
+    sessionPath,
+    page.outputIndex,
+    page.outputPageNumber - 1,
+  )
+    .then((manifest) => {
+      rememberDecorationPreviewCache(cacheKey, { status: "manifest", manifest });
+      return manifest;
+    })
+    .finally(() => {
+      if (decorationPreviewSessionPromises.get(promiseKey) === promise) {
+        decorationPreviewSessionPromises.delete(promiseKey);
+      }
+    });
+  decorationPreviewSessionPromises.set(promiseKey, promise);
+  return promise;
+}
+
+function requestDecorationOverlayPage(
+  sessionPath: string,
+  previewSignature: string,
+  page: ExportPreviewFilmstripPage,
+): Promise<DecorationOverlayRenderResult> {
+  const cacheKey = decorationPreviewCacheKey(previewSignature, page);
+  const cached = decorationPreviewSessionCache.get(cacheKey);
+  if (cached?.status === "ready" && cached.overlay) {
+    return Promise.resolve(cached.overlay);
+  }
+
+  const promiseKey = `${cacheKey}:overlay`;
+  const existingPromise = decorationPreviewSessionPromises.get(promiseKey);
+  if (existingPromise) {
+    return existingPromise as Promise<DecorationOverlayRenderResult>;
+  }
+
+  const promise = renderCurrentExportDecorationOverlayWithEngine(
+    sessionPath,
+    page.outputIndex,
+    page.outputPageNumber - 1,
+  )
+    .then((overlay) => {
+      rememberDecorationPreviewCache(cacheKey, {
+        status: "ready",
+        manifest: overlay,
+        overlay,
+      });
+      return overlay;
+    })
+    .finally(() => {
+      if (decorationPreviewSessionPromises.get(promiseKey) === promise) {
+        decorationPreviewSessionPromises.delete(promiseKey);
+      }
+    });
+  decorationPreviewSessionPromises.set(promiseKey, promise);
+  return promise;
 }
 
 function buildOutputPageNumberMap(
@@ -1508,6 +1736,154 @@ function PageDecorations({
   );
 }
 
+function svgTextAnchor(align: DecorationLayoutItem["align"]): "start" | "middle" | "end" {
+  if (align === "right") {
+    return "end";
+  }
+  if (align === "center") {
+    return "middle";
+  }
+  return "start";
+}
+
+function svgTextX(item: DecorationLayoutItem): number {
+  const rect = item.rectPt;
+  if (!rect) {
+    return item.pointPt?.[0] ?? item.centerPt?.[0] ?? 0;
+  }
+  if (item.align === "right") {
+    return rect[2];
+  }
+  if (item.align === "center") {
+    return (rect[0] + rect[2]) / 2;
+  }
+  return rect[0];
+}
+
+function svgFontFamily(item: DecorationLayoutItem, manifest: DecorationLayoutManifest): string {
+  const primary = item.fontFamily ?? manifest.fontFamily ?? "BIZ UDPGothic";
+  return `${primary}, "Yu Gothic", "Yu Gothic UI", Meiryo, sans-serif`;
+}
+
+function safeSvgId(value: string): string {
+  return value.replace(/[^a-zA-Z0-9_-]/g, "-");
+}
+
+function DecorationManifestSvg({
+  manifest,
+  idPrefix,
+}: {
+  manifest: DecorationLayoutManifest;
+  idPrefix: string;
+}) {
+  if (manifest.items.length === 0 || manifest.pageWidthPt <= 0 || manifest.pageHeightPt <= 0) {
+    return null;
+  }
+
+  const clipPrefix = safeSvgId(`${idPrefix}-${manifest.cacheKey}`);
+  return (
+    <svg
+      className="preview-decoration-overlay-svg"
+      viewBox={`0 0 ${manifest.pageWidthPt} ${manifest.pageHeightPt}`}
+      preserveAspectRatio="none"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <defs>
+        {manifest.items.map((item, index) => {
+          if (!item.rectPt) {
+            return null;
+          }
+          const [x0, y0, x1, y1] = item.rectPt;
+          return (
+            <clipPath id={`${clipPrefix}-clip-${index}`} key={index}>
+              <rect x={x0} y={y0} width={Math.max(0, x1 - x0)} height={Math.max(0, y1 - y0)} />
+            </clipPath>
+          );
+        })}
+      </defs>
+      {manifest.items.map((item, index) => {
+        const fontSize = item.fontSizePt;
+        const textLength = item.textWidthPt && item.textWidthPt > 0 ? item.textWidthPt : undefined;
+        if (item.kind === "watermark") {
+          const center = item.centerPt;
+          if (!center) {
+            return null;
+          }
+          return (
+            <text
+              className="preview-decoration-svg-text"
+              key={`${item.sourceDecorationId ?? item.kind}-${index}`}
+              x={center[0]}
+              y={center[1]}
+              fill={item.color}
+              fontFamily={svgFontFamily(item, manifest)}
+              fontSize={fontSize}
+              opacity={item.opacity ?? 1}
+              textAnchor="middle"
+              dominantBaseline="middle"
+              transform={`rotate(${item.rotationDeg ?? -25} ${center[0]} ${center[1]})`}
+              textLength={textLength}
+              lengthAdjust={textLength ? "spacingAndGlyphs" : undefined}
+            >
+              {item.text}
+            </text>
+          );
+        }
+
+        const rect = item.rectPt;
+        if (!rect) {
+          return null;
+        }
+        const [, y0] = rect;
+        return (
+          <text
+            className="preview-decoration-svg-text"
+            clipPath={`url(#${clipPrefix}-clip-${index})`}
+            key={`${item.sourceDecorationId ?? item.kind}-${index}`}
+            x={svgTextX(item)}
+            y={item.baselinePt ?? y0 + fontSize}
+            fill={item.color}
+            fontFamily={svgFontFamily(item, manifest)}
+            fontSize={fontSize}
+            textAnchor={svgTextAnchor(item.align)}
+            dominantBaseline="alphabetic"
+            textLength={textLength}
+            lengthAdjust={textLength ? "spacingAndGlyphs" : undefined}
+          >
+            {item.text}
+          </text>
+        );
+      })}
+    </svg>
+  );
+}
+
+function DecorationPreviewLayer({
+  manifest,
+  overlaySrc,
+  idPrefix,
+}: {
+  manifest?: DecorationLayoutManifest;
+  overlaySrc?: string;
+  idPrefix: string;
+}) {
+  if (overlaySrc) {
+    return (
+      <img
+        className="preview-decoration-overlay-raster"
+        src={overlaySrc}
+        alt=""
+        draggable={false}
+      />
+    );
+  }
+  if (manifest) {
+    return <DecorationManifestSvg manifest={manifest} idPrefix={idPrefix} />;
+  }
+  return null;
+}
+
 function PageCard({
   page,
   fileId,
@@ -2282,16 +2658,26 @@ function ExportPreviewModal({
   const outputPlan = useWorkbenchStore((state) => state.outputPlan);
   const decorations = useWorkbenchStore((state) => state.decorations);
   const exportJob = useWorkbenchStore((state) => state.exportJob);
+  const cacheSession = useWorkbenchStore((state) => state.cacheSession);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [previewInfoOpen, setPreviewInfoOpen] = useState(false);
   const [pageAspectRatios, setPageAspectRatios] = useState<Record<string, number>>({});
+  const [decorationPreviewPages, setDecorationPreviewPages] = useState<Record<string, DecorationPreviewState>>({});
+  const [previewCanvasSize, setPreviewCanvasSize] = useState<PreviewCanvasSize | null>(null);
+  const [previewImageFallbacks, setPreviewImageFallbacks] = useState<Record<string, boolean>>({});
+  const previewCanvasRef = useRef<HTMLDivElement | null>(null);
   const thumbnailRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+  const decorationPreviewPagesRef = useRef<Record<string, DecorationPreviewState>>({});
+  const decorationPreviewGenerationRef = useRef(0);
   const groups = buildExportPreviewGroups(files, pagesByFile, outputPlan);
   const pages = flattenExportPreviewGroups(groups);
   const pendingFiles = files.filter(
     (file) =>
       !file.excluded && ["queued", "converting", "stale"].includes(file.cacheState),
   );
+  const previewSignature = exportPreviewSignature(files, pagesByFile, decorations, outputPlan);
+  const decorationPreviewAvailable =
+    isTauriRuntime() && Boolean(cacheSession.path) && pendingFiles.length === 0 && pages.length > 0;
 
   useEffect(() => {
     if (!open) {
@@ -2330,7 +2716,187 @@ function ExportPreviewModal({
   }, [open, onClose, pages.length]);
 
   const currentPage = pages[currentIndex];
-  const currentKey = currentPage ? `${currentPage.id}-${currentPage.globalIndex}` : "";
+  const currentKey = currentPage ? decorationPreviewKey(currentPage) : "";
+
+  useEffect(() => {
+    decorationPreviewPagesRef.current = decorationPreviewPages;
+  }, [decorationPreviewPages]);
+
+  useEffect(() => {
+    decorationPreviewGenerationRef.current += 1;
+    const cachedPages = cachedDecorationPreviewPages(previewSignature, pages);
+    decorationPreviewPagesRef.current = cachedPages;
+    setDecorationPreviewPages(cachedPages);
+    setPreviewImageFallbacks({});
+  }, [open, pages.length, previewSignature]);
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+    const node = previewCanvasRef.current;
+    if (!node) {
+      return;
+    }
+
+    const updateCanvasSize = () => {
+      const rect = node.getBoundingClientRect();
+      const nextSize = {
+        width: Math.max(0, rect.width),
+        height: Math.max(0, rect.height),
+      };
+      setPreviewCanvasSize((current) => {
+        if (
+          current &&
+          Math.abs(current.width - nextSize.width) < 1 &&
+          Math.abs(current.height - nextSize.height) < 1
+        ) {
+          return current;
+        }
+        return nextSize;
+      });
+    };
+
+    updateCanvasSize();
+    if (typeof ResizeObserver === "undefined") {
+      window.addEventListener("resize", updateCanvasSize);
+      return () => window.removeEventListener("resize", updateCanvasSize);
+    }
+
+    const observer = new ResizeObserver(updateCanvasSize);
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [open]);
+
+  useEffect(() => {
+    if (!open || !decorationPreviewAvailable || !cacheSession.path || !currentPage || !currentKey) {
+      return;
+    }
+
+    const sessionPath = cacheSession.path;
+    const page = currentPage;
+    const key = currentKey;
+    const cacheKey = decorationPreviewCacheKey(previewSignature, page);
+    const cached = decorationPreviewSessionCache.get(cacheKey);
+    if (cached?.manifest) {
+      const next = { ...decorationPreviewPagesRef.current, [key]: cached };
+      decorationPreviewPagesRef.current = next;
+      setDecorationPreviewPages(next);
+      return;
+    }
+
+    const generation = decorationPreviewGenerationRef.current;
+    let cancelled = false;
+    void requestDecorationManifestPage(sessionPath, previewSignature, page)
+      .then((manifest) => {
+        if (cancelled || decorationPreviewGenerationRef.current !== generation) {
+          return;
+        }
+        const manifestState: DecorationPreviewState = { status: "manifest", manifest };
+        rememberDecorationPreviewCache(cacheKey, manifestState);
+        setDecorationPreviewPages((current) => {
+          const currentState = current[key];
+          if (currentState?.status === "ready") {
+            return current;
+          }
+          const next = { ...current, [key]: { ...currentState, ...manifestState } };
+          decorationPreviewPagesRef.current = next;
+          return next;
+        });
+      })
+      .catch(() => {
+        if (cancelled || decorationPreviewGenerationRef.current !== generation) {
+          return;
+        }
+        const errorState: DecorationPreviewState = { status: "error" };
+        setDecorationPreviewPages((current) => {
+          if (current[key]?.status === "ready" || current[key]?.status === "manifest") {
+            return current;
+          }
+          const next = { ...current, [key]: errorState };
+          decorationPreviewPagesRef.current = next;
+          return next;
+        });
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    cacheSession.path,
+    currentKey,
+    currentPage,
+    decorationPreviewAvailable,
+    open,
+    previewSignature,
+  ]);
+
+  useEffect(() => {
+    if (!open || !decorationPreviewAvailable || !cacheSession.path || !currentPage || !currentKey) {
+      return;
+    }
+
+    const sessionPath = cacheSession.path;
+    const generation = decorationPreviewGenerationRef.current;
+    let cancelled = false;
+    const targetPages = [pages[currentIndex], pages[currentIndex - 1], pages[currentIndex + 1]].filter(
+      (page): page is ExportPreviewFilmstripPage => Boolean(page),
+    );
+    const timer = window.setTimeout(() => {
+      for (const page of targetPages) {
+        const key = decorationPreviewKey(page);
+        if (decorationPreviewPagesRef.current[key]?.status === "ready") {
+          continue;
+        }
+        const cacheKey = decorationPreviewCacheKey(previewSignature, page);
+        void requestDecorationOverlayPage(sessionPath, previewSignature, page)
+          .then((overlay) => {
+            if (cancelled || decorationPreviewGenerationRef.current !== generation) {
+              return;
+            }
+            const readyState: DecorationPreviewState = {
+              status: "ready",
+              manifest: overlay,
+              overlay,
+            };
+            rememberDecorationPreviewCache(cacheKey, readyState);
+            setDecorationPreviewPages((current) => {
+              const next = { ...current, [key]: readyState };
+              decorationPreviewPagesRef.current = next;
+              return next;
+            });
+          })
+          .catch(() => {
+            if (cancelled || decorationPreviewGenerationRef.current !== generation) {
+              return;
+            }
+            const errorState: DecorationPreviewState = { status: "error" };
+            setDecorationPreviewPages((current) => {
+              if (current[key]?.status === "ready") {
+                return current;
+              }
+              const next = { ...current, [key]: { ...current[key], ...errorState } };
+              decorationPreviewPagesRef.current = next;
+              return next;
+            });
+          });
+      }
+    }, decorationPreviewOverlayDelayMs);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [
+    cacheSession.path,
+    currentIndex,
+    currentKey,
+    currentPage,
+    decorationPreviewAvailable,
+    open,
+    pages.length,
+    previewSignature,
+  ]);
 
   useEffect(() => {
     if (!open || !currentKey) {
@@ -2354,8 +2920,22 @@ function ExportPreviewModal({
     }
     setCurrentIndex(Math.max(0, Math.min(pages.length - 1, nextIndex)));
   };
-  const currentThumbnailSrc = localAssetSrc(currentPage?.previewPath ?? currentPage?.thumbnailPath);
-  const currentAspectRatio = currentKey ? pageAspectRatios[currentKey] : undefined;
+  const currentImagePath =
+    currentPage && currentKey && previewImageFallbacks[currentKey]
+      ? currentPage.thumbnailPath
+      : currentPage?.previewPath ?? currentPage?.thumbnailPath;
+  const currentThumbnailSrc = localAssetSrc(currentImagePath);
+  const currentDecorationPreview = currentKey ? decorationPreviewPages[currentKey] : undefined;
+  const currentDecorationManifest =
+    currentDecorationPreview?.manifest ?? currentDecorationPreview?.overlay;
+  const currentDecorationOverlaySrc = localAssetSrc(currentDecorationPreview?.overlay?.overlayPath ?? undefined);
+  const currentManifestAspectRatio =
+    currentDecorationManifest?.pageWidthPt && currentDecorationManifest.pageHeightPt
+      ? currentDecorationManifest.pageWidthPt / currentDecorationManifest.pageHeightPt
+      : undefined;
+  const currentAspectRatio =
+    currentManifestAspectRatio ?? (currentKey ? pageAspectRatios[currentKey] : undefined);
+  const currentPageFrameStyle = previewPageFrameStyle(currentAspectRatio, previewCanvasSize);
   const rememberPageAspectRatio = (
     pageKey: string,
     event: SyntheticEvent<HTMLImageElement>,
@@ -2369,6 +2949,17 @@ function ExportPreviewModal({
       Math.abs((current[pageKey] ?? 0) - nextRatio) < 0.001
         ? current
         : { ...current, [pageKey]: nextRatio },
+    );
+  };
+  const fallbackToThumbnailPreview = () => {
+    if (!currentPage || !currentKey || !currentPage.previewPath || !currentPage.thumbnailPath) {
+      return;
+    }
+    if (currentPage.previewPath === currentPage.thumbnailPath) {
+      return;
+    }
+    setPreviewImageFallbacks((current) =>
+      current[currentKey] ? current : { ...current, [currentKey]: true },
     );
   };
 
@@ -2424,15 +3015,11 @@ function ExportPreviewModal({
           >
             <ChevronRight size={24} />
           </button>
-          <div className="preview-canvas">
+          <div className="preview-canvas" ref={previewCanvasRef}>
             {currentPage ? (
               <div
                 className="preview-live-page"
-                style={
-                  currentAspectRatio
-                    ? { aspectRatio: String(currentAspectRatio) }
-                    : undefined
-                }
+                style={currentPageFrameStyle}
               >
                 {currentThumbnailSrc ? (
                   <img
@@ -2441,6 +3028,7 @@ function ExportPreviewModal({
                     alt=""
                     draggable={false}
                     onLoad={(event) => rememberPageAspectRatio(currentKey, event)}
+                    onError={fallbackToThumbnailPreview}
                   />
                 ) : (
                   <div className="preview-live-placeholder">
@@ -2448,10 +3036,11 @@ function ExportPreviewModal({
                     <span>{currentPage.fileName}</span>
                   </div>
                 )}
-                <PageDecorations page={currentPage} decorations={decorations} />
-                <div className="preview-live-page-label">
-                  {kindLabel(currentPage.fileKind)} p{currentPage.outputPageNumber}
-                </div>
+                <DecorationPreviewLayer
+                  manifest={currentDecorationManifest}
+                  overlaySrc={currentDecorationOverlaySrc}
+                  idPrefix={`preview-${currentKey}`}
+                />
               </div>
             ) : (
               <div className="preview-live-empty">出力対象ページがありません</div>
@@ -2471,8 +3060,15 @@ function ExportPreviewModal({
         <div className="preview-filmstrip" aria-label="出力ページ一覧">
           {pages.length > 0 ? (
             pages.map((page, index) => {
-              const pageKey = `${page.id}-${page.globalIndex}`;
+              const pageKey = decorationPreviewKey(page);
+              const decorationPreview = decorationPreviewPages[pageKey];
+              const decorationManifest = decorationPreview?.manifest ?? decorationPreview?.overlay;
+              const decorationOverlaySrc = localAssetSrc(decorationPreview?.overlay?.overlayPath ?? undefined);
               const thumbnailSrc = localAssetSrc(page.thumbnailPath);
+              const manifestAspectRatio =
+                decorationManifest?.pageWidthPt && decorationManifest.pageHeightPt
+                  ? decorationManifest.pageWidthPt / decorationManifest.pageHeightPt
+                  : undefined;
               return (
                 <div className="filmstrip-item-wrap" key={pageKey}>
                   {page.startsOutput && (
@@ -2493,8 +3089,8 @@ function ExportPreviewModal({
                     <div
                       className={["filmstrip-paper", thumbnailSrc ? "has-thumbnail" : ""].join(" ")}
                       style={
-                        pageAspectRatios[pageKey]
-                          ? { aspectRatio: String(pageAspectRatios[pageKey]) }
+                        manifestAspectRatio || pageAspectRatios[pageKey]
+                          ? { aspectRatio: String(manifestAspectRatio ?? pageAspectRatios[pageKey]) }
                           : undefined
                       }
                     >
@@ -2508,7 +3104,11 @@ function ExportPreviewModal({
                       ) : (
                         <FileText size={20} />
                       )}
-                      <PageDecorations page={page} decorations={decorations} />
+                      <DecorationPreviewLayer
+                        manifest={decorationManifest}
+                        overlaySrc={decorationOverlaySrc}
+                        idPrefix={`filmstrip-${pageKey}`}
+                      />
                     </div>
                     <span>{kindLabel(page.fileKind)} p{page.outputPageNumber}</span>
                   </button>
@@ -2518,109 +3118,6 @@ function ExportPreviewModal({
           ) : (
             <div className="preview-empty">出力対象ページがありません</div>
           )}
-        </div>
-
-        <div className="preview-actions">
-          <button onClick={onClose}>戻る</button>
-          <button
-            className="export-button"
-            disabled={exportJob.status === "running" || outputPlan.activePageCount === 0}
-            onClick={onConfirm}
-          >
-            <FileOutput size={17} />
-            この内容で書き出し
-          </button>
-        </div>
-      </section>
-    </div>
-  );
-}
-
-function LegacyExportPreviewModal({
-  open,
-  onClose,
-  onConfirm,
-}: {
-  open: boolean;
-  onClose: () => void;
-  onConfirm: () => void;
-}) {
-  const files = useWorkbenchStore((state) => state.files);
-  const pagesByFile = useWorkbenchStore((state) => state.pagesByFile);
-  const outputPlan = useWorkbenchStore((state) => state.outputPlan);
-  const decorations = useWorkbenchStore((state) => state.decorations);
-  const exportJob = useWorkbenchStore((state) => state.exportJob);
-
-  if (!open) {
-    return null;
-  }
-
-  const groups = buildExportPreviewGroups(files, pagesByFile, outputPlan);
-  const pendingFiles = files.filter(
-    (file) =>
-      !file.excluded && ["queued", "converting", "stale"].includes(file.cacheState),
-  );
-
-  return (
-    <div className="modal-backdrop" role="presentation">
-      <section className="export-preview-modal" role="dialog" aria-modal="true" aria-label="書き出しプレビュー">
-        <div className="modal-heading">
-          <span>
-            <Eye size={18} />
-            書き出しプレビュー
-          </span>
-          <button className="icon-button" onClick={onClose} aria-label="プレビューを閉じる">
-            <X size={18} />
-          </button>
-        </div>
-
-        <div className="preview-summary-row">
-          <span>{outputPlan.outputCount}ファイル</span>
-          <span>{outputPlan.activePageCount}ページ</span>
-          <span>除外 {outputPlan.excludedPageCount}</span>
-          <span>分割 {outputPlan.splitCount}</span>
-          <span>装飾 {decorations.length}</span>
-          <span>{outputPlan.encrypted ? "暗号化あり" : "暗号化なし"}</span>
-        </div>
-
-        {pendingFiles.length > 0 && (
-          <div className="preview-warning">
-            未準備のファイルは、書き出し前にバックグラウンドでPDF化してから反映します。
-          </div>
-        )}
-
-        <div className="preview-output-list">
-          {groups.map((group, index) => (
-            <article className="preview-output-group" key={group.name}>
-              <div className="preview-output-heading">
-                <strong>{group.name}</strong>
-                <span>出力 {index + 1} / {group.pages.length}ページ</span>
-              </div>
-              <div className="preview-page-strip">
-                {group.pages.length > 0 ? (
-                  group.pages.map((page) => {
-                    const thumbnailSrc = localAssetSrc(page.thumbnailPath);
-                    return (
-                      <div className="preview-page-card" key={page.id} title={page.fileName}>
-                        <div className="preview-page-paper">
-                          {thumbnailSrc ? (
-                            <img src={thumbnailSrc} alt="" draggable={false} />
-                          ) : (
-                            <FileText size={26} />
-                          )}
-                        </div>
-                        <span>
-                          {kindLabel(page.fileKind)} p{page.pageNumber}
-                        </span>
-                      </div>
-                    );
-                  })
-                ) : (
-                  <div className="preview-empty">出力対象ページがありません</div>
-                )}
-              </div>
-            </article>
-          ))}
         </div>
 
         <div className="preview-actions">

@@ -1,0 +1,32 @@
+{
+  "source": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\docs\\reports\\e2e\\2026-05-16-header-footer-debug\\inputs\\pdf_normal_portrait.pdf",
+  "outputFiles": [
+    "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\docs\\reports\\e2e\\2026-05-16-exact-export-preview\\outputs\\exact-preview-a.pdf",
+    "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\docs\\reports\\e2e\\2026-05-16-exact-export-preview\\outputs\\exact-preview-b.pdf"
+  ],
+  "results": [
+    {
+      "outputIndex": 0,
+      "elapsedMs": 476.5,
+      "previewPath": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\docs\\reports\\e2e\\2026-05-16-exact-export-preview\\preview-cache\\preview\\preview-o001-p0001-1335242d70844584b8659e3707caa657.png",
+      "finalRenderedPath": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\docs\\reports\\e2e\\2026-05-16-exact-export-preview\\rendered-final\\final-output-1.png",
+      "dimensions": [
+        1005,
+        1422
+      ],
+      "pixelExact": true
+    },
+    {
+      "outputIndex": 1,
+      "elapsedMs": 545.1,
+      "previewPath": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\docs\\reports\\e2e\\2026-05-16-exact-export-preview\\preview-cache\\preview\\preview-o002-p0001-f76a73f464f248fa9cbd05ec073da0f8.png",
+      "finalRenderedPath": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\docs\\reports\\e2e\\2026-05-16-exact-export-preview\\rendered-final\\final-output-2.png",
+      "dimensions": [
+        1005,
+        1422
+      ],
+      "pixelExact": true
+    }
+  ],
+  "overallPass": true
+}

@@ -1,0 +1,267 @@
+{
+  "createdAt": "2026-05-16T17:26:48",
+  "root": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\docs\\reports\\e2e\\2026-05-16-header-footer-debug",
+  "decorations": [
+    {
+      "id": "hf-hl",
+      "kind": "header",
+      "target": "all",
+      "position": "top-left",
+      "text": "HL短",
+      "fontSize": 13,
+      "color": "#1f5f8f"
+    },
+    {
+      "id": "hf-hc",
+      "kind": "header",
+      "target": "all",
+      "position": "top",
+      "text": "HC-LONG-HEADER-日本語-ABCDEFGHIJKLMNOPQRSTUVWXYZ-1234567890-長文表示確認",
+      "fontSize": 13,
+      "color": "#1f5f8f"
+    },
+    {
+      "id": "hf-hr",
+      "kind": "header",
+      "target": "all",
+      "position": "top-right",
+      "text": "HR文書-{page}/{total}",
+      "fontSize": 12,
+      "color": "#1f5f8f"
+    },
+    {
+      "id": "hf-fl",
+      "kind": "footer",
+      "target": "all",
+      "position": "bottom-left",
+      "text": "FL承認",
+      "fontSize": 13,
+      "color": "#365a7a"
+    },
+    {
+      "id": "hf-fc",
+      "kind": "footer",
+      "target": "all",
+      "position": "bottom",
+      "text": "FC-LONG-FOOTER-日本語-ABCDEFGHIJKLMNOPQRSTUVWXYZ-9876543210-長文表示確認",
+      "fontSize": 13,
+      "color": "#365a7a"
+    },
+    {
+      "id": "hf-pn",
+      "kind": "page-number",
+      "target": "all",
+      "position": "bottom-right",
+      "text": "PN-{page}/{total}",
+      "fontSize": 12,
+      "color": "#365a7a"
+    }
+  ],
+  "cases": [
+    {
+      "id": "pdf-normal",
+      "label": "PDF normal portrait",
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\docs\\reports\\e2e\\2026-05-16-header-footer-debug\\inputs\\pdf_normal_portrait.pdf",
+      "stress": "standard portrait with open margins",
+      "source": null,
+      "output": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\docs\\reports\\e2e\\2026-05-16-header-footer-debug\\outputs\\decorated-pdf_normal_portrait.pdf",
+      "preview": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\docs\\reports\\e2e\\2026-05-16-header-footer-debug\\previews\\decorated-pdf_normal_portrait-p1.png",
+      "metrics": {
+        "pages": 2,
+        "pageSize": [
+          595.0,
+          842.0
+        ],
+        "missingMarkers": [],
+        "missingJapaneseTerms": [],
+        "outsidePage": [],
+        "wrongBand": [],
+        "sourceTopBandBlocks": 0,
+        "sourceBottomBandBlocks": 0,
+        "topChangedPixels": 2742,
+        "bottomChangedPixels": 2535,
+        "bandPixels": 112518,
+        "pass": true,
+        "missingRequiredJapaneseTerms": []
+      }
+    },
+    {
+      "id": "pdf-dense",
+      "label": "PDF dense top/bottom",
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\docs\\reports\\e2e\\2026-05-16-header-footer-debug\\inputs\\pdf_dense_margins.pdf",
+      "stress": "source content intentionally occupies header/footer bands",
+      "source": null,
+      "output": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\docs\\reports\\e2e\\2026-05-16-header-footer-debug\\outputs\\decorated-pdf_dense_margins.pdf",
+      "preview": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\docs\\reports\\e2e\\2026-05-16-header-footer-debug\\previews\\decorated-pdf_dense_margins-p1.png",
+      "metrics": {
+        "pages": 1,
+        "pageSize": [
+          595.0,
+          842.0
+        ],
+        "missingMarkers": [],
+        "missingJapaneseTerms": [],
+        "outsidePage": [],
+        "wrongBand": [],
+        "sourceTopBandBlocks": 4,
+        "sourceBottomBandBlocks": 4,
+        "topChangedPixels": 5319,
+        "bottomChangedPixels": 5432,
+        "bandPixels": 112518,
+        "pass": true,
+        "missingRequiredJapaneseTerms": []
+      }
+    },
+    {
+      "id": "pdf-landscape",
+      "label": "PDF landscape wide",
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\docs\\reports\\e2e\\2026-05-16-header-footer-debug\\inputs\\pdf_landscape_wide.pdf",
+      "stress": "landscape and wide table",
+      "source": null,
+      "output": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\docs\\reports\\e2e\\2026-05-16-header-footer-debug\\outputs\\decorated-pdf_landscape_wide.pdf",
+      "preview": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\docs\\reports\\e2e\\2026-05-16-header-footer-debug\\previews\\decorated-pdf_landscape_wide-p1.png",
+      "metrics": {
+        "pages": 1,
+        "pageSize": [
+          842.0,
+          595.0
+        ],
+        "missingMarkers": [],
+        "missingJapaneseTerms": [],
+        "outsidePage": [],
+        "wrongBand": [],
+        "sourceTopBandBlocks": 0,
+        "sourceBottomBandBlocks": 0,
+        "topChangedPixels": 3427,
+        "bottomChangedPixels": 3221,
+        "bandPixels": 112407,
+        "pass": true,
+        "missingRequiredJapaneseTerms": []
+      }
+    },
+    {
+      "id": "pdf-small",
+      "label": "PDF small page",
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\docs\\reports\\e2e\\2026-05-16-header-footer-debug\\inputs\\pdf_small_page.pdf",
+      "stress": "small page with narrow slots",
+      "source": null,
+      "output": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\docs\\reports\\e2e\\2026-05-16-header-footer-debug\\outputs\\decorated-pdf_small_page.pdf",
+      "preview": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\docs\\reports\\e2e\\2026-05-16-header-footer-debug\\previews\\decorated-pdf_small_page-p1.png",
+      "metrics": {
+        "pages": 1,
+        "pageSize": [
+          300.0,
+          220.0
+        ],
+        "missingMarkers": [],
+        "missingJapaneseTerms": [
+          "日本語"
+        ],
+        "outsidePage": [],
+        "wrongBand": [],
+        "sourceTopBandBlocks": 0,
+        "sourceBottomBandBlocks": 0,
+        "topChangedPixels": 1385,
+        "bottomChangedPixels": 178,
+        "bandPixels": 14850,
+        "pass": true,
+        "missingRequiredJapaneseTerms": []
+      }
+    },
+    {
+      "id": "office-word",
+      "label": "Word converted PDF",
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\docs\\reports\\e2e\\2026-05-16-header-footer-debug\\converted\\office_word_dense.pdf",
+      "source": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\docs\\reports\\e2e\\2026-05-16-header-footer-debug\\inputs\\office_word_dense.docx",
+      "stress": "Office COM Word conversion, narrow margins",
+      "output": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\docs\\reports\\e2e\\2026-05-16-header-footer-debug\\outputs\\decorated-office_word_dense.pdf",
+      "preview": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\docs\\reports\\e2e\\2026-05-16-header-footer-debug\\previews\\decorated-office_word_dense-p1.png",
+      "metrics": {
+        "pages": 1,
+        "pageSize": [
+          595.32,
+          841.92
+        ],
+        "missingMarkers": [],
+        "missingJapaneseTerms": [],
+        "outsidePage": [],
+        "wrongBand": [],
+        "sourceTopBandBlocks": 3,
+        "sourceBottomBandBlocks": 0,
+        "topChangedPixels": 3126,
+        "bottomChangedPixels": 2537,
+        "bandPixels": 112518,
+        "pass": true,
+        "missingRequiredJapaneseTerms": []
+      }
+    },
+    {
+      "id": "office-excel",
+      "label": "Excel converted PDF",
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\docs\\reports\\e2e\\2026-05-16-header-footer-debug\\converted\\office_excel_wide.pdf",
+      "source": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\docs\\reports\\e2e\\2026-05-16-header-footer-debug\\inputs\\office_excel_wide.xlsx",
+      "stress": "Office COM Excel conversion, landscape wide sheet",
+      "output": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\docs\\reports\\e2e\\2026-05-16-header-footer-debug\\outputs\\decorated-office_excel_wide.pdf",
+      "preview": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\docs\\reports\\e2e\\2026-05-16-header-footer-debug\\previews\\decorated-office_excel_wide-p1.png",
+      "metrics": {
+        "pages": 2,
+        "pageSize": [
+          841.92,
+          595.32
+        ],
+        "missingMarkers": [],
+        "missingJapaneseTerms": [],
+        "outsidePage": [],
+        "wrongBand": [],
+        "sourceTopBandBlocks": 2,
+        "sourceBottomBandBlocks": 1,
+        "topChangedPixels": 5207,
+        "bottomChangedPixels": 3713,
+        "bandPixels": 112407,
+        "pass": true,
+        "missingRequiredJapaneseTerms": []
+      }
+    },
+    {
+      "id": "office-ppt",
+      "label": "PowerPoint converted PDF",
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\docs\\reports\\e2e\\2026-05-16-header-footer-debug\\converted\\office_powerpoint_edge.pdf",
+      "source": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\docs\\reports\\e2e\\2026-05-16-header-footer-debug\\inputs\\office_powerpoint_edge.pptx",
+      "stress": "Office COM PowerPoint conversion, edge text",
+      "output": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\docs\\reports\\e2e\\2026-05-16-header-footer-debug\\outputs\\decorated-office_powerpoint_edge.pdf",
+      "preview": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\docs\\reports\\e2e\\2026-05-16-header-footer-debug\\previews\\decorated-office_powerpoint_edge-p1.png",
+      "metrics": {
+        "pages": 1,
+        "pageSize": [
+          960.0,
+          540.0
+        ],
+        "missingMarkers": [],
+        "missingJapaneseTerms": [],
+        "outsidePage": [],
+        "wrongBand": [],
+        "sourceTopBandBlocks": 1,
+        "sourceBottomBandBlocks": 1,
+        "topChangedPixels": 4837,
+        "bottomChangedPixels": 4495,
+        "bandPixels": 116640,
+        "pass": true,
+        "missingRequiredJapaneseTerms": []
+      }
+    }
+  ],
+  "mixedExport": {
+    "result": {
+      "outputFiles": [
+        "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\docs\\reports\\e2e\\2026-05-16-header-footer-debug\\outputs\\mixed-export\\mixed-before-office.pdf",
+        "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\docs\\reports\\e2e\\2026-05-16-header-footer-debug\\outputs\\mixed-export\\mixed-with-office.pdf"
+      ],
+      "outputCount": 2
+    },
+    "previews": [
+      "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\docs\\reports\\e2e\\2026-05-16-header-footer-debug\\previews\\mixed-mixed-before-office-p1.png",
+      "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\docs\\reports\\e2e\\2026-05-16-header-footer-debug\\previews\\mixed-mixed-with-office-p1.png"
+    ]
+  },
+  "overallPass": true
+}

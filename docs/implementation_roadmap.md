@@ -826,3 +826,195 @@ Evidence:
 Remaining:
 
 - Validate the NSIS/MSI installer on a separate clean Windows PC that has Microsoft Office installed but no development Python, Node, or Rust toolchains.
+
+## 2026-05-16 Alpha practical-test fixes
+
+Implemented:
+
+- Hardened the bottom output bar so completed status text and action buttons do not wrap at 1366x768.
+- Made the log drawer opaque and explicitly stacked above page header/footer/watermark preview labels.
+- Added split-output naming settings from the bottom output chip edit icon. The editor sets the save destination folder and output names together.
+- Applied custom output naming bypasses the old export-time save dialog. The worker receives `outputDir` and `outputNames[]` and writes final PDFs with those names.
+- Custom output naming can be reset after confirmation and is cleared when file-card removal leaves the workspace blank.
+
+Verification:
+
+- `npm run typecheck`: passed.
+- `npm run build`: passed outside sandbox after the known Vite/Rolldown `spawn EPERM` limitation was avoided.
+- `python -m py_compile src-python\pdf_workbench_engine\jobs\export_workspace.py`: passed.
+- Browser visual check at 1366x768 using `?fixture=workbench`: passed for log drawer stacking, output-name editor apply/reset, and completed-status bottom bar density.
+
+Evidence:
+
+- Report: `docs/reports/2026-05-16-alpha-practical-test-fixes.md`
+- Screenshots:
+  - `docs/reports/screenshots/2026-05-16-output-log-layout-1366x768.png`
+  - `docs/reports/screenshots/2026-05-16-output-name-editor-applied-1366x768.png`
+  - `docs/reports/screenshots/2026-05-16-output-bar-complete-1366x768.png`
+
+Remaining:
+
+- Verify the new custom output names in the installed Tauri executable with a real folder path and real PDF/Office inputs. Browser mode can validate UI state, but the OS folder picker and actual custom-name file writes need Tauri runtime coverage.
+
+## 2026-05-16 Status pill and header/footer fit fixes
+
+Implemented:
+
+- Changed the top-right app-bar job status into a fixed-width pill with short stable labels so export progress no longer shifts neighboring controls.
+- Reworked header/footer/page-number preview chips so short values do not leave large blank fields and long values shrink/clip inside their left, center, or right slot.
+- Updated Python PDF decoration rendering to fit header/footer/page-number text inside margin-band text boxes, auto-shrink long text, and draw compact light backing rectangles to reduce collisions with source PDF content.
+
+Verification:
+
+- `npm run typecheck`: passed.
+- `python -m py_compile src-python\pdf_workbench_engine\services\pdf_decorations.py`: passed.
+- Python decoration smoke test for short and long header/footer text: passed.
+- `npm run build`: passed outside sandbox after the known Vite/Rolldown `spawn EPERM` limitation was avoided.
+- Browser visual check at 1366x768 using `?fixture=workbench`: passed for fixed app-bar status width and header/footer preview fit.
+
+Evidence:
+
+- Report: `docs/reports/2026-05-16-status-decoration-fit-fixes.md`
+- Screenshot: `docs/reports/screenshots/2026-05-16-status-decoration-layout-1366x768.png`
+
+Remaining:
+
+- Confirm exported decoration placement against a representative set of real business PDFs, because source content can still occupy the same top/bottom margin band.
+
+## 2026-05-16 Header/footer bad-condition debug pass
+
+Implemented:
+
+- Added PDF-output abbreviation for header/footer/page-number strings that still exceed a slot after auto-shrinking, so tiny pages show a shortened value instead of dropping the text.
+- Built an E2E debug set covering portrait PDF, dense top/bottom PDF, landscape PDF, small-page PDF, and Office COM-converted Word/Excel/PowerPoint PDFs.
+- Ran both per-file decoration output and a mixed workspace export with two split outputs.
+
+Verification:
+
+- Office COM conversion: passed for Word, Excel, and PowerPoint test files.
+- Header/footer/page-number application: passed for 7/7 decorated outputs after the abbreviation fix.
+- Mixed export route with PDF and Office-converted inputs: passed and produced 2 PDFs.
+- `python -m py_compile src-python\pdf_workbench_engine\services\pdf_decorations.py`: passed.
+- `npm run typecheck`: passed.
+- `npm run build`: passed outside sandbox after the known Vite/Rolldown `spawn EPERM` limitation was avoided.
+
+Evidence:
+
+- Report: `docs/reports/2026-05-16-header-footer-debug-e2e.md`
+- Summary JSON: `docs/reports/e2e/2026-05-16-header-footer-debug/summary.json`
+- Contact sheet: `docs/reports/e2e/2026-05-16-header-footer-debug/previews/contact-sheet-decorated-first-pages.png`
+
+Remaining:
+
+- Dense source content in the top/bottom margin band is protected by a light backing rectangle, but it can still be visually covered. Real customer templates should be sampled before finalizing the default band position.
+
+## 2026-05-16 Natural Word-like header/footer standard
+
+Implemented:
+
+- Normalized header, footer, and page-number PDF output to black 8.5pt text regardless of stored decoration color or size.
+- Removed the visible backing rectangle/chip treatment from PDF output, keeping only natural text in the top/bottom margin slot.
+- Updated React preview labels to black transparent text instead of blue badge-like chips.
+- Kept fixed-size fit behavior by abbreviating long text with `...` rather than shrinking per file.
+
+Verification:
+
+- Reused the bad-condition PDF/Office-derived set from the header/footer debug pass.
+- Applied deliberately mismatched requested sizes and colors, then confirmed all 7 output PDFs extracted only 8.5pt black header/footer/page-number spans.
+- Mixed export route with PDF and Office-converted inputs: passed and produced 2 PDFs.
+- Browser visual check at 1366x768 using `?fixture=workbench`: passed for black transparent preview labels.
+- `python -m py_compile src-python\pdf_workbench_engine\services\pdf_decorations.py`: passed.
+- `npm run typecheck`: passed.
+- `npm run build`: passed outside sandbox after the known Vite/Rolldown `spawn EPERM` limitation was avoided.
+
+Evidence:
+
+- Report: `docs/reports/2026-05-16-natural-header-footer-style.md`
+- Summary JSON: `docs/reports/e2e/2026-05-16-header-footer-natural/summary.json`
+- Contact sheet: `docs/reports/e2e/2026-05-16-header-footer-natural/previews/contact-sheet-natural-header-footer.png`
+- Browser screenshot: `docs/reports/screenshots/2026-05-16-natural-header-footer-preview-1366x768.png`
+
+Remaining:
+
+- If a source PDF has actual content in the Word-style margin band, natural black header/footer text can overlap that content. The app now favors natural output over a protective white backing.
+
+## 2026-05-16 Exact completed-state export preview
+
+Implemented:
+
+- Added a worker job that renders a single export-preview page through the same page extraction and decoration pipeline as final export, then produces preview and filmstrip PNGs.
+- Updated the Tauri preview modal to request the current page first and prefetch adjacent pages without blocking the edit screen.
+- Replaced final-state decoration overlays in Tauri preview with worker-rendered completed images. While the exact image is pending, the modal shows the existing thumbnail plus a clear short wait message.
+- Browser fixture mode remains usable for layout checks with the lightweight React overlay; exact final-state preview requires the Tauri worker runtime.
+- Superseded on 2026-05-16 by the PDF-coordinate decoration manifest plus transparent decoration PNG path below. The completed-page preview PNG worker path should not be reintroduced.
+
+Waiting model:
+
+- No wait is introduced on header/footer/watermark editing or normal page/file operations.
+- The only user-visible wait is inside the export preview modal, per page, after the user asks to preview output.
+- If Office/PDF preparation is still running, the preview explains that completed preview will appear after preparation finishes.
+
+Verification:
+
+- See `docs/reports/2026-05-16-exact-export-preview.md`.
+
+## 2026-05-16 Exact preview speed-up
+
+Implemented:
+
+- The preview worker now stores deterministic completed-page PNGs in the session preview cache. When workspace state and source fingerprints match, the worker returns existing PNG metadata instead of rebuilding the temporary PDF.
+- The preview worker can skip thumbnail rendering for the currently viewed large page, so the first exact page render focuses on the image the user is waiting for.
+- React keeps a session-level exact-preview result cache. If the first page was prewarmed, opening the preview modal can show the exact completed image immediately without another worker call.
+- The app prewarms only the first output page after a short idle delay, only when no input file is queued/converting/stale, and never while export is running.
+- Superseded on 2026-05-16. Cache/prewarm logic now applies to lightweight decoration manifests and transparent decoration PNG overlays, not completed full-page PNG previews.
+
+Verification:
+
+- See `docs/reports/2026-05-16-exact-preview-speedup.md`.
+
+## 2026-05-16 Fast overlay preview default
+
+Implemented:
+
+- Export preview page navigation now renders immediately from the existing preview PNG plus the React header/footer/page-number/watermark overlay.
+- Completed worker-rendered PNG creation is delayed until the user has stopped on a page, then runs in the background and silently replaces the fast overlay image when ready.
+- The modal no longer blocks normal page navigation with a `完成プレビューを作成中` page overlay. Visible waiting remains only for source preparation states such as Office/PDF conversion.
+- Filmstrip thumbnails use the same fast overlay path unless an exact thumbnail already exists.
+- Superseded on 2026-05-16. The React-only overlay has been replaced by an SVG layer generated from the Python PDF-coordinate manifest, followed by a transparent PyMuPDF decoration PNG refinement.
+
+Verification:
+
+- See `docs/reports/2026-05-16-fast-overlay-preview.md`.
+
+## 2026-05-16 Decoration manifest plus transparent PNG preview
+
+Implemented:
+
+- Export preview now requests a lightweight PDF-coordinate decoration manifest for the selected output page. The manifest is produced by the same Python layout code used by final PDF decoration output.
+- The preview modal draws that manifest as an SVG layer over the existing page preview image. Arrow-key and button page navigation are not blocked by full PDF rendering.
+- A transparent PyMuPDF-rendered decoration PNG is generated asynchronously for the current, previous, and next pages after a short delay. When it is ready, it replaces the SVG layer without changing layout.
+- The obsolete completed full-page preview worker was removed from the active Python/TypeScript command surface.
+- Source-preparation waits remain explicit through existing Office/PDF conversion state. Decoration overlay generation is background-only and does not show a blocking page overlay.
+
+Verification:
+
+- See `docs/reports/2026-05-16-decoration-manifest-overlay.md`.
+
+Follow-up fix:
+
+- The large preview page frame now uses the measured preview canvas size and the current page aspect ratio to set explicit width and height. This prevents the page from collapsing to a tiny center box when the preview image is absolutely positioned for overlay alignment.
+- If the high-resolution preview image fails to load, the modal falls back to the existing thumbnail image so the large preview does not remain blank.
+
+## 2026-05-16 Preview fit and decoration application cleanup
+
+Implemented:
+
+- The export preview modal now measures the actual preview canvas and scales the current page to fit within it, avoiding page clipping at 1366x768.
+- The modal no longer draws the page-kind label over the page itself, so footer/header content is not hidden by app chrome.
+- Header/footer settings are visible immediately when the corresponding tool is selected, before a page or file is clicked.
+- Header/footer/page-number application now treats the same visual slot as a replacement target. Reapplying a changed value to the same page and slot removes the previous effective value instead of stacking `+1`.
+- Page-level overrides now exclude broader all-page or file-level decorations for that page and slot before adding the new page-specific value.
+
+Verification:
+
+- See `docs/reports/2026-05-16-preview-fit-decoration-panel.md`.

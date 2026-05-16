@@ -2,10 +2,15 @@ import {
   cancelProcessingEngineJob,
   convertOfficeFileStreaming,
   createProcessingJobId,
-  exportWorkspaceToPathStreaming,
+  exportWorkspaceToDestinationStreaming,
+  type ExportDestination,
+  renderExportDecorationManifestPage,
+  renderExportDecorationOverlayPage,
   inspectPdfFile,
   ProcessingEngineCancelledError,
   renderPdfThumbnails,
+  type DecorationLayoutManifest,
+  type DecorationOverlayRenderResult,
   type ExportWorkspaceResult,
   type ProcessingEngineEvent,
 } from "./backend";
@@ -276,7 +281,7 @@ function passwordMapForExport(snapshot: WorkbenchSnapshot): Record<string, strin
 }
 
 export async function exportCurrentWorkspaceWithEngine(
-  outputPath: string,
+  destination: string | ExportDestination,
 ): Promise<ExportWorkspaceResult> {
   if (activeExportCancellationRequested) {
     throw new ProcessingEngineCancelledError();
@@ -285,8 +290,8 @@ export async function exportCurrentWorkspaceWithEngine(
   const jobId = createProcessingJobId("export");
   activeExportJobId = jobId;
   try {
-    return await exportWorkspaceToPathStreaming(
-      outputPath,
+    return await exportWorkspaceToDestinationStreaming(
+      typeof destination === "string" ? { outputPath: destination } : destination,
       snapshot,
       passwordMapForExport(snapshot),
       jobId,
@@ -297,6 +302,36 @@ export async function exportCurrentWorkspaceWithEngine(
       activeExportJobId = undefined;
     }
   }
+}
+
+export async function renderCurrentExportDecorationManifestWithEngine(
+  sessionDir: string,
+  outputIndex: number,
+  pageIndex: number,
+): Promise<DecorationLayoutManifest> {
+  const snapshot = snapshotForExport();
+  return renderExportDecorationManifestPage(
+    snapshot,
+    joinWorkerPath(sessionDir, "export-preview"),
+    outputIndex,
+    pageIndex,
+    passwordMapForExport(snapshot),
+  );
+}
+
+export async function renderCurrentExportDecorationOverlayWithEngine(
+  sessionDir: string,
+  outputIndex: number,
+  pageIndex: number,
+): Promise<DecorationOverlayRenderResult> {
+  const snapshot = snapshotForExport();
+  return renderExportDecorationOverlayPage(
+    snapshot,
+    joinWorkerPath(sessionDir, "export-preview"),
+    outputIndex,
+    pageIndex,
+    passwordMapForExport(snapshot),
+  );
 }
 
 function handleExportEvent(event: ProcessingEngineEvent): void {

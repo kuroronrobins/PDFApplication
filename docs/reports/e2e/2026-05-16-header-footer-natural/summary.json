@@ -1,0 +1,226 @@
+{
+  "createdAt": "2026-05-16T17:38:00",
+  "fontSize": 8.5,
+  "expectedColor": "black",
+  "cases": [
+    {
+      "id": "pdf-normal",
+      "label": "PDF normal portrait",
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\docs\\reports\\e2e\\2026-05-16-header-footer-debug\\inputs\\pdf_normal_portrait.pdf",
+      "output": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\docs\\reports\\e2e\\2026-05-16-header-footer-natural\\outputs\\natural-pdf_normal_portrait.pdf",
+      "preview": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\docs\\reports\\e2e\\2026-05-16-header-footer-natural\\previews\\natural-pdf_normal_portrait-p1.png",
+      "metrics": {
+        "pageSize": [
+          595.0,
+          842.0
+        ],
+        "missingMarkers": [],
+        "missingRequiredJapaneseTerms": [],
+        "spanSizes": [
+          8.5,
+          8.5,
+          8.5,
+          8.5,
+          8.5,
+          8.5
+        ],
+        "uniqueColors": [
+          0
+        ],
+        "outsidePage": [],
+        "sizePass": true,
+        "colorPass": true,
+        "pass": true
+      }
+    },
+    {
+      "id": "pdf-dense",
+      "label": "PDF dense top/bottom",
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\docs\\reports\\e2e\\2026-05-16-header-footer-debug\\inputs\\pdf_dense_margins.pdf",
+      "output": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\docs\\reports\\e2e\\2026-05-16-header-footer-natural\\outputs\\natural-pdf_dense_margins.pdf",
+      "preview": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\docs\\reports\\e2e\\2026-05-16-header-footer-natural\\previews\\natural-pdf_dense_margins-p1.png",
+      "metrics": {
+        "pageSize": [
+          595.0,
+          842.0
+        ],
+        "missingMarkers": [],
+        "missingRequiredJapaneseTerms": [],
+        "spanSizes": [
+          8.5,
+          8.5,
+          8.5,
+          8.5,
+          8.5,
+          8.5
+        ],
+        "uniqueColors": [
+          0
+        ],
+        "outsidePage": [],
+        "sizePass": true,
+        "colorPass": true,
+        "pass": true
+      }
+    },
+    {
+      "id": "pdf-landscape",
+      "label": "PDF landscape wide",
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\docs\\reports\\e2e\\2026-05-16-header-footer-debug\\inputs\\pdf_landscape_wide.pdf",
+      "output": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\docs\\reports\\e2e\\2026-05-16-header-footer-natural\\outputs\\natural-pdf_landscape_wide.pdf",
+      "preview": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\docs\\reports\\e2e\\2026-05-16-header-footer-natural\\previews\\natural-pdf_landscape_wide-p1.png",
+      "metrics": {
+        "pageSize": [
+          842.0,
+          595.0
+        ],
+        "missingMarkers": [],
+        "missingRequiredJapaneseTerms": [],
+        "spanSizes": [
+          8.5,
+          8.5,
+          8.5,
+          8.5,
+          8.5,
+          8.5
+        ],
+        "uniqueColors": [
+          0
+        ],
+        "outsidePage": [],
+        "sizePass": true,
+        "colorPass": true,
+        "pass": true
+      }
+    },
+    {
+      "id": "pdf-small",
+      "label": "PDF small page",
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\docs\\reports\\e2e\\2026-05-16-header-footer-debug\\inputs\\pdf_small_page.pdf",
+      "output": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\docs\\reports\\e2e\\2026-05-16-header-footer-natural\\outputs\\natural-pdf_small_page.pdf",
+      "preview": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\docs\\reports\\e2e\\2026-05-16-header-footer-natural\\previews\\natural-pdf_small_page-p1.png",
+      "metrics": {
+        "pageSize": [
+          300.0,
+          220.0
+        ],
+        "missingMarkers": [],
+        "missingRequiredJapaneseTerms": [],
+        "spanSizes": [
+          8.5,
+          8.5,
+          8.5,
+          8.5,
+          8.5,
+          8.5
+        ],
+        "uniqueColors": [
+          0
+        ],
+        "outsidePage": [],
+        "sizePass": true,
+        "colorPass": true,
+        "pass": true
+      }
+    },
+    {
+      "id": "office-word",
+      "label": "Word converted PDF",
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\docs\\reports\\e2e\\2026-05-16-header-footer-debug\\converted\\office_word_dense.pdf",
+      "output": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\docs\\reports\\e2e\\2026-05-16-header-footer-natural\\outputs\\natural-office_word_dense.pdf",
+      "preview": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\docs\\reports\\e2e\\2026-05-16-header-footer-natural\\previews\\natural-office_word_dense-p1.png",
+      "metrics": {
+        "pageSize": [
+          595.32,
+          841.92
+        ],
+        "missingMarkers": [],
+        "missingRequiredJapaneseTerms": [],
+        "spanSizes": [
+          8.5,
+          8.5,
+          8.5,
+          8.5,
+          8.5,
+          8.5
+        ],
+        "uniqueColors": [
+          0
+        ],
+        "outsidePage": [],
+        "sizePass": true,
+        "colorPass": true,
+        "pass": true
+      }
+    },
+    {
+      "id": "office-excel",
+      "label": "Excel converted PDF",
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\docs\\reports\\e2e\\2026-05-16-header-footer-debug\\converted\\office_excel_wide.pdf",
+      "output": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\docs\\reports\\e2e\\2026-05-16-header-footer-natural\\outputs\\natural-office_excel_wide.pdf",
+      "preview": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\docs\\reports\\e2e\\2026-05-16-header-footer-natural\\previews\\natural-office_excel_wide-p1.png",
+      "metrics": {
+        "pageSize": [
+          841.92,
+          595.32
+        ],
+        "missingMarkers": [],
+        "missingRequiredJapaneseTerms": [],
+        "spanSizes": [
+          8.5,
+          8.5,
+          8.5,
+          8.5,
+          8.5,
+          8.5
+        ],
+        "uniqueColors": [
+          0
+        ],
+        "outsidePage": [],
+        "sizePass": true,
+        "colorPass": true,
+        "pass": true
+      }
+    },
+    {
+      "id": "office-ppt",
+      "label": "PowerPoint converted PDF",
+      "path": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\docs\\reports\\e2e\\2026-05-16-header-footer-debug\\converted\\office_powerpoint_edge.pdf",
+      "output": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\docs\\reports\\e2e\\2026-05-16-header-footer-natural\\outputs\\natural-office_powerpoint_edge.pdf",
+      "preview": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\docs\\reports\\e2e\\2026-05-16-header-footer-natural\\previews\\natural-office_powerpoint_edge-p1.png",
+      "metrics": {
+        "pageSize": [
+          960.0,
+          540.0
+        ],
+        "missingMarkers": [],
+        "missingRequiredJapaneseTerms": [],
+        "spanSizes": [
+          8.5,
+          8.5,
+          8.5,
+          8.5,
+          8.5,
+          8.5
+        ],
+        "uniqueColors": [
+          0
+        ],
+        "outsidePage": [],
+        "sizePass": true,
+        "colorPass": true,
+        "pass": true
+      }
+    }
+  ],
+  "mixedExport": {
+    "outputFiles": [
+      "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\docs\\reports\\e2e\\2026-05-16-header-footer-natural\\outputs\\mixed-export\\natural-before-office.pdf",
+      "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\docs\\reports\\e2e\\2026-05-16-header-footer-natural\\outputs\\mixed-export\\natural-with-office.pdf"
+    ],
+    "outputCount": 2
+  },
+  "contactSheet": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\docs\\reports\\e2e\\2026-05-16-header-footer-natural\\previews\\contact-sheet-natural-header-footer.png",
+  "overallPass": true
+}

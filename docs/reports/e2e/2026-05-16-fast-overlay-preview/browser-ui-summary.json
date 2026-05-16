@@ -1,0 +1,36 @@
+{
+  "navigationCheck": {
+    "before": {
+      "bodyOverflowX": false,
+      "bodyOverflowY": false,
+      "decorRows": 2,
+      "exactStatus": 0,
+      "label": "Excel p1"
+    },
+    "after": {
+      "activeThumbText": "2 / 35Excel p2",
+      "bodyOverflowX": false,
+      "bodyOverflowY": false,
+      "decorRows": 2,
+      "exactStatus": 0,
+      "label": "Excel p2"
+    }
+  },
+  "decoratedUiSummary": {
+    "activeFilmstrip": "31 / 35CONFIDENTIALPDF p31",
+    "currentLabel": "PDF p31",
+    "exactStatusOverlays": 0,
+    "filmstripExactBadges": 0,
+    "liveDecorRows": 2,
+    "liveWatermarks": 1,
+    "modalVisible": true,
+    "overflowX": false,
+    "overflowY": false,
+    "previewPageText": "添付資料.pdf31 / 35CONFIDENTIALPDF p31",
+    "url": "http://127.0.0.1:5173/?fixture=workbench",
+    "viewport": {
+      "height": 768,
+      "width": 1366
+    }
+  }
+}

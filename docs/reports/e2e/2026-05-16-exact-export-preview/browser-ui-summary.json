@@ -1,0 +1,54 @@
+{
+  "click": {
+    "clicked": true,
+    "text": "プレビュー",
+    "buttons": [
+      "ファイル追加",
+      "",
+      "",
+      "プレビュー",
+      "書き出し"
+    ]
+  },
+  "modal": {
+    "open": true,
+    "rect": {
+      "x": 103,
+      "y": 28,
+      "width": 1160,
+      "height": 744
+    },
+    "stage": {
+      "x": 114,
+      "y": 81,
+      "width": 1138,
+      "height": 505.125
+    },
+    "filmstrip": {
+      "x": 114,
+      "y": 594.125,
+      "width": 1138,
+      "height": 122.875
+    },
+    "actions": {
+      "x": 114,
+      "y": 725,
+      "width": 1138,
+      "height": 36
+    },
+    "page": {
+      "x": 443,
+      "y": 92,
+      "width": 480,
+      "height": 483.125
+    },
+    "exactStatus": "",
+    "viewport": {
+      "width": 1366,
+      "height": 768
+    },
+    "bodyOverflowX": false,
+    "bodyOverflowY": false
+  },
+  "screenshotPath": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\docs\\reports\\screenshots\\2026-05-16-exact-preview-ui-1366x768.png"
+}

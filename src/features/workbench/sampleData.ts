@@ -99,9 +99,9 @@ export const initialDecorations: Decoration[] = [
     text: "{page} / {total}",
     target: "all",
     position: "bottom-right",
-    fontSize: 10,
+    fontSize: 8.5,
     opacity: 1,
-    color: "#355f92",
+    color: "#111111",
   },
   {
     id: "dec-watermark",

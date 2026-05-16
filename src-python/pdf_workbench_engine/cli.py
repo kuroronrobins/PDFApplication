@@ -9,6 +9,12 @@ from .errors import EngineError
 from .jobs.convert_office import handle as convert_office
 from .jobs.export_workspace import handle as export_workspace
 from .jobs.inspect_pdf import handle as inspect_pdf
+from .jobs.render_decoration_overlay_page import (
+    manifest_handle as render_export_decoration_manifest_page,
+)
+from .jobs.render_decoration_overlay_page import (
+    overlay_handle as render_export_decoration_overlay_page,
+)
 from .jobs.render_thumbnail import handle as render_thumbnail
 from .jobs.render_thumbnails import handle as render_thumbnails
 from .schemas import error, result
@@ -30,6 +36,8 @@ HANDLERS: dict[str, Handler] = {
     "inspect_pdf": inspect_pdf,
     "render_thumbnail": render_thumbnail,
     "render_thumbnails": render_thumbnails,
+    "render_export_decoration_manifest_page": render_export_decoration_manifest_page,
+    "render_export_decoration_overlay_page": render_export_decoration_overlay_page,
     "export_workspace": export_workspace,
 }
 

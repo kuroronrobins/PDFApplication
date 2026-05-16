@@ -160,6 +160,48 @@ def _requested_output_file(request: dict[str, Any]) -> Path:
     return output_file
 
 
+def _requested_custom_output_files(
+    request: dict[str, Any],
+    output_count: int,
+    fallback_base_file: Path,
+) -> list[Path] | None:
+    raw_names = request.get("outputNames")
+    if raw_names is None:
+        return None
+    if not isinstance(raw_names, list) or len(raw_names) != output_count:
+        raise EngineError("invalid_output_names", "出力ファイル名の数が分割後の出力数と一致しません。")
+
+    output_dir = (
+        as_path(request.get("outputDir"), "outputDir")
+        if request.get("outputDir")
+        else fallback_base_file.parent
+    )
+    invalid_chars = set('<>:"/\\|?*')
+    seen: set[str] = set()
+    output_files: list[Path] = []
+
+    for raw_name in raw_names:
+        if not isinstance(raw_name, str):
+            raise EngineError("invalid_output_name", "出力ファイル名が不正です。")
+        name = raw_name.strip()
+        if not name:
+            raise EngineError("invalid_output_name", "空の出力ファイル名は使用できません。")
+        if any(char in invalid_chars or ord(char) < 32 for char in name):
+            raise EngineError("invalid_output_name", "出力ファイル名に使用できない文字が含まれています。", target=name)
+        if not name.lower().endswith(".pdf"):
+            name = f"{name}.pdf"
+        stem = name[:-4].strip()
+        if not stem or stem in {".", ".."}:
+            raise EngineError("invalid_output_name", "出力ファイル名が不正です。", target=name)
+        normalized_key = name.lower()
+        if normalized_key in seen:
+            raise EngineError("duplicate_output_name", "出力ファイル名が重複しています。", target=name)
+        seen.add(normalized_key)
+        output_files.append(output_dir / name)
+
+    return output_files
+
+
 def _final_output_file(base_file: Path, output_count: int, index: int) -> Path:
     if output_count <= 1:
         return base_file
@@ -180,6 +222,9 @@ def handle(request: dict[str, Any]) -> dict[str, Any]:
     _emit_progress(emit, job_id, "PDF解析", 8, "ワークスペースから出力対象ページを解析しています。")
     groups = _build_groups(workspace)
     _emit_progress(emit, job_id, "分割", 16, f"{len(groups)}個の出力PDFへ分割計画を作成しました。")
+    custom_output_files = _requested_custom_output_files(request, len(groups), output_file)
+    if custom_output_files is not None:
+        output_dir = custom_output_files[0].parent
 
     outputs: list[str] = []
     scratch_prefix = f".pdf-workbench-{uuid4().hex}"
@@ -200,7 +245,9 @@ def handle(request: dict[str, Any]) -> dict[str, Any]:
                 workspace,
                 output_dir,
                 scratch_prefix,
-                _final_output_file(output_file, len(groups), index),
+                custom_output_files[index - 1]
+                if custom_output_files is not None
+                else _final_output_file(output_file, len(groups), index),
                 index,
                 group,
                 emit=emit,

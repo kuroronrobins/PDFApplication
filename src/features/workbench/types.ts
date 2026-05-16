@@ -139,12 +139,21 @@ export type CacheSession = {
 export type OutputPlan = {
   outputCount: number;
   defaultOutputFileName: string;
+  autoOutputFiles: string[];
   outputFiles: string[];
+  customOutputNamesApplied: boolean;
+  outputDestinationDir?: string;
   activePageCount: number;
   excludedPageCount: number;
   splitCount: number;
   decorationCount: number;
   encrypted: boolean;
+};
+
+export type OutputSettings = {
+  applied: boolean;
+  destinationDir?: string;
+  outputNames: string[];
 };
 
 export type WorkbenchLog = {

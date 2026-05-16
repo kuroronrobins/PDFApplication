@@ -88,6 +88,15 @@ export async function openOutputFileDialog(defaultPath = "result.pdf"): Promise<
   return selected || null;
 }
 
+export async function openOutputFolderDialog(): Promise<string | null> {
+  const selected = await open({
+    multiple: false,
+    directory: true,
+  });
+
+  return typeof selected === "string" ? selected : null;
+}
+
 export function browserFilesToInputInfo(files: FileList | File[]): InputFileInfo[] {
   return Array.from(files).map((file) => {
     const extension = extensionOf(file.name);

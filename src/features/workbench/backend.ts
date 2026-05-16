@@ -93,6 +93,49 @@ export type ExportWorkspaceResult = {
   outputCount: number;
 };
 
+export type DecorationLayoutItem = {
+  sourceDecorationId?: string;
+  kind: "header" | "footer" | "page-number" | "watermark";
+  position: string;
+  slot?: "left" | "center" | "right";
+  text: string;
+  rectPt?: [number, number, number, number];
+  pointPt?: [number, number];
+  centerPt?: [number, number];
+  baselinePt?: number;
+  fontSizePt: number;
+  color: string;
+  align: "left" | "center" | "right";
+  textWidthPt?: number;
+  fontFamily?: string;
+  rotationDeg?: number;
+  opacity?: number;
+};
+
+export type DecorationLayoutManifest = {
+  outputIndex: number;
+  pageIndex: number;
+  outputPageNumber: number;
+  outputPageTotal: number;
+  pageWidthPt: number;
+  pageHeightPt: number;
+  renderZoom: number;
+  cacheKey: string;
+  fontFamily?: string;
+  items: DecorationLayoutItem[];
+};
+
+export type DecorationOverlayRenderResult = DecorationLayoutManifest & {
+  overlayPath?: string | null;
+  overlayWidth?: number | null;
+  overlayHeight?: number | null;
+  cached?: boolean;
+};
+
+export type ExportDestination =
+  | { outputPath: string }
+  | { outputDir: string; outputNames: string[] };
+
 export async function prepareCacheSession(): Promise<CacheSession | null> {
   if (!isTauriRuntime()) {
     return {
@@ -311,14 +354,58 @@ export async function renderPdfThumbnails(
   });
 }
 
+export async function renderExportDecorationManifestPage(
+  workspace: WorkbenchSnapshot,
+  outputDir: string,
+  outputIndex: number,
+  pageIndex: number,
+  passwordMap?: Record<string, string>,
+): Promise<DecorationLayoutManifest> {
+  return runTypedEngine<DecorationLayoutManifest>({
+    kind: "render_export_decoration_manifest_page",
+    workspace,
+    outputDir,
+    outputIndex,
+    pageIndex,
+    passwordMap,
+    overlayZoom: 2.25,
+  });
+}
+
+export async function renderExportDecorationOverlayPage(
+  workspace: WorkbenchSnapshot,
+  outputDir: string,
+  outputIndex: number,
+  pageIndex: number,
+  passwordMap?: Record<string, string>,
+): Promise<DecorationOverlayRenderResult> {
+  return runTypedEngine<DecorationOverlayRenderResult>({
+    kind: "render_export_decoration_overlay_page",
+    workspace,
+    outputDir,
+    outputIndex,
+    pageIndex,
+    passwordMap,
+    overlayZoom: 2.25,
+  });
+}
+
 export async function exportWorkspaceToPath(
   outputPath: string,
   workspace: WorkbenchSnapshot,
   passwordMap?: Record<string, string>,
 ): Promise<ExportWorkspaceResult> {
+  return exportWorkspaceToDestination({ outputPath }, workspace, passwordMap);
+}
+
+export async function exportWorkspaceToDestination(
+  destination: ExportDestination,
+  workspace: WorkbenchSnapshot,
+  passwordMap?: Record<string, string>,
+): Promise<ExportWorkspaceResult> {
   return runTypedEngine<ExportWorkspaceResult>({
     kind: "export_workspace",
-    outputPath,
+    ...destination,
     workspace,
     passwordMap,
   });
@@ -331,14 +418,30 @@ export async function exportWorkspaceToPathStreaming(
   jobId: string,
   onEvent: (event: ProcessingEngineEvent) => void,
 ): Promise<ExportWorkspaceResult> {
+  return exportWorkspaceToDestinationStreaming(
+    { outputPath },
+    workspace,
+    passwordMap,
+    jobId,
+    onEvent,
+  );
+}
+
+export async function exportWorkspaceToDestinationStreaming(
+  destination: ExportDestination,
+  workspace: WorkbenchSnapshot,
+  passwordMap: Record<string, string> | undefined,
+  jobId: string,
+  onEvent: (event: ProcessingEngineEvent) => void,
+): Promise<ExportWorkspaceResult> {
   if (!isTauriRuntime()) {
-    return exportWorkspaceToPath(outputPath, workspace, passwordMap);
+    return exportWorkspaceToDestination(destination, workspace, passwordMap);
   }
 
   return runProcessingEngineJob<ExportWorkspaceResult>(
     {
       kind: "export_workspace",
-      outputPath,
+      ...destination,
       workspace,
       passwordMap,
     },

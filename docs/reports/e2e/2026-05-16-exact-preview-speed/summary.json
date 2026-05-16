@@ -1,0 +1,39 @@
+{
+  "source": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\docs\\reports\\e2e\\2026-05-16-header-footer-debug\\inputs\\pdf_normal_portrait.pdf",
+  "measurements": [
+    {
+      "label": "cold_preview_only",
+      "elapsedMs": 510.9,
+      "cached": false,
+      "hasThumbnail": false,
+      "previewPath": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\docs\\reports\\e2e\\2026-05-16-exact-preview-speed\\preview-cache\\preview\\preview-e7513d4922a672011c69ac398bc28aabd30f11f43444566ae5b51b0c298ec496.png",
+      "thumbnailPath": null
+    },
+    {
+      "label": "cache_hit_preview_only",
+      "elapsedMs": 31.9,
+      "cached": true,
+      "hasThumbnail": false,
+      "previewPath": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\docs\\reports\\e2e\\2026-05-16-exact-preview-speed\\preview-cache\\preview\\preview-e7513d4922a672011c69ac398bc28aabd30f11f43444566ae5b51b0c298ec496.png",
+      "thumbnailPath": null
+    },
+    {
+      "label": "add_thumbnail_with_preview_cached",
+      "elapsedMs": 404.3,
+      "cached": false,
+      "hasThumbnail": true,
+      "previewPath": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\docs\\reports\\e2e\\2026-05-16-exact-preview-speed\\preview-cache\\preview\\preview-e7513d4922a672011c69ac398bc28aabd30f11f43444566ae5b51b0c298ec496.png",
+      "thumbnailPath": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\docs\\reports\\e2e\\2026-05-16-exact-preview-speed\\preview-cache\\thumbnail\\preview-e7513d4922a672011c69ac398bc28aabd30f11f43444566ae5b51b0c298ec496.png"
+    },
+    {
+      "label": "cache_hit_preview_and_thumbnail",
+      "elapsedMs": 33.7,
+      "cached": true,
+      "hasThumbnail": true,
+      "previewPath": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\docs\\reports\\e2e\\2026-05-16-exact-preview-speed\\preview-cache\\preview\\preview-e7513d4922a672011c69ac398bc28aabd30f11f43444566ae5b51b0c298ec496.png",
+      "thumbnailPath": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\docs\\reports\\e2e\\2026-05-16-exact-preview-speed\\preview-cache\\thumbnail\\preview-e7513d4922a672011c69ac398bc28aabd30f11f43444566ae5b51b0c298ec496.png"
+    }
+  ],
+  "pixelExactFirstOutput": true,
+  "finalRenderedPath": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\docs\\reports\\e2e\\2026-05-16-exact-preview-speed\\rendered-final\\final-output-1.png"
+}
