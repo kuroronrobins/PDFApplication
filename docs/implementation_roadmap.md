@@ -1156,3 +1156,16 @@ Implemented:
 Verification:
 
 - See `docs/reports/2026-05-18-v0.2.0-splash-license.md`.
+
+## 2026-05-18 v0.2.0 GitHub release upload
+
+Implemented:
+
+- Built the v0.2.0 release executable, NSIS installer, and MSI installer.
+- Staged the three artifacts under `build/release-artifacts/v0.2.0/`.
+- Published the staged artifacts to the GitHub Release `v0.2.0`.
+- Added the release reference document with final download URLs and SHA256 values.
+
+Verification:
+
+- See `docs/reports/2026-05-18-v0.2.0-release-upload.md`.
