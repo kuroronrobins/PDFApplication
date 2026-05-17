@@ -1,0 +1,40 @@
+id: pdf_workbench
+name: PDF Workbench
+
+display:
+  icon: icon.png
+  short_description: Arrange PDF and Office files, edit pages, and export one batch job.
+  categories:
+    - PDF
+    - Office
+    - File Processing
+
+detail:
+  description: >
+    PDF Workbench is a Tauri desktop PDF workflow app for adding PDF, Word,
+    Excel, and PowerPoint files, arranging file cards, editing pages, applying
+    decorations, and exporting the workspace as one batch job.
+  use_cases:
+    - Merge and split PDFs visually.
+    - Convert Office files to temporary session PDFs before export.
+    - Add headers, footers, page numbers, watermarks, and output encryption.
+  inputs:
+    - PDF files
+    - Word documents
+    - Excel workbooks
+    - PowerPoint presentations
+  outputs:
+    - PDF files
+  notes:
+    - Microsoft Office is required for Office conversion.
+    - Office conversion uses Microsoft Office COM only.
+
+run:
+  runner: python_shared_env
+  entry: main.py
+  mode: gui
+
+admin:
+  version: 0.2.0
+  owner: admin
+  requirements: requirements.txt

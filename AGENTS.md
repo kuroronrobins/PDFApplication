@@ -61,11 +61,10 @@ States:
 
 ## 3.1 Current Implementation Boundary
 
-As of 2026-05-13, the React/Tauri workbench implements the full UI, state model, session-cache command boundary, export-job progress model, logs, visual verification screens for Phases 0-11, the first real processing-engine connection in Phase 12, streaming/cancel support for the active export worker process, real Office COM worker E2E, a release-executable UI E2E bootstrap, and a bundled Python runtime path for release builds.
+As of 2026-05-17, the React/Tauri workbench implements the full UI, state model, session-cache command boundary, export-job progress model, logs, visual verification screens for Phases 0-11, the first real processing-engine connection in Phase 12, streaming/cancel support for the active export worker process and pre-export Office/PDF preparation workers, real Office COM worker E2E, a release-executable UI E2E bootstrap, a bundled Python runtime path for release builds, and startup cleanup for stale session cache directories.
 
 Do not overclaim this as a completed production PDF engine. The current backend still needs real PDF/Office processing integration for:
 
-- Full cancellation for pre-export Office/PDF preparation jobs
 - Manual Explorer drag-and-drop smoke verification on the target machine. Worker-level Office COM E2E and release-executable UI E2E passed on 2026-05-13; see `docs/reports/2026-05-13-office-com-e2e.md` and `docs/reports/2026-05-13-tauri-release-ui-e2e.md`.
 - Clean-machine installer validation on an Office-equipped PC outside this development workspace
 - Large-PDF lazy thumbnail generation

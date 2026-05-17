@@ -21,3 +21,8 @@ build/python-runtime/
 build/python-worker/
 build/python-worker-tmp/
 build/python-worker-spec/
+build/release-artifacts/
+build/toolhub-registration/
+toolhub/pdf_workbench/payload/
+toolhub/pdf_workbench/assets/payload/
+toolhub/pdf_workbench/ToolHub_AppStudio_Output/

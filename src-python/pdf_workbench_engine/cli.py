@@ -32,7 +32,7 @@ if hasattr(sys.stdout, "reconfigure"):
 HANDLERS: dict[str, Handler] = {
     "ping": lambda request: {
         "engine": "pdf_workbench_engine",
-        "version": "0.1.1",
+        "version": "0.2.0",
         "ok": True,
     },
     "convert_office": convert_office,

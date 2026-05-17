@@ -1,10 +1,12 @@
-# 2026-05-17 App-side IO Robustness Hardening
+# 2026-05-17 アプリ側入出力堅牢化レポート
 
-## Scope
+## 対象範囲
 
-Improve the app-side protections identified in `2026-05-16-load-export-robustness-risk-inventory.md` so obvious load/export failures are rejected early, worker errors are classified, and final output files are not overwritten until generated output is ready.
+`2026-05-16-load-export-robustness-risk-inventory.md` で整理した読み込み・書き出し失敗リスクのうち、本アプリ側で即時に対策すべき項目を改善した。
 
-## Changed files
+今回の改善の目的は、明らかに失敗する入力や保存先を早い段階で止めること、ワーカーの失敗理由を分類して返すこと、書き出し失敗時に既存の出力 PDF を壊しにくくすることである。壊れた PDF や Office ファイルそのものを自動修復する対応ではない。
+
+## 変更ファイル
 
 - `src-tauri/src/lib.rs`
 - `src-tauri/src/python_worker.rs`
@@ -18,36 +20,217 @@ Improve the app-side protections identified in `2026-05-16-load-export-robustnes
 - `docs/implementation_roadmap.md`
 - `docs/tauri_ui_redesign_plan.md`
 
-## User-visible behavior
+## ユーザーから見える動作
 
-- Missing, unreadable, empty, unsupported, temporary, cloud-placeholder, and extension/signature-mismatched inputs are rejected before they become file cards.
-- Export now checks destination folder writability, existing locked files, invalid names, reserved Windows names, duplicate split-output names, and file/folder conflicts before conversion/export work starts.
-- Applied split-output names and save destination are used directly at export time without another save dialog, but still receive the same destination preflight.
-- Worker protocol failures now expose a bounded protocol error instead of only a generic parse failure.
-- PDF open/render failures and Office conversion output failures are returned as classified worker errors.
-- Final PDFs are written via a temporary same-folder file and replaced after successful generation, reducing risk to an existing output file when export fails.
+- 読み込めないことが事前に分かるファイルは、ファイルカードを作らずにログへ理由を出す。
+- 書き出し先に問題がある場合は、Office 変換や PDF 結合を始める前に止める。
+- ハサミ分割後に名前編集画面で保存先と出力名を適用済みの場合、書き出し時に追加の保存ダイアログを出さず、その設定をそのまま使う。
+- ワーカーの標準出力にライブラリ診断が混ざった場合でも、JSON 結果を救出できる範囲では処理を継続する。
+- PDF の解析・描画・Office 変換後 PDF 検査・最終保存の失敗を、可能な限り分類済みのエラーとして返す。
+- 最終 PDF は一度同じ保存先フォルダの一時ファイルへ書き、生成できてから置き換える。途中失敗で既存 PDF を壊すリスクを下げる。
 
-## Verification commands
+## エラーを起こさず事前に対処できる問題
 
-- `npm run typecheck` -> passed.
-- `python -m compileall src-python\pdf_workbench_engine` -> passed.
-- `cargo check --manifest-path src-tauri\Cargo.toml` -> passed.
-- Python worker missing-file smoke: `inspect_pdf` on a nonexistent PDF -> returned `input_not_found`.
-- Python worker empty-file smoke: `inspect_pdf` on a temporary zero-byte PDF -> returned `empty_input_file`.
-- `npm run build` inside sandbox -> failed with Vite/Rolldown `spawn EPERM`.
-- `npm run build` outside sandbox after approval -> passed.
-- `git diff --check` -> passed, with only existing CRLF normalization warnings.
+ここでいう「エラーを起こさず」は、アプリやワーカーがクラッシュせず、問題のある処理を開始前に止める、またはログに理由を残して安全に中断できるという意味である。
 
-## Screenshot paths
+- 存在しない入力パス
+  追加時に `input_not_found` 相当として扱い、ファイルカードを作らない。
 
-None. This change does not alter visual layout; it changes load/export validation and worker error handling.
+- ファイルではない入力パス
+  フォルダなどが渡された場合、追加対象から除外する。
 
-## Known limitations
+- 0 バイトの入力ファイル
+  追加時およびワーカー側で `empty_input_file` として扱い、PDF 解析や Office 変換へ進めない。
 
-- Office COM dialog blocking, Protected View, and password-required Office files still need targeted runtime tests on an Office-equipped PC.
-- Disk-full behavior is classified in the Python final-save path, but was not simulated during this pass.
-- Long-path, cloud-placeholder, and locked-output cases should be added to future E2E fixtures where they can be reproduced safely.
+- 読み取り権限がない入力ファイル
+  追加時の先頭バイト確認、またはワーカー側の読み取り確認で止める。
 
-## Next recommended step
+- Office の一時ファイル
+  `~$` で始まる Word、Excel、PowerPoint のロック用一時ファイルは追加しない。
 
-Build a small negative-case fixture suite for input preflight and export destination preflight, then run it against PDF, Word, Excel, and PowerPoint files on the target Windows machine.
+- ダウンロード途中または一時拡張子のファイル
+  `.tmp`, `.crdownload`, `.download` は追加しない。
+
+- 未対応拡張子のファイル
+  PDF、Word、Excel、PowerPoint 以外はワーカーへ送らず、追加時点で除外する。
+
+- 拡張子と中身が明らかに一致しないファイル
+  `.pdf` なのに PDF シグネチャが見つからない、Office 拡張子なのに ZIP/OLE 形式ではない、というケースを追加時に止める。
+
+- Windows のクラウドプレースホルダー属性を持つ未実体ファイル
+  OneDrive などで実体がローカルにないと判断できる場合は、先にローカルへダウンロードする必要があるものとして止める。
+
+- 空の出力ファイル名
+  ハサミ分割後の一括出力名や通常出力名で空名を許可しない。
+
+- Windows で使用できない文字を含む出力名
+  `< > : " / \ | ? *` と制御文字を含む出力名を事前に止める。
+
+- Windows 予約名の出力名
+  `CON`, `PRN`, `AUX`, `NUL`, `COM1` から `COM9`, `LPT1` から `LPT9` を出力名として許可しない。
+
+- 末尾スペース・末尾ドットなどの危険な出力名
+  Windows で扱いが不安定になる名前を事前に止める。
+
+- ハサミ分割後の出力名重複
+  大文字小文字の差だけの重複も含め、同じフォルダに同名 PDF を出そうとする設定を止める。
+
+- 保存先がフォルダとして使えないケース
+  保存先親パスが既存ファイルだった場合など、フォルダとして準備できない場合に止める。
+
+- 保存先フォルダへ書き込めないケース
+  書き込みテスト用の一時ファイルを作成できない場合、書き出し処理を始めない。
+
+- 既存の出力 PDF が書き込み不可またはロックされているケース
+  事前に書き込みオープンを試し、失敗すれば Office 変換や PDF 結合を始める前に止める。
+
+- ワーカー標準出力に回復可能な診断出力が混ざるケース
+  先頭に診断文字列が混ざっても JSON 本体を見つけられる場合は、`worker_protocol_error` にせず結果を救出する。
+
+- Office 変換後に PDF が生成されない、またはページ数 0 のケース
+  変換後 PDF を検査し、問題があれば `office_output_invalid` として準備完了状態にしない。
+
+- PDF の解析に失敗するケース
+  pypdf 側で開けない PDF は `pdf_inspect_failed` として分類する。
+
+- PDF の描画に失敗するケース
+  PyMuPDF 側でページ描画に失敗した場合は `pdf_render_failed` として分類する。
+
+- プレビュー画像の保存に失敗するケース
+  サムネイル・プレビュー PNG の保存失敗を `thumbnail_write_failed` として分類する。
+
+- 最終保存時に既存 PDF を途中で壊すケース
+  まず一時ファイルへコピーしてから `os.replace` するため、生成途中の失敗で既存ファイルを直接上書きしにくい。
+
+## エラー分類はできるが、自動解決まではできない問題
+
+これらはアプリがクラッシュせず、理由を返すことはできるが、ユーザー操作や別途実装が必要である。
+
+- パスワード必須 PDF
+  `pdf_password_required` や `pdf_password_invalid` として扱えるが、ファイルごとの解除パスワード UX はまだ十分ではない。
+
+- 破損 PDF
+  解析・描画・ページ抽出のどこで壊れているかを分類できるが、PDF の自動修復はしない。
+
+- 特定ページだけ壊れている PDF
+  対象ページ番号を含めて失敗を返せる余地はあるが、壊れたページを自動スキップして残りだけ処理する実装ではない。
+
+- Office COM の起動失敗
+  Office 未インストール、COM 登録破損、初回起動ブロック、ライセンス認証待ちなどはワーカーエラーとして扱う必要があるが、今回の変更だけで解決はしない。
+
+- Office の保護ビュー、マクロ警告、リンク更新、ダイアログ待ち
+  変換が失敗または停止した場合の分類は今後の対象であり、今回の変更では根本対策していない。
+
+- Office ファイル自体のパスワード保護
+  PDF 変換に入る前に解除できないため、現時点ではユーザーに解除済みファイルを用意してもらう必要がある。
+
+- ディスク容量不足
+  最終保存時の `ENOSPC` は `disk_full` として分類するが、事前の空き容量見積もりは未実装である。
+
+- ネットワークドライブや VPN 断
+  保存先書き込みテスト後に切断された場合は防げない。失敗時に分類して止める。
+
+- ファイル追加後に元ファイルが削除・移動・更新されるケース
+  追加時点の検査は通っても、後で状態が変わった場合はワーカー実行時に失敗する可能性がある。
+
+- 書き出し事前検査後に出力先がロックされるケース
+  事前検査と実際の保存の間に別アプリがファイルを開いた場合は、最終保存時に失敗する。
+
+- 長すぎるパス
+  OS や Office COM の制限で失敗する可能性がある。今回の変更では専用の長パス診断は追加していない。
+
+- クラウドプロバイダー独自の未実体ファイル
+  Windows 標準属性で検出できるものは止めるが、属性が付かない同期ソフトの未実体ファイルは完全には検出できない。
+
+- 非標準 PDF 構造や特殊仕様
+  PDF Portfolio、XFA、署名済み PDF、特殊なフォーム、壊れたタグ構造などは、ライブラリで扱えない場合がある。
+
+## 現時点で対処できない問題
+
+- 壊れた入力 PDF の内容復旧。
+- 壊れた Office ファイルの修復。
+- Office の保護ビューやセキュリティ警告をユーザー操作なしで安全に突破すること。
+- パスワード不明の PDF/Office ファイルを開くこと。
+- ディスク容量不足を完全に事前予測すること。
+- ネットワークドライブ、USB、クラウド同期フォルダの途中切断を完全に防ぐこと。
+- 書き出し中にユーザーや別アプリが保存先ファイルを操作することを完全に防ぐこと。
+- すべての PDF ライブラリ差異を吸収して、どの PDF でも必ず結合・描画・装飾できるようにすること。
+- あらゆるマルウェア的 PDF/Office 構造を無害化すること。現状は実行せずページ処理・Office COM 変換へ渡す方針であり、サンドボックス実行ではない。
+
+## この改善によって逆に起きうる問題
+
+- 正常ファイルが誤って拒否される可能性
+  シグネチャ検査を強めたため、拡張子は対応形式でも、通常と異なる先頭構造のファイルは追加時に止まる可能性がある。
+
+- PDF ヘッダーが極端に後方にある特殊 PDF を拒否する可能性
+  先頭 1024 バイト内で `%PDF-` を探すため、仕様外または特殊なファイルは `invalid_file_signature` になる可能性がある。
+
+- Office 以外の OLE/ZIP ファイルを Office と誤認する可能性
+  Office 拡張子かつ ZIP/OLE 形式であれば追加を許可するため、中身が実際には Office 文書でない場合は Office COM 変換時に失敗する。
+
+- クラウドファイルの読み取りが同期を誘発する可能性
+  プレースホルダー属性で検出できないクラウドファイルは、シグネチャ確認のために先頭を読むことで同期や待ちが発生する可能性がある。
+
+- ファイル追加時の軽い待ちが増える可能性
+  追加時にメタデータ確認と先頭バイト読み取りを行うため、低速なネットワークドライブや外部ストレージでは追加操作が少し遅くなる可能性がある。
+
+- 保存先事前検査がフォルダを先に作成する
+  存在しない保存先フォルダを指定した場合、書き出し本体の前にフォルダが作られる。後で書き出しを中止しても空フォルダが残る可能性がある。
+
+- 保存先事前検査が一時ファイルを作成・削除する
+  書き込みテストのため、保存先フォルダに短時間だけ `.pdf-workbench-write-test-...tmp` が作られる。通常は削除されるが、セキュリティソフトや同期ソフトが反応する可能性がある。
+
+- 既存ファイルのロック判定が環境依存になる可能性
+  Windows のファイル共有モードや相手アプリの開き方によって、実際には上書き時に失敗するのに事前検査では通る、またはその逆が起きる可能性がある。
+
+- 末尾スペースや末尾ドットを含む名前が使えなくなる
+  Windows 上では危険な名前として拒否するため、以前は入力できた特殊名を出力名に使えなくなる。
+
+- `~$` で始まる実在ファイル名を拒否する
+  Office 一時ファイル対策として `~$` 始まりを拒否するため、非常にまれに意図的にその名前を付けた通常ファイルも追加できない。
+
+- ワーカー JSON 救出がプロトコル違反を見えにくくする可能性
+  標準出力に余計な文字が混ざっても JSON を救出できるため、軽微なプロトコル汚染は表面化しにくくなる。完全に壊れた場合は `worker_protocol_error` として出る。
+
+- 最終置換の瞬間は OS 依存の失敗が残る
+  `os.replace` でも、保存先がロックされた瞬間やネットワークドライブの一時断では失敗する。その場合は既存ファイルを守る方向で止めるが、書き出しは完了しない。
+
+- 書き込みテストにより権限問題が早く表面化する
+  以前は PDF 結合後に失敗していたものが、今後は保存先選択直後に止まる。これは安全側の挙動だが、ユーザーには「前より厳しくなった」と見える可能性がある。
+
+## 検証コマンド
+
+- `npm run typecheck`
+  成功。
+
+- `python -m compileall src-python\pdf_workbench_engine`
+  成功。
+
+- `cargo check --manifest-path src-tauri\Cargo.toml`
+  成功。
+
+- Pythonワーカー欠損ファイル確認
+  存在しない PDF に対して `inspect_pdf` を実行し、`input_not_found` が返ることを確認。
+
+- Pythonワーカー空ファイル確認
+  一時的に作成した 0 バイト PDF に対して `inspect_pdf` を実行し、`empty_input_file` が返ることを確認。
+
+- `npm run build`
+  サンドボックス内では Vite/Rolldown の `spawn EPERM` で失敗。承認後にサンドボックス外で再実行し、成功。
+
+- `git diff --check`
+  成功。CRLF 正規化警告のみ。
+
+## スクリーンショット
+
+なし。今回の変更は画面レイアウトではなく、入力・保存先検査とワーカーエラー処理の変更である。
+
+## 既知の制限
+
+- Office COM の保護ビュー、ダイアログ待ち、パスワード付き Office ファイルは、Office 搭載 PC での実機検証が必要である。
+- ディスク容量不足は最終保存時に分類するが、今回の検証では容量不足状態を実際には再現していない。
+- 長パス、クラウド未実体ファイル、ロック済み出力ファイルは、安全に再現できる E2E 検証用データとして今後追加する必要がある。
+
+## 次に推奨する作業
+
+入力事前検査と書き出し先事前検査の失敗系検証用データを小さく作り、PDF、Word、Excel、PowerPoint の実ファイルを使って対象 Windows PC 上で自動検証できるようにする。

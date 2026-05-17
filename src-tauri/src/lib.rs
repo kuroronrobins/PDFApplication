@@ -65,9 +65,20 @@ struct E2eBootstrapInfo {
     auto_export: bool,
 }
 
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ToolHubSmokeReport {
+    ok: bool,
+    resource_dir: String,
+    src_python_found: bool,
+    bundled_python_found: bool,
+    worker_response: Value,
+}
+
 const ALPHA_EXPIRES_ON: &str = "2026-06-30";
 const ALPHA_EXPIRY_UNIX_SECONDS: u64 = 1_782_831_600; // 2026-07-01 00:00:00 JST.
 const MIN_SPLASH_VISIBLE_MILLIS: u64 = 4_000;
+const STALE_CACHE_SESSION_SECONDS: u64 = 24 * 60 * 60;
 
 struct StartupClock {
     launched_at: Instant,
@@ -147,9 +158,8 @@ fn detect_signature(path: &Path) -> Result<String, String> {
         _ => format!("ファイルの先頭を確認できません: {error}"),
     })?;
     let mut buffer = [0_u8; 1024];
-    let read = std::io::Read::read(&mut file, &mut buffer).map_err(|error| {
-        format!("ファイルの先頭を読み取れません: {error}")
-    })?;
+    let read = std::io::Read::read(&mut file, &mut buffer)
+        .map_err(|error| format!("ファイルの先頭を読み取れません: {error}"))?;
     let bytes = &buffer[..read];
     if bytes.windows(5).any(|window| window == b"%PDF-") {
         return Ok("pdf".to_string());
@@ -203,10 +213,8 @@ fn validate_input_file(
         return (false, code, message, None);
     };
     if !metadata.is_file() {
-        let (code, message) = validation_issue(
-            "input_not_file",
-            "ファイルではないため追加できません。",
-        );
+        let (code, message) =
+            validation_issue("input_not_file", "ファイルではないため追加できません。");
         return (false, code, message, None);
     }
     if metadata.len() == 0 {
@@ -237,11 +245,7 @@ fn validate_input_file(
         _ => false,
     };
     if !valid_signature {
-        let expected = if kind == "pdf" {
-            "PDF"
-        } else {
-            "Office"
-        };
+        let expected = if kind == "pdf" { "PDF" } else { "Office" };
         let (code, message) = validation_issue(
             "invalid_file_signature",
             format!(
@@ -256,6 +260,135 @@ fn validate_input_file(
 
 fn cache_root() -> PathBuf {
     std::env::temp_dir().join("pdf-workbench-sessions")
+}
+
+fn toolhub_smoke_resource_dir() -> Result<PathBuf, String> {
+    if let Ok(value) = std::env::var("PDF_WORKBENCH_RESOURCE_DIR") {
+        let trimmed = value.trim();
+        if !trimmed.is_empty() {
+            return Ok(PathBuf::from(trimmed));
+        }
+    }
+
+    let exe_path = std::env::current_exe().map_err(|error| error.to_string())?;
+    exe_path
+        .parent()
+        .map(Path::to_path_buf)
+        .ok_or_else(|| "Could not resolve PDF Workbench executable directory.".to_string())
+}
+
+fn bundled_python_executable(resource_dir: &Path) -> PathBuf {
+    resource_dir.join("python").join(if cfg!(windows) {
+        "python.exe"
+    } else {
+        "bin/python"
+    })
+}
+
+fn toolhub_smoke_report() -> Result<ToolHubSmokeReport, String> {
+    let resource_dir = toolhub_smoke_resource_dir()?;
+    let src_python_found = resource_dir
+        .join("src-python")
+        .join("pdf_workbench_engine")
+        .exists();
+    let bundled_python_found = bundled_python_executable(&resource_dir).exists();
+
+    if !src_python_found {
+        return Err(format!(
+            "Bundled src-python/pdf_workbench_engine was not found under {}.",
+            resource_dir.display()
+        ));
+    }
+    if !bundled_python_found {
+        return Err(format!(
+            "Bundled Python runtime was not found under {}.",
+            resource_dir.join("python").display()
+        ));
+    }
+
+    let worker_response = python_worker::run(
+        serde_json::json!({
+            "kind": "ping",
+            "jobId": "toolhub-smoke"
+        }),
+        Some(resource_dir.clone()),
+    )?;
+
+    let worker_ok = worker_response
+        .get("type")
+        .and_then(Value::as_str)
+        .is_some_and(|value| value == "result")
+        && worker_response
+            .get("data")
+            .and_then(|data| data.get("ok"))
+            .and_then(Value::as_bool)
+            .unwrap_or(false);
+
+    if !worker_ok {
+        return Err(format!(
+            "Worker ping did not return an ok result: {}",
+            worker_response
+        ));
+    }
+
+    Ok(ToolHubSmokeReport {
+        ok: true,
+        resource_dir: resource_dir.to_string_lossy().to_string(),
+        src_python_found,
+        bundled_python_found,
+        worker_response,
+    })
+}
+
+pub fn run_toolhub_smoke() -> i32 {
+    match toolhub_smoke_report() {
+        Ok(report) => match serde_json::to_string_pretty(&report) {
+            Ok(text) => {
+                println!("{text}");
+                0
+            }
+            Err(error) => {
+                eprintln!("Failed to encode ToolHub smoke report: {error}");
+                1
+            }
+        },
+        Err(error) => {
+            eprintln!("ToolHub smoke failed: {error}");
+            1
+        }
+    }
+}
+
+fn cleanup_stale_cache_sessions(root: &Path, max_age: Duration) {
+    let Ok(entries) = std::fs::read_dir(root) else {
+        return;
+    };
+    let now = SystemTime::now();
+
+    for entry in entries.flatten() {
+        let path = entry.path();
+        let Some(name) = path.file_name().and_then(|value| value.to_str()) else {
+            continue;
+        };
+        if !name.starts_with("session-") {
+            continue;
+        }
+        let Ok(metadata) = entry.metadata() else {
+            continue;
+        };
+        if !metadata.is_dir() {
+            continue;
+        }
+        let Ok(modified) = metadata.modified() else {
+            continue;
+        };
+        let Ok(age) = now.duration_since(modified) else {
+            continue;
+        };
+        if age >= max_age {
+            let _ = std::fs::remove_dir_all(&path);
+        }
+    }
 }
 
 fn session_id() -> String {
@@ -307,7 +440,9 @@ fn describe_input_files(paths: Vec<String>) -> Result<Vec<InputFileInfo>, String
 #[tauri::command]
 fn prepare_cache_session() -> Result<CacheSessionInfo, String> {
     let id = session_id();
-    let path = cache_root().join(&id);
+    let root = cache_root();
+    cleanup_stale_cache_sessions(&root, Duration::from_secs(STALE_CACHE_SESSION_SECONDS));
+    let path = root.join(&id);
     std::fs::create_dir_all(&path).map_err(|error| error.to_string())?;
 
     Ok(CacheSessionInfo {
@@ -330,9 +465,9 @@ fn check_alpha_license() -> AlphaLicenseInfo {
         expires_on: ALPHA_EXPIRES_ON,
         checked_at_epoch_seconds,
         message: if valid {
-            "Alpha license is valid.".to_string()
+            "アルファ版ライセンスは有効です。".to_string()
         } else {
-            "Alpha license has expired.".to_string()
+            "アルファ版ライセンスの有効期限が終了しました。".to_string()
         },
     }
 }
@@ -421,10 +556,9 @@ fn validate_output_file_name(name: &str) -> Result<(), PreflightIssue> {
             Some(name.to_string()),
         ));
     }
-    if trimmed
-        .chars()
-        .any(|char| matches!(char, '<' | '>' | ':' | '"' | '/' | '\\' | '|' | '?' | '*') || char < ' ')
-    {
+    if trimmed.chars().any(|char| {
+        matches!(char, '<' | '>' | ':' | '"' | '/' | '\\' | '|' | '?' | '*') || char < ' '
+    }) {
         return Err(preflight_error(
             "invalid_output_name",
             "出力ファイル名に Windows で使用できない文字が含まれています。",
@@ -769,6 +903,32 @@ fn complete_startup(
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn cleanup_stale_cache_sessions_removes_only_session_directories() {
+        let root =
+            std::env::temp_dir().join(format!("pdf-workbench-cache-cleanup-test-{}", session_id()));
+        let session_dir = root.join("session-remove");
+        let unrelated_dir = root.join("not-a-session");
+        let session_file = root.join("session-file");
+
+        std::fs::create_dir_all(&session_dir).unwrap();
+        std::fs::create_dir_all(&unrelated_dir).unwrap();
+        std::fs::write(&session_file, b"keep").unwrap();
+
+        cleanup_stale_cache_sessions(&root, Duration::from_secs(0));
+
+        assert!(!session_dir.exists());
+        assert!(unrelated_dir.exists());
+        assert!(session_file.exists());
+
+        let _ = std::fs::remove_dir_all(root);
+    }
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]

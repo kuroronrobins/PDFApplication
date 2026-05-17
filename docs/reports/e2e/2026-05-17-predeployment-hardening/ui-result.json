@@ -1,0 +1,320 @@
+{
+  "outputFiles": [
+    "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\docs\\reports\\e2e\\2026-05-17-predeployment-hardening\\outputs\\predeployment-e2e-result_001.pdf",
+    "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\docs\\reports\\e2e\\2026-05-17-predeployment-hardening\\outputs\\predeployment-e2e-result_002.pdf"
+  ],
+  "snapshot": {
+    "exportJob": {
+      "cancellable": false,
+      "completedAt": 1778949006895,
+      "currentStep": "保存",
+      "message": "書き出し完了",
+      "progress": 100,
+      "startedAt": 1778949003236,
+      "status": "completed"
+    },
+    "files": [
+      {
+        "cacheState": "ready",
+        "engineState": "cached",
+        "id": "job_history-mp8kagxq-0",
+        "kind": "excel",
+        "name": "job_history.xlsx",
+        "pageCount": 7
+      },
+      {
+        "cacheState": "ready",
+        "engineState": "cached",
+        "id": "-003--mp8kagxq-2",
+        "kind": "powerpoint",
+        "name": "プレゼン資料 (003).pptx",
+        "pageCount": 27
+      },
+      {
+        "cacheState": "ready",
+        "engineState": "cached",
+        "id": "--mp8kagxq-4",
+        "kind": "word",
+        "name": "生体機械力学１.docx",
+        "pageCount": 7
+      }
+    ],
+    "lastOutputFiles": [
+      "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\docs\\reports\\e2e\\2026-05-17-predeployment-hardening\\outputs\\predeployment-e2e-result_001.pdf",
+      "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\docs\\reports\\e2e\\2026-05-17-predeployment-hardening\\outputs\\predeployment-e2e-result_002.pdf"
+    ],
+    "logs": [
+      {
+        "id": "log-390fd824-6228-4fcb-90fa-f4b0d61bc3a6",
+        "level": "info",
+        "message": "書き出しが完了しました: predeployment-e2e-result_001.pdf, predeployment-e2e-result_002.pdf",
+        "time": "01:30:06"
+      },
+      {
+        "id": "log-f6b123f6-1d97-4f3d-9ffd-80d657152f97",
+        "level": "info",
+        "message": "一括書き出しジョブを開始しました。出力予定 2ファイル。",
+        "time": "01:30:03"
+      },
+      {
+        "id": "log-3fc97dd1-d711-472b-9452-563da874ad8b",
+        "level": "info",
+        "message": "E2E CHECK をページへ配置しました。",
+        "time": "01:30:03"
+      },
+      {
+        "id": "log-dca8482b-5e61-4766-a4ab-5361e304cafa",
+        "level": "info",
+        "message": "{page} / {total} をページへ配置しました。",
+        "time": "01:30:03"
+      },
+      {
+        "id": "log-7c501269-d1c9-4f8a-ba72-7be4ee5c2a9d",
+        "level": "info",
+        "message": "PDF Workbench E2E をページへ配置しました。",
+        "time": "01:30:03"
+      },
+      {
+        "id": "log-96c9c0d8-e636-45f7-9144-dbd74a241cbd",
+        "level": "info",
+        "message": "生体機械力学１.docx を実PDFとして準備しました。7ページ。",
+        "time": "01:30:03"
+      },
+      {
+        "id": "log-ecc9faa3-2b0f-400d-944e-f564663e13da",
+        "level": "info",
+        "message": "worker処理を開始しました。",
+        "time": "01:30:02"
+      },
+      {
+        "id": "log-70d3d7bb-6744-4b41-93ca-6a1469d2f6c9",
+        "level": "info",
+        "message": "生体機械力学１.docx のサムネイルを生成しています。",
+        "time": "01:30:02"
+      },
+      {
+        "id": "log-356feb1c-b21a-48c5-9e2b-58b624e14b70",
+        "level": "info",
+        "message": "worker処理を開始しました。",
+        "time": "01:30:02"
+      },
+      {
+        "id": "log-1c7ce83a-d619-45a2-9d2d-5d1bc4ba8b3f",
+        "level": "info",
+        "message": "生体機械力学１.docx のPDF化が完了しました。ページ解析中です。",
+        "time": "01:30:02"
+      },
+      {
+        "id": "log-f0e541eb-72c9-4777-a069-2ee40a94cdb6",
+        "level": "info",
+        "message": "生体機械力学１.docx のPDF化が完了しました。",
+        "time": "01:30:02"
+      },
+      {
+        "id": "log-f610c39f-d517-4217-b5ff-bf6de98b867b",
+        "level": "info",
+        "message": "Microsoft Office をバックグラウンドで起動しています。",
+        "time": "01:29:55"
+      },
+      {
+        "id": "log-e52bc6c2-8b54-418d-8f9f-c13325f7ca5e",
+        "level": "info",
+        "message": "生体機械力学１.docx のPDF化を開始しています。",
+        "time": "01:29:55"
+      },
+      {
+        "id": "log-25cd2894-ce46-4548-a472-64313aeeb705",
+        "level": "info",
+        "message": "worker処理を開始しました。",
+        "time": "01:29:55"
+      },
+      {
+        "id": "log-b3672f2c-02ce-4721-8617-1fdeb03c5d33",
+        "level": "info",
+        "message": "生体機械力学１.docx のOffice PDF化を開始しました。",
+        "time": "01:29:55"
+      },
+      {
+        "id": "log-f15f7d3f-ddcb-409b-9829-4f59785a8953",
+        "level": "info",
+        "message": "プレゼン資料 (003).pptx を実PDFとして準備しました。27ページ。",
+        "time": "01:29:55"
+      },
+      {
+        "id": "log-13e68228-9c4d-4c0c-af95-75f097d9c02b",
+        "level": "info",
+        "message": "worker処理を開始しました。",
+        "time": "01:29:53"
+      },
+      {
+        "id": "log-da5f52de-64e2-46a0-8634-21279f788183",
+        "level": "info",
+        "message": "プレゼン資料 (003).pptx のサムネイルを生成しています。",
+        "time": "01:29:53"
+      },
+      {
+        "id": "log-1f817999-62e9-47f7-8112-ba58da42d30b",
+        "level": "info",
+        "message": "worker処理を開始しました。",
+        "time": "01:29:52"
+      },
+      {
+        "id": "log-f7f21679-03c4-4d56-8f6e-86944be3dcb1",
+        "level": "info",
+        "message": "プレゼン資料 (003).pptx のPDF化が完了しました。ページ解析中です。",
+        "time": "01:29:52"
+      },
+      {
+        "id": "log-3d5a5763-9200-42a4-a1dd-af584536484a",
+        "level": "info",
+        "message": "プレゼン資料 (003).pptx のPDF化が完了しました。",
+        "time": "01:29:52"
+      },
+      {
+        "id": "log-d19e4bea-7fe6-47a6-824d-d3f094bf7321",
+        "level": "info",
+        "message": "Microsoft Office をバックグラウンドで起動しています。",
+        "time": "01:29:42"
+      },
+      {
+        "id": "log-a5857dc1-4c0d-49ca-987b-118aba6904ba",
+        "level": "info",
+        "message": "プレゼン資料 (003).pptx のPDF化を開始しています。",
+        "time": "01:29:42"
+      },
+      {
+        "id": "log-06721f2d-7da5-408a-9fc1-6e8bb52b66b1",
+        "level": "info",
+        "message": "worker処理を開始しました。",
+        "time": "01:29:42"
+      },
+      {
+        "id": "log-9c65372c-6628-47de-8065-cde94dc1954d",
+        "level": "info",
+        "message": "プレゼン資料 (003).pptx のOffice PDF化を開始しました。",
+        "time": "01:29:42"
+      },
+      {
+        "id": "log-111a3bac-e38e-4d9c-92de-2088d4f13e69",
+        "level": "info",
+        "message": "job_history.xlsx を実PDFとして準備しました。7ページ。",
+        "time": "01:29:42"
+      },
+      {
+        "id": "log-7074bfcb-34b8-4ea8-8c2c-aeddc0c1cdf5",
+        "level": "info",
+        "message": "worker処理を開始しました。",
+        "time": "01:29:41"
+      },
+      {
+        "id": "log-991c135f-96e7-43ab-b832-48eedfb271ec",
+        "level": "info",
+        "message": "job_history.xlsx のサムネイルを生成しています。",
+        "time": "01:29:41"
+      },
+      {
+        "id": "log-cde9a5db-fdcc-4f75-8aa9-90cd45cddd7c",
+        "level": "info",
+        "message": "worker処理を開始しました。",
+        "time": "01:29:41"
+      },
+      {
+        "id": "log-c496edcc-4bf9-44de-b1d2-8aa7a3d35704",
+        "level": "info",
+        "message": "job_history.xlsx のPDF化が完了しました。ページ解析中です。",
+        "time": "01:29:41"
+      },
+      {
+        "id": "log-9c86fba3-8a4d-40be-8426-90a00c75b667",
+        "level": "info",
+        "message": "job_history.xlsx のPDF化が完了しました。",
+        "time": "01:29:41"
+      },
+      {
+        "id": "log-4af4edbc-0572-4a56-aba6-a8143bb09cc0",
+        "level": "info",
+        "message": "Microsoft Office をバックグラウンドで起動しています。",
+        "time": "01:29:38"
+      },
+      {
+        "id": "log-a9eb421d-ccd9-4421-bad8-cd4033758042",
+        "level": "info",
+        "message": "job_history.xlsx のPDF化を開始しています。",
+        "time": "01:29:38"
+      },
+      {
+        "id": "log-24736d24-d6ff-4bae-bc72-7fff27f33e23",
+        "level": "info",
+        "message": "worker処理を開始しました。",
+        "time": "01:29:38"
+      },
+      {
+        "id": "log-0c8e7c21-3486-421b-856d-6c057f610e47",
+        "level": "info",
+        "message": "job_history.xlsx のOffice PDF化を開始しました。",
+        "time": "01:29:38"
+      },
+      {
+        "id": "log-d8064eb7-982f-477b-9cda-2539ae86b76c",
+        "level": "info",
+        "message": "出力先を設定しました: C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\docs\\reports\\e2e\\2026-05-17-predeployment-hardening\\outputs\\predeployment-e2e-result.pdf",
+        "time": "01:29:38"
+      },
+      {
+        "id": "log-cf23593f-728c-4f98-b28e-851a831f0296",
+        "level": "info",
+        "message": "生体機械力学１.docx を追加しました。PDF 化はバックグラウンドで待機します。",
+        "time": "01:29:38"
+      },
+      {
+        "id": "log-620e3ddc-41d9-4df0-8280-ae2bbf6c0ec0",
+        "level": "info",
+        "message": "プレゼン資料 (003).pptx を追加しました。PDF 化はバックグラウンドで待機します。",
+        "time": "01:29:38"
+      },
+      {
+        "id": "log-be574b50-49ee-47fc-a700-dccbf53c3783",
+        "level": "info",
+        "message": "job_history.xlsx を追加しました。PDF 化はバックグラウンドで待機します。",
+        "time": "01:29:38"
+      },
+      {
+        "id": "log-092d757e-0e26-4b6b-be9d-370f4ffc154b",
+        "level": "info",
+        "message": "E2Eファイル投入を開始します: 3件",
+        "time": "01:29:35"
+      },
+      {
+        "id": "log-275aa6e4-3cfd-40a0-9a4d-c4be94724cb6",
+        "level": "info",
+        "message": "セッション一時キャッシュを準備しました: C:\\Users\\kuroron\\AppData\\Local\\Temp\\pdf-workbench-sessions\\session-1778948975249",
+        "time": "01:29:35"
+      },
+      {
+        "id": "log-b80db5c1-1ead-4f8b-9172-cfccbd95ee85",
+        "level": "info",
+        "message": "E2E起動設定を検出しました。",
+        "time": "01:29:35"
+      }
+    ],
+    "outputPlan": {
+      "activePageCount": 41,
+      "autoOutputFiles": [
+        "job_history_PDF化_001.pdf",
+        "job_history_PDF化_002.pdf"
+      ],
+      "customOutputNamesApplied": false,
+      "decorationCount": 3,
+      "defaultOutputFileName": "job_history_PDF化.pdf",
+      "encrypted": false,
+      "excludedPageCount": 0,
+      "outputCount": 2,
+      "outputFiles": [
+        "job_history_PDF化_001.pdf",
+        "job_history_PDF化_002.pdf"
+      ],
+      "splitCount": 1
+    }
+  },
+  "status": "completed"
+}

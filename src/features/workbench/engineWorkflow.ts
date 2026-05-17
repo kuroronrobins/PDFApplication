@@ -7,9 +7,9 @@ import {
   renderExportDecorationOverlayFromManifest,
   renderExportDecorationManifestPage,
   renderExportDecorationOverlayPage,
-  inspectPdfFile,
+  inspectPdfFileStreaming,
   ProcessingEngineCancelledError,
-  renderPdfThumbnails,
+  renderPdfThumbnailsStreaming,
   type DecorationLayoutManifest,
   type DecorationOverlayRenderResult,
   type ExportWorkspaceResult,
@@ -19,6 +19,7 @@ import { useWorkbenchStore } from "./store";
 import type { PageItem, PdfMetadata, WorkbenchFile, WorkbenchSnapshot } from "./types";
 
 const inFlightFiles = new Map<string, Promise<void>>();
+const activePreparationJobIds = new Set<string>();
 let activeExportJobId: string | undefined;
 let activeExportCancellationRequested = false;
 
@@ -42,6 +43,53 @@ function normalizeEngineMessage(error: unknown): string {
     return error.message;
   }
   return String(error);
+}
+
+function throwIfCurrentExportCancelled(): void {
+  if (activeExportCancellationRequested) {
+    throw new ProcessingEngineCancelledError();
+  }
+}
+
+async function trackPreparationJob<T>(jobId: string, runner: () => Promise<T>): Promise<T> {
+  activePreparationJobIds.add(jobId);
+  try {
+    return await runner();
+  } finally {
+    activePreparationJobIds.delete(jobId);
+  }
+}
+
+function scaledProgress(value: number, min: number, max: number): number {
+  const normalized = value > 1 ? value / 100 : value;
+  return Math.max(min, Math.min(max, Math.round(min + normalized * (max - min))));
+}
+
+function handleFilePreparationEvent(
+  fileId: string,
+  event: ProcessingEngineEvent,
+  minProgress: number,
+  maxProgress: number,
+): void {
+  const store = useWorkbenchStore.getState();
+  if (event.type === "progress") {
+    store.setFileCacheProgress(
+      fileId,
+      "converting",
+      scaledProgress(event.progress, minProgress, maxProgress),
+      event.message,
+    );
+    return;
+  }
+  if (event.type === "log" && event.message) {
+    store.addLog(event.level ?? "info", event.message);
+  }
+}
+
+function resetFileAfterCancellation(file: WorkbenchFile): void {
+  useWorkbenchStore
+    .getState()
+    .setFileCacheProgress(file.id, "queued", 0, `${file.name} の準備をキャンセルしました。`);
 }
 
 function metadataFromInspection(result: {
@@ -98,6 +146,7 @@ async function processFileInternal(file: WorkbenchFile, sessionDir: string): Pro
   }
 
   try {
+    throwIfCurrentExportCancelled();
     const password = useWorkbenchStore.getState().security.inputPassword;
     store.setFileCacheProgress(
       file.id,
@@ -111,22 +160,16 @@ async function processFileInternal(file: WorkbenchFile, sessionDir: string): Pro
     let pdfPath = sourcePath;
     if (file.kind !== "pdf") {
       const convertJobId = createProcessingJobId("convert");
-      const converted = await convertOfficeFileStreaming(
-        sourcePath,
-        sessionDir,
-        `${file.id}.pdf`,
-        convertJobId,
-        (event) => {
-          if (event.type === "progress") {
-            const progress = Math.max(8, Math.min(56, Math.round(event.progress * 0.56)));
-            useWorkbenchStore
-              .getState()
-              .setFileCacheProgress(file.id, "converting", progress, event.message);
-          } else if (event.type === "log" && event.message) {
-            useWorkbenchStore.getState().addLog(event.level ?? "info", event.message);
-          }
-        },
+      const converted = await trackPreparationJob(convertJobId, () =>
+        convertOfficeFileStreaming(
+          sourcePath,
+          sessionDir,
+          `${file.id}.pdf`,
+          convertJobId,
+          (event) => handleFilePreparationEvent(file.id, event, 8, 56),
+        ),
       );
+      throwIfCurrentExportCancelled();
       pdfPath = converted.outputPath ?? converted.cachePath ?? "";
       if (!pdfPath) {
         throw new Error("Office変換後のPDFパスを取得できませんでした。");
@@ -136,18 +179,31 @@ async function processFileInternal(file: WorkbenchFile, sessionDir: string): Pro
         .setFileCacheProgress(file.id, "converting", 58, `${file.name} のPDF化が完了しました。ページ解析中です。`);
     }
 
-    const inspection = await inspectPdfFile(pdfPath, password);
+    throwIfCurrentExportCancelled();
+    const inspectJobId = createProcessingJobId("inspect");
+    const inspection = await trackPreparationJob(inspectJobId, () =>
+      inspectPdfFileStreaming(pdfPath, password, inspectJobId, (event) =>
+        handleFilePreparationEvent(file.id, event, 58, 76),
+      ),
+    );
+    throwIfCurrentExportCancelled();
     useWorkbenchStore
       .getState()
       .setFileCacheProgress(file.id, "converting", 78, `${file.name} のサムネイルを生成しています。`);
 
     const thumbnailDir = joinWorkerPath(sessionDir, "thumbnails", file.id);
-    const thumbnails = await renderPdfThumbnails(
-      pdfPath,
-      thumbnailDir,
-      inspection.pageCount,
-      password,
+    const thumbnailJobId = createProcessingJobId("thumbnail");
+    const thumbnails = await trackPreparationJob(thumbnailJobId, () =>
+      renderPdfThumbnailsStreaming(
+        pdfPath,
+        thumbnailDir,
+        inspection.pageCount,
+        password,
+        thumbnailJobId,
+        (event) => handleFilePreparationEvent(file.id, event, 78, 96),
+      ),
     );
+    throwIfCurrentExportCancelled();
 
     useWorkbenchStore.getState().completeFileInspection(file.id, {
       cachePath: pdfPath,
@@ -159,6 +215,10 @@ async function processFileInternal(file: WorkbenchFile, sessionDir: string): Pro
       message: `${file.name} を実PDFとして準備しました。${inspection.pageCount}ページ。`,
     });
   } catch (error) {
+    if (error instanceof ProcessingEngineCancelledError) {
+      resetFileAfterCancellation(file);
+      return;
+    }
     useWorkbenchStore.getState().failFileProcessing(file.id, normalizeEngineMessage(error));
   }
 }
@@ -177,6 +237,10 @@ export function processWorkbenchFile(file: WorkbenchFile, sessionDir: string): P
 }
 
 export function processNextPendingEngineFile(sessionDir: string): void {
+  if (inFlightFiles.size > 0) {
+    return;
+  }
+
   const state = useWorkbenchStore.getState();
   const candidate =
     state.files.find((file) => file.priority && shouldProcessWithEngine(file) && !inFlightFiles.has(file.id)) ??
@@ -189,9 +253,7 @@ export function processNextPendingEngineFile(sessionDir: string): void {
 
 export async function processAllPendingEngineFiles(sessionDir: string): Promise<void> {
   while (true) {
-    if (activeExportCancellationRequested) {
-      throw new ProcessingEngineCancelledError();
-    }
+    throwIfCurrentExportCancelled();
     const state = useWorkbenchStore.getState();
     const activeJobs = state.files
       .map((file) => inFlightFiles.get(file.id))
@@ -210,9 +272,7 @@ export async function processAllPendingEngineFiles(sessionDir: string): Promise<
     await processWorkbenchFile(candidate, sessionDir);
   }
 
-  if (activeExportCancellationRequested) {
-    throw new ProcessingEngineCancelledError();
-  }
+  throwIfCurrentExportCancelled();
 
   const nextState = useWorkbenchStore.getState();
   const blockers = nextState.files.filter((file) => {
@@ -284,9 +344,7 @@ function passwordMapForExport(snapshot: WorkbenchSnapshot): Record<string, strin
 export async function exportCurrentWorkspaceWithEngine(
   destination: string | ExportDestination,
 ): Promise<ExportWorkspaceResult> {
-  if (activeExportCancellationRequested) {
-    throw new ProcessingEngineCancelledError();
-  }
+  throwIfCurrentExportCancelled();
   const snapshot = snapshotForExport();
   const jobId = createProcessingJobId("export");
   activeExportJobId = jobId;
@@ -358,9 +416,10 @@ function handleExportEvent(event: ProcessingEngineEvent): void {
 
 export async function cancelCurrentExportWithEngine(): Promise<void> {
   activeExportCancellationRequested = true;
-  const jobId = activeExportJobId;
-  if (jobId) {
-    await cancelProcessingEngineJob(jobId);
-  }
+  const jobIds = [
+    ...activePreparationJobIds,
+    ...(activeExportJobId ? [activeExportJobId] : []),
+  ];
+  await Promise.allSettled(jobIds.map((jobId) => cancelProcessingEngineJob(jobId)));
   useWorkbenchStore.getState().cancelExportJob();
 }

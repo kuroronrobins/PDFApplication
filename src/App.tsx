@@ -34,6 +34,7 @@ import {
   Loader2,
   Lock,
   Logs,
+  PencilLine,
   Redo2,
   Scissors,
   Shield,
@@ -80,6 +81,7 @@ import {
   isTauriRuntime,
   openInputFilesDialog,
   openOutputFileDialog,
+  openOutputFolderDialog,
   supportedExtensions,
 } from "./features/workbench/fileInput";
 import { useWorkbenchStore } from "./features/workbench/store";
@@ -301,6 +303,66 @@ function localAssetSrc(path?: string): string | undefined {
 
 function plannedOutputNames(outputPlan: OutputPlan): string[] {
   return outputPlan.outputFiles;
+}
+
+const invalidOutputNamePattern = /[<>:"/\\|?*\u0000-\u001f]/;
+const reservedWindowsNames = new Set([
+  "CON",
+  "PRN",
+  "AUX",
+  "NUL",
+  "COM1",
+  "COM2",
+  "COM3",
+  "COM4",
+  "COM5",
+  "COM6",
+  "COM7",
+  "COM8",
+  "COM9",
+  "LPT1",
+  "LPT2",
+  "LPT3",
+  "LPT4",
+  "LPT5",
+  "LPT6",
+  "LPT7",
+  "LPT8",
+  "LPT9",
+]);
+
+function withPdfExtension(name: string): string {
+  const trimmed = name.trim();
+  return /\.pdf$/i.test(trimmed) ? trimmed : `${trimmed}.pdf`;
+}
+
+function outputNameValidationError(outputNames: string[]): string | null {
+  const seen = new Set<string>();
+
+  for (const outputName of outputNames) {
+    const name = outputName.trim();
+    if (!name) {
+      return "空のファイル名があります。";
+    }
+    if (invalidOutputNamePattern.test(name)) {
+      return `使用できない文字を含むファイル名があります: ${name}`;
+    }
+    if (/[. ]$/.test(name)) {
+      return `末尾が空白またはドットのファイル名は使えません: ${name}`;
+    }
+    const stem = name.replace(/\.pdf$/i, "").toUpperCase();
+    if (stem === "." || stem === ".." || reservedWindowsNames.has(stem)) {
+      return `Windows予約名は使えません: ${name}`;
+    }
+
+    const normalized = name.toLocaleLowerCase();
+    if (seen.has(normalized)) {
+      return `重複したファイル名があります: ${name}`;
+    }
+    seen.add(normalized);
+  }
+
+  return null;
 }
 
 function buildExportPreviewGroups(
@@ -615,7 +677,7 @@ function AlphaExpiredScreen({ license }: { license: AlphaLicenseStatus }) {
         <p>
           この限定版は {license.expiresOn} まで利用可能です。期限後は作業画面を開けません。
         </p>
-        <small>{license.message ?? "Alpha license expired"}</small>
+        <small>{license.message ?? "アルファ版ライセンスの有効期限が終了しました。"}</small>
       </section>
     </div>
   );
@@ -724,10 +786,191 @@ function ConfirmDialog({
   );
 }
 
+function OutputNameEditorModal({
+  open,
+  onClose,
+}: {
+  open: boolean;
+  onClose: () => void;
+}) {
+  const outputPlan = useWorkbenchStore((state) => state.outputPlan);
+  const applyOutputSettings = useWorkbenchStore((state) => state.applyOutputSettings);
+  const resetOutputSettings = useWorkbenchStore((state) => state.resetOutputSettings);
+  const [destinationDir, setDestinationDir] = useState("");
+  const [names, setNames] = useState<string[]>([]);
+  const [error, setError] = useState("");
+  const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+    setDestinationDir(outputPlan.outputDestinationDir ?? "");
+    setNames(plannedOutputNames(outputPlan));
+    setError("");
+    setResetConfirmOpen(false);
+  }, [open, outputPlan]);
+
+  useEffect(() => {
+    if (!open) {
+      return undefined;
+    }
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        onClose();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [onClose, open]);
+
+  if (!open) {
+    return null;
+  }
+
+  const updateName = (index: number, value: string) => {
+    setNames((current) => current.map((name, itemIndex) => (itemIndex === index ? value : name)));
+    setError("");
+  };
+
+  const chooseDestination = async () => {
+    if (!isTauriRuntime()) {
+      setError("保存先フォルダの選択はデスクトップ版で利用できます。");
+      return;
+    }
+
+    try {
+      const selected = await openOutputFolderDialog();
+      if (selected) {
+        setDestinationDir(selected);
+        setError("");
+      }
+    } catch (error) {
+      setError(`保存先フォルダを選択できませんでした: ${errorMessage(error)}`);
+    }
+  };
+
+  const applySettings = () => {
+    const destination = destinationDir.trim();
+    if (!destination) {
+      setError("保存先フォルダを選択してください。");
+      return;
+    }
+
+    const normalizedNames = names.map((name) => withPdfExtension(name));
+    const validationError = outputNameValidationError(normalizedNames);
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
+
+    applyOutputSettings(destination, normalizedNames);
+    onClose();
+  };
+
+  const confirmReset = () => {
+    resetOutputSettings();
+    onClose();
+  };
+
+  return (
+    <div className="modal-backdrop output-name-backdrop" role="presentation">
+      <section
+        className="output-name-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="output-name-editor-title"
+      >
+        <div className="modal-heading">
+          <span id="output-name-editor-title">
+            <PencilLine size={18} />
+            出力ファイル名
+          </span>
+          <button className="icon-button" aria-label="閉じる" onClick={onClose} type="button">
+            <X size={18} />
+          </button>
+        </div>
+
+        <label className="destination-field">
+          保存先フォルダ
+          <div>
+            <input
+              value={destinationDir}
+              onChange={(event: ChangeEvent<HTMLInputElement>) => {
+                setDestinationDir(event.target.value);
+                setError("");
+              }}
+              placeholder="保存先フォルダを選択"
+            />
+            <button onClick={() => void chooseDestination()} type="button">
+              <FolderOpen size={16} />
+              選択
+            </button>
+          </div>
+        </label>
+
+        <div className="output-name-list">
+          {names.length === 0 ? (
+            <div className="output-name-empty">書き出し対象がありません。</div>
+          ) : (
+            names.map((name, index) => (
+              <label key={`${index}:${outputPlan.autoOutputFiles[index] ?? name}`}>
+                <span>{index + 1}</span>
+                <input
+                  value={name}
+                  onChange={(event: ChangeEvent<HTMLInputElement>) =>
+                    updateName(index, event.target.value)
+                  }
+                />
+              </label>
+            ))
+          )}
+        </div>
+
+        {error && <div className="output-name-error">{error}</div>}
+
+        {resetConfirmOpen && (
+          <div className="output-reset-confirm">
+            <span>出力名と保存先を自動設定に戻しますか。</span>
+            <button onClick={() => setResetConfirmOpen(false)} type="button">
+              キャンセル
+            </button>
+            <button className="danger-action" onClick={confirmReset} type="button">
+              リセット
+            </button>
+          </div>
+        )}
+
+        <div className="output-name-actions">
+          <button
+            disabled={!outputPlan.customOutputNamesApplied}
+            onClick={() => setResetConfirmOpen(true)}
+            type="button"
+          >
+            リセット
+          </button>
+          <button onClick={onClose} type="button">
+            キャンセル
+          </button>
+          <button
+            className="primary-action"
+            disabled={names.length === 0}
+            onClick={applySettings}
+            type="button"
+          >
+            適用
+          </button>
+        </div>
+      </section>
+    </div>
+  );
+}
+
 function AppBar() {
   const inputRef = useRef<HTMLInputElement>(null);
   const [selectingFiles, setSelectingFiles] = useState(false);
   const [exportPreviewOpen, setExportPreviewOpen] = useState(false);
+  const [outputNameEditorOpen, setOutputNameEditorOpen] = useState(false);
   const undo = useWorkbenchStore((state) => state.undo);
   const redo = useWorkbenchStore((state) => state.redo);
   const canUndo = useWorkbenchStore((state) => state.canUndo);
@@ -900,6 +1143,15 @@ function AppBar() {
         >
           <Redo2 size={18} />
         </button>
+        <button
+          disabled={exportJob.status === "running" || outputPlan.activePageCount === 0}
+          onClick={() => setOutputNameEditorOpen(true)}
+          title="カット後の複数出力ファイル名を一括編集"
+          type="button"
+        >
+          <PencilLine size={17} />
+          出力名
+        </button>
         {exportJob.status !== "idle" && (
           <div className="job-pill">
             <span
@@ -936,6 +1188,10 @@ function AppBar() {
         setExportPreviewOpen(false);
         void handleExport();
       }}
+    />
+    <OutputNameEditorModal
+      open={outputNameEditorOpen}
+      onClose={() => setOutputNameEditorOpen(false)}
     />
     </>
   );

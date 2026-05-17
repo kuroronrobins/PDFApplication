@@ -1,6 +1,6 @@
 {
   "name": "pdf-workbench",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -8,6 +8,8 @@
     "build": "tsc --noEmit && vite build",
     "build:python-runtime": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build-python-runtime.ps1",
     "build:release": "npm run build:python-runtime && npm run build",
+    "stage:release": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/stage-release-artifacts.ps1",
+    "stage:toolhub": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/stage-toolhub-app.ps1",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "tauri": "tauri"

@@ -121,26 +121,26 @@
     </style>
   </head>
   <body>
-    <main class="splash" aria-label="PDF Workbench is starting">
+    <main class="splash" aria-label="PDF Workbench を起動中">
       <section class="picture" aria-hidden="true">
         <img src="assets/splash-workbench-a.png" alt="" />
       </section>
       <section class="license">
         <strong>PDF Workbench</strong>
-        <span>Licensed to koki kurokawa</span>
-        <span>v0.1.1</span>
+        <span>ライセンス: koki kurokawa</span>
+        <span>v0.2.0</span>
       </section>
       <section class="status" aria-live="polite">
         <span class="spinner" aria-hidden="true"></span>
-        <span id="status-line" class="status-line">Preparing workspace</span>
+        <span id="status-line" class="status-line">ワークスペースを準備しています</span>
       </section>
     </main>
     <script>
       const messages = [
-        "Preparing workspace",
-        "Checking session cache",
-        "Connecting processing engine",
-        "Loading workbench UI",
+        "ワークスペースを準備しています",
+        "セッションキャッシュを確認しています",
+        "処理エンジンへ接続しています",
+        "作業画面を読み込んでいます",
       ];
       const statusLine = document.getElementById("status-line");
       let index = 0;

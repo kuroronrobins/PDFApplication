@@ -1115,3 +1115,44 @@ Implemented:
 Verification:
 
 - See `docs/reports/2026-05-17-app-side-io-robustness-hardening.md`.
+
+## 2026-05-17 Predeployment queue, cancellation, cache, and release staging
+
+Implemented:
+
+- Background file preparation now respects a single in-flight worker at a time. `processNextPendingEngineFile` does not launch another Office/PDF preparation job while any file is already being prepared.
+- Office conversion, PDF inspection, and thumbnail rendering now use cancellable streaming job IDs in the Tauri runtime. `cancelCurrentExportWithEngine` cancels both the active export worker and any active pre-export preparation workers.
+- Cancellation returns the affected file to a retryable queued state instead of turning it into a processing error.
+- Tauri session creation now removes stale `session-*` cache directories older than 24 hours before creating the new session.
+- Added `npm run stage:release` to copy only the current `package.json` version's release executable, NSIS installer, and MSI installer into `build/release-artifacts/v<version>`.
+
+Verification:
+
+- See `docs/reports/2026-05-17-predeployment-hardening-fixes.md`.
+
+## 2026-05-17 ToolHub registration layer
+
+Implemented:
+
+- Added a ToolHub-specific Python source root at `toolhub/pdf_workbench/`.
+- Kept the Tauri/React/Rust/Python worker architecture as the production app boundary. ToolHub launches the staged Tauri release payload through a thin Python entry point instead of moving app code back to the root or into `archive/`.
+- Added a release-payload smoke path through `pdf-workbench.exe --toolhub-smoke`. This validates the bundled `src-python` worker package, bundled Python runtime, and worker `ping` without opening the GUI.
+- Updated the ToolHub payload boundary so App Studio can package the release payload from `assets/payload/`, while the launcher resolves only `pdf-workbench.exe` from that staged payload and does not fall back to development build output.
+- App Studio shared-env startup probes are detected and routed to the smoke path, avoiding a real GUI launch during registration checks while keeping ToolHub runtime launches as GUI mode.
+- Added `npm run stage:toolhub` to build a registration source tree under `build/toolhub-registration/pdf_workbench/`.
+
+Verification:
+
+- See `docs/reports/2026-05-17-toolhub-registration-structure.md`.
+
+## 2026-05-18 v0.2.0 metadata and Japanese splash license wording
+
+Implemented:
+
+- Bumped the current app metadata from `0.1.1` to `0.2.0` across npm, Tauri, Cargo, Python worker, splash, and ToolHub example metadata.
+- Updated the startup splash license row to use Japanese wording while preserving the licensed user name as `koki kurokawa`.
+- Updated splash startup status text and alpha-license status messages to Japanese.
+
+Verification:
+
+- See `docs/reports/2026-05-18-v0.2.0-splash-license.md`.

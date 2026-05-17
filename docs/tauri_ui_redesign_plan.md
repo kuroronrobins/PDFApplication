@@ -450,7 +450,7 @@ Behavior:
 - The splash uses bundled static assets under `public/`, so production startup does not wait for the React workbench to paint before showing a branded loading surface.
 - The React workbench calls the Tauri `complete_startup` command after initial session-cache setup settles.
 - `complete_startup` shows and focuses the main window, then closes the splash window.
-- The bottom of the splash displays `Licensed to koki kurokawa` and the current visible version.
+- The bottom of the splash displays the Japanese license label `ライセンス: koki kurokawa` and the current visible version.
 - The lowest row displays a small spinner and a single subtle rotating status line.
 - Production Windows builds suppress the console subsystem so users see the app window flow instead of a terminal.
 
@@ -521,6 +521,7 @@ Reference screenshot:
 ## 2026-05-16 Split Output Naming and Bottom Bar Hardening
 
 - The bottom output file chips include an edit icon. Opening it shows a compact output-name editor for the current split output groups.
+- The same output-name editor is also available from the top-right app bar as `出力名`, so users can reopen the split-output naming modal even when the bottom chips are not the active focus.
 - The output-name editor owns both file names and the save destination folder. When these settings are applied, export uses them directly and does not show the previous file-name save dialog or an additional folder picker at export time.
 - Reset in the output-name editor requires confirmation and restores automatic names/destination handling. If the workspace becomes blank because all file cards are removed, the custom output settings reset automatically.
 - Export worker requests may pass `outputDir` plus `outputNames[]`; the Python worker validates the count, duplicate names, and Windows-invalid characters before writing final PDFs.
@@ -608,3 +609,21 @@ Reference screenshot:
 - Worker stdout must stay machine-readable. If a dependency still prints recoverable diagnostics before JSON, Rust may salvage the first JSON payload, but a true parse failure is reported as `worker_protocol_error` with bounded stdout/stderr prefixes.
 - Python worker stages must return classified errors for input inspection, PDF open/render, Office conversion output validation, destination preparation, final save, and atomic replacement. Generic worker crashes should be the last resort.
 - Final user files should be touched only after scratch output is successfully produced. Existing destination files are replaced through a temporary same-directory file and `os.replace`, so partial worker failures do not overwrite a valid prior PDF.
+
+## 2026-05-17 Predeployment Hardening Update
+
+- Background Office/PDF preparation is a single-worker queue. A prioritized file may move to the front, but it must not start a second conversion/inspection/thumbnail worker while another file preparation is active.
+- Export cancellation covers the preparation phase as well as the final export worker. Office conversion, PDF inspection, and thumbnail rendering all run through cancellable streaming job IDs when the app is in the Tauri runtime.
+- Cancelling preparation leaves the file in a retryable queued state instead of marking the source as a hard processing error.
+- Session cache remains temporary. `prepare_cache_session` removes stale `session-*` directories that are at least 24 hours old before creating the new session, while current/young sessions are left untouched.
+- Release publishing should use the staged current-version folder from `npm run stage:release` instead of uploading directly from Tauri bundle directories that may contain old installer versions.
+
+## 2026-05-17 ToolHub Registration Boundary
+
+- ToolHub registration is handled by a thin Python launcher source root under `toolhub/pdf_workbench/`.
+- The launcher starts the staged Tauri release payload from `assets/payload/`; it does not reimplement the workbench UI or PDF processing in Python.
+- The ToolHub launcher intentionally resolves only `pdf-workbench.exe` from the staged payload and does not fall back to development release paths.
+- App Studio shared-env startup probes run the same payload smoke path instead of opening the real GUI. ToolHub runtime launches still open the main Tauri window.
+- The production architecture remains Tauri/React for UI, Rust/Tauri for orchestration and cache/session commands, and `src-python/pdf_workbench_engine/` for worker jobs.
+- `pdf-workbench.exe --toolhub-smoke` is the non-GUI registration smoke check. It validates the bundled Python runtime, active worker package, and worker `ping` command without opening the workbench.
+- ToolHub staging output belongs under `build/toolhub-registration/` and must not be committed as active source.

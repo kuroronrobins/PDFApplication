@@ -180,7 +180,7 @@ export async function checkAlphaLicense(): Promise<AlphaLicenseStatus> {
     return {
       valid: true,
       expiresOn: "2026-06-30",
-      message: "Browser development runtime",
+      message: "ブラウザ開発実行環境",
     };
   }
 
@@ -349,6 +349,27 @@ export async function inspectPdfFile(
   });
 }
 
+export async function inspectPdfFileStreaming(
+  sourcePath: string,
+  password: string | undefined,
+  jobId: string,
+  onEvent: (event: ProcessingEngineEvent) => void,
+): Promise<InspectPdfResult> {
+  if (!isTauriRuntime()) {
+    return inspectPdfFile(sourcePath, password);
+  }
+
+  return runProcessingEngineJob<InspectPdfResult>(
+    {
+      kind: "inspect_pdf",
+      sourcePath,
+      password,
+    },
+    jobId,
+    onEvent,
+  );
+}
+
 export async function renderPdfThumbnails(
   sourcePath: string,
   outputDir: string,
@@ -364,6 +385,33 @@ export async function renderPdfThumbnails(
     thumbnailZoom: 0.32,
     previewZoom: 2.25,
   });
+}
+
+export async function renderPdfThumbnailsStreaming(
+  sourcePath: string,
+  outputDir: string,
+  pageCount: number,
+  password: string | undefined,
+  jobId: string,
+  onEvent: (event: ProcessingEngineEvent) => void,
+): Promise<RenderThumbnailsResult> {
+  if (!isTauriRuntime()) {
+    return renderPdfThumbnails(sourcePath, outputDir, pageCount, password);
+  }
+
+  return runProcessingEngineJob<RenderThumbnailsResult>(
+    {
+      kind: "render_thumbnails",
+      sourcePath,
+      outputDir,
+      pageNumbers: Array.from({ length: pageCount }, (_, index) => index + 1),
+      password,
+      thumbnailZoom: 0.32,
+      previewZoom: 2.25,
+    },
+    jobId,
+    onEvent,
+  );
 }
 
 export async function renderExportDecorationManifestPage(
