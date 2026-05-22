@@ -72,6 +72,7 @@ import {
   renderCurrentExportDecorationManifestWithEngine,
   renderCurrentExportDecorationOverlayFromManifestWithEngine,
   renderCurrentExportDecorationOverlayWithEngine,
+  renderExpandedFileThumbnails,
   resetCurrentExportCancellation,
 } from "./features/workbench/engineWorkflow";
 import {
@@ -212,6 +213,9 @@ const decorationPreviewMaxCachedPages = 96;
 const previewNavigationSettleMs = 140;
 const previewNeighborPrefetchDelayMs = 260;
 const defaultPreviewPageAspectRatio = 1 / Math.SQRT2;
+const pageTimelineColumnCount = 12;
+const pageTimelineRowHeight = 119;
+const pageTimelineOverscanRows = 2;
 
 type OutputPageNumberInfo = {
   outputPageNumber: number;
@@ -225,6 +229,11 @@ type ConfirmDialogState = {
   cancelLabel: string;
   danger?: boolean;
   onConfirm: () => void;
+};
+
+type ExportCompletionNotice = {
+  completedAt: number;
+  outputFiles: string[];
 };
 
 function kindLabel(kind: FileKind): string {
@@ -634,14 +643,48 @@ function buildOutputPageNumberMap(
   pagesByFile: Record<string, PageItem[]>,
   outputPlan: OutputPlan,
 ): Record<string, OutputPageNumberInfo> {
+  const outputCount = plannedOutputNames(outputPlan).length;
+  if (outputCount === 0) {
+    return {};
+  }
+
+  const groupTotals = Array.from({ length: outputCount }, () => 0);
+  let groupIndex = 0;
+  for (const file of files) {
+    if (file.excluded) {
+      continue;
+    }
+    for (const page of pagesByFile[file.id] ?? []) {
+      if (page.excluded) {
+        continue;
+      }
+      groupTotals[groupIndex] += 1;
+      if (page.splitAfter && groupIndex < outputCount - 1) {
+        groupIndex += 1;
+      }
+    }
+  }
+
   const pageNumbers: Record<string, OutputPageNumberInfo> = {};
-  for (const group of buildExportPreviewGroups(files, pagesByFile, outputPlan)) {
-    group.pages.forEach((page, pageIndex) => {
+  const groupPageNumbers = Array.from({ length: outputCount }, () => 0);
+  groupIndex = 0;
+  for (const file of files) {
+    if (file.excluded) {
+      continue;
+    }
+    for (const page of pagesByFile[file.id] ?? []) {
+      if (page.excluded) {
+        continue;
+      }
+      groupPageNumbers[groupIndex] += 1;
       pageNumbers[page.id] = {
-        outputPageNumber: pageIndex + 1,
-        outputPageTotal: group.pages.length,
+        outputPageNumber: groupPageNumbers[groupIndex],
+        outputPageTotal: groupTotals[groupIndex],
       };
-    });
+      if (page.splitAfter && groupIndex < outputCount - 1) {
+        groupIndex += 1;
+      }
+    }
   }
   return pageNumbers;
 }
@@ -783,6 +826,45 @@ function ConfirmDialog({
         </div>
       </section>
     </div>
+  );
+}
+
+function outputDisplayName(pathOrName: string): string {
+  return pathOrName.split(/[\\/]/).pop() ?? pathOrName;
+}
+
+function ExportCompletionPopup({
+  notice,
+  onClose,
+}: {
+  notice: ExportCompletionNotice | null;
+  onClose: () => void;
+}) {
+  if (!notice) {
+    return null;
+  }
+
+  const outputNames = notice.outputFiles.map(outputDisplayName);
+  const outputSummary =
+    outputNames.length === 0
+      ? "PDFの出力が完了しました。"
+      : outputNames.length === 1
+        ? outputNames[0]
+        : `${outputNames.length}ファイル: ${outputNames.join(", ")}`;
+
+  return (
+    <aside className="export-completion-popup" role="status" aria-live="polite">
+      <div className="export-completion-icon">
+        <FileOutput size={18} />
+      </div>
+      <div className="export-completion-text">
+        <strong>出力が完了しました</strong>
+        <p title={outputSummary}>{outputSummary}</p>
+      </div>
+      <button onClick={onClose} type="button" aria-label="完了通知を閉じる">
+        <X size={15} />
+      </button>
+    </aside>
   );
 }
 
@@ -1491,7 +1573,10 @@ function FileStrip({
     y: 0,
     lastTime: null,
   });
-  const outputPageNumbers = buildOutputPageNumberMap(files, pagesByFile, outputPlan);
+  const outputPageNumbers = useMemo(
+    () => buildOutputPageNumberMap(files, pagesByFile, outputPlan),
+    [files, pagesByFile, outputPlan],
+  );
 
   const firstThumbnailPath = (fileId: string) =>
     pagesByFile[fileId]?.find((page) => Boolean(page.thumbnailPath))?.thumbnailPath;
@@ -2595,10 +2680,8 @@ function InfoPanel({ file, onClose }: { file?: WorkbenchFile; onClose: () => voi
 
 function ExpandedTimeline({
   onInternalDragActiveChange = () => undefined,
-  onRequestTogglePagesExcluded,
 }: {
   onInternalDragActiveChange?: InternalDragActiveHandler;
-  onRequestTogglePagesExcluded: (pages: PageItem[]) => void;
 }) {
   const files = useWorkbenchStore((state) => state.files);
   const pagesByFile = useWorkbenchStore((state) => state.pagesByFile);
@@ -2607,21 +2690,73 @@ function ExpandedTimeline({
   const activeTool = useWorkbenchStore((state) => state.activeTool);
   const toolActivationId = useWorkbenchStore((state) => state.toolActivationId);
   const movePageToIndex = useWorkbenchStore((state) => state.movePageToIndex);
+  const togglePageExcluded = useWorkbenchStore((state) => state.togglePageExcluded);
   const togglePageSplit = useWorkbenchStore((state) => state.togglePageSplit);
   const applyDecorationToTarget = useWorkbenchStore(
     (state) => state.applyDecorationToTarget,
   );
   const expandedFile = files.find((file) => file.expanded && file.cacheState === "ready");
   const pages = expandedFile ? pagesByFile[expandedFile.id] ?? [] : [];
-  const outputPageNumbers = buildOutputPageNumberMap(files, pagesByFile, outputPlan);
+  const outputPageNumbers = useMemo(
+    () => buildOutputPageNumberMap(files, pagesByFile, outputPlan),
+    [files, pagesByFile, outputPlan],
+  );
   const [draggingPageId, setDraggingPageId] = useState<string | null>(null);
   const [dropTarget, setDropTarget] = useState<PageDropTarget | null>(null);
   const [settingsPanelHidden, setSettingsPanelHidden] = useState(false);
+  const [timelineViewportHeight, setTimelineViewportHeight] = useState(0);
+  const [timelineScrollTop, setTimelineScrollTop] = useState(0);
   const pagePointerDragRef = useRef<PagePointerDragRef | null>(null);
+  const pageTimelineRef = useRef<HTMLDivElement | null>(null);
+
+  const totalTimelineRows = Math.ceil(pages.length / pageTimelineColumnCount);
+  const firstVisibleRow = Math.max(
+    0,
+    Math.floor(timelineScrollTop / pageTimelineRowHeight) - pageTimelineOverscanRows,
+  );
+  const visibleRowCount =
+    Math.ceil((timelineViewportHeight || pageTimelineRowHeight) / pageTimelineRowHeight) +
+    pageTimelineOverscanRows * 2;
+  const lastVisibleRow = Math.min(totalTimelineRows, firstVisibleRow + visibleRowCount);
+  const visiblePageStart = firstVisibleRow * pageTimelineColumnCount;
+  const visiblePageEnd = Math.min(pages.length, lastVisibleRow * pageTimelineColumnCount);
+  const visiblePages = pages.slice(visiblePageStart, visiblePageEnd);
+  const topSpacerHeight = firstVisibleRow * pageTimelineRowHeight;
+  const bottomSpacerHeight = Math.max(0, totalTimelineRows - lastVisibleRow) * pageTimelineRowHeight;
 
   useEffect(() => {
     setSettingsPanelHidden(false);
   }, [activeTool, expandedFile?.id, toolActivationId]);
+
+  useEffect(() => {
+    const timeline = pageTimelineRef.current;
+    if (!timeline) {
+      return undefined;
+    }
+
+    const updateViewport = () => {
+      setTimelineViewportHeight(timeline.clientHeight);
+      setTimelineScrollTop(timeline.scrollTop);
+    };
+    updateViewport();
+
+    if (typeof ResizeObserver === "undefined") {
+      window.addEventListener("resize", updateViewport);
+      return () => window.removeEventListener("resize", updateViewport);
+    }
+
+    const observer = new ResizeObserver(updateViewport);
+    observer.observe(timeline);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    const timeline = pageTimelineRef.current;
+    if (timeline) {
+      timeline.scrollTop = 0;
+    }
+    setTimelineScrollTop(0);
+  }, [expandedFile?.id]);
 
   const positionFromEvent = (
     event: DragEvent<HTMLButtonElement>,
@@ -2657,7 +2792,7 @@ function ExpandedTimeline({
       return null;
     }
 
-    const scrollContainer = document.querySelector<HTMLElement>(".page-timeline");
+    const scrollContainer = pageTimelineRef.current;
     const scrollDelta =
       (scrollContainer?.scrollLeft ?? drag?.scrollLeft ?? 0) - (drag?.scrollLeft ?? 0);
     const adjustedRects = hitRects.map((rect) => ({
@@ -2717,7 +2852,7 @@ function ExpandedTimeline({
       target: null,
       active: false,
       hitRects: [],
-      scrollLeft: document.querySelector<HTMLElement>(".page-timeline")?.scrollLeft ?? 0,
+      scrollLeft: pageTimelineRef.current?.scrollLeft ?? 0,
     };
     event.currentTarget.setPointerCapture(event.pointerId);
   };
@@ -2738,7 +2873,7 @@ function ExpandedTimeline({
 
     if (!drag.active) {
       drag.hitRects = capturePageHitRects();
-      drag.scrollLeft = document.querySelector<HTMLElement>(".page-timeline")?.scrollLeft ?? 0;
+      drag.scrollLeft = pageTimelineRef.current?.scrollLeft ?? 0;
     }
     drag.active = true;
     event.preventDefault();
@@ -2815,7 +2950,7 @@ function ExpandedTimeline({
 
   const requestPageExclusion = (page: PageItem) => {
     const targets = page.selected ? pages.filter((item) => item.selected) : [page];
-    onRequestTogglePagesExcluded(targets.length > 0 ? targets : [page]);
+    togglePageExcluded((targets[0] ?? page).id);
   };
 
   const requestPageExclusionById = (pageId: string) => {
@@ -2882,25 +3017,37 @@ function ExpandedTimeline({
         </div>
       </div>
 
-      <div className="page-timeline">
+      <div
+        className="page-timeline"
+        onScroll={(event) => setTimelineScrollTop(event.currentTarget.scrollTop)}
+        ref={pageTimelineRef}
+      >
         {pages.length > 0 ? (
-          pages.map((page) => (
-            <PageCard
-              page={withOutputPageNumber(page, outputPageNumbers)}
-              fileId={expandedFile?.id ?? ""}
-              decorations={decorations}
-              draggingPageId={draggingPageId}
-              dropTarget={dropTarget}
-              onDragOver={handlePageDragOver}
-              onDrop={handlePageDrop}
-              onPointerDragStart={handlePagePointerDragStart}
-              onPointerDragMove={handlePagePointerDragMove}
-              onPointerDragEnd={handlePagePointerDragEnd}
-              onPointerDragCancel={handlePagePointerDragCancel}
-              onRequestToggleExcluded={requestPageExclusion}
-              key={page.id}
-            />
-          ))
+          <>
+            {topSpacerHeight > 0 && (
+              <div className="page-timeline-spacer" style={{ height: topSpacerHeight }} />
+            )}
+            {visiblePages.map((page) => (
+              <PageCard
+                page={withOutputPageNumber(page, outputPageNumbers)}
+                fileId={expandedFile?.id ?? ""}
+                decorations={decorations}
+                draggingPageId={draggingPageId}
+                dropTarget={dropTarget}
+                onDragOver={handlePageDragOver}
+                onDrop={handlePageDrop}
+                onPointerDragStart={handlePagePointerDragStart}
+                onPointerDragMove={handlePagePointerDragMove}
+                onPointerDragEnd={handlePagePointerDragEnd}
+                onPointerDragCancel={handlePagePointerDragCancel}
+                onRequestToggleExcluded={requestPageExclusion}
+                key={page.id}
+              />
+            ))}
+            {bottomSpacerHeight > 0 && (
+              <div className="page-timeline-spacer" style={{ height: bottomSpacerHeight }} />
+            )}
+          </>
         ) : (
           <div className="empty-timeline">ファイルカードを展開してください</div>
         )}
@@ -3701,10 +3848,13 @@ export function App() {
   const [dropActive, setDropActive] = useState(false);
   const [logOpen, setLogOpen] = useState(false);
   const [confirmDialog, setConfirmDialog] = useState<ConfirmDialogState | null>(null);
+  const [exportCompletionNotice, setExportCompletionNotice] =
+    useState<ExportCompletionNotice | null>(null);
   const [alphaLicense, setAlphaLicense] = useState<AlphaLicenseStatus | null>(null);
   const [e2eBootstrap, setE2eBootstrap] = useState<E2eBootstrapInfo | null>(null);
   const e2eStartedRef = useRef(false);
   const internalDragActiveRef = useRef(false);
+  const lastCompletionNoticeAtRef = useRef<number | undefined>(undefined);
   const markInternalDragActive = useCallback((active: boolean) => {
     internalDragActiveRef.current = active;
     if (active) {
@@ -3717,7 +3867,6 @@ export function App() {
   const redo = useWorkbenchStore((state) => state.redo);
   const deleteSelectedPages = useWorkbenchStore((state) => state.deleteSelectedPages);
   const removeFile = useWorkbenchStore((state) => state.removeFile);
-  const togglePageExcluded = useWorkbenchStore((state) => state.togglePageExcluded);
   const setActiveTool = useWorkbenchStore((state) => state.setActiveTool);
   const setCacheSession = useWorkbenchStore((state) => state.setCacheSession);
   const cacheSession = useWorkbenchStore((state) => state.cacheSession);
@@ -3729,6 +3878,25 @@ export function App() {
   const loadDevelopmentFixture = useWorkbenchStore(
     (state) => state.loadDevelopmentFixture,
   );
+  const loadLargePerformanceFixture = useWorkbenchStore(
+    (state) => state.loadLargePerformanceFixture,
+  );
+  const loadHundredFilesPerformanceFixture = useWorkbenchStore(
+    (state) => state.loadHundredFilesPerformanceFixture,
+  );
+  const exportJob = useWorkbenchStore((state) => state.exportJob);
+  const lastOutputFiles = useWorkbenchStore((state) => state.lastOutputFiles);
+  const outputPlan = useWorkbenchStore((state) => state.outputPlan);
+  const expandedThumbnailFileId = useWorkbenchStore((state) => {
+    const expandedReadyFile = state.files.find(
+      (file) => file.expanded && file.cacheState === "ready",
+    );
+    if (!expandedReadyFile || expandedReadyFile.engineState === "synthetic") {
+      return undefined;
+    }
+    const pages = state.pagesByFile[expandedReadyFile.id] ?? [];
+    return pages.some((page) => !page.thumbnailPath) ? expandedReadyFile.id : undefined;
+  });
 
   const requestRemoveFiles = useCallback(
     (targets: WorkbenchFile[]) => {
@@ -3751,50 +3919,53 @@ export function App() {
     [removeFile],
   );
 
-  const requestTogglePagesExcluded = useCallback(
-    (targets: PageItem[]) => {
-      if (targets.length === 0) {
-        return;
-      }
-      const shouldExclude = targets.some((page) => !page.excluded);
-      setConfirmDialog({
-        title:
-          targets.length > 1
-            ? shouldExclude
-              ? "複数ページを除外"
-              : "複数ページを戻す"
-            : shouldExclude
-              ? "ページを除外"
-              : "ページを戻す",
-        message:
-          targets.length > 1
-            ? `${targets.length}ページを${shouldExclude ? "書き出し対象外にします" : "書き出し対象に戻します"}。`
-            : `p${targets[0].pageNumber} を${shouldExclude ? "書き出し対象外にします" : "書き出し対象に戻します"}。`,
-        confirmLabel: shouldExclude ? "除外" : "戻す",
-        cancelLabel: "キャンセル",
-        danger: shouldExclude,
-        onConfirm: () => {
-          targets.forEach((page) => {
-            if (page.excluded !== shouldExclude) {
-              togglePageExcluded(page.id);
-            }
-          });
-        },
-      });
-    },
-    [togglePageExcluded],
-  );
+  useEffect(() => {
+    if (exportJob.status !== "completed" || !exportJob.completedAt) {
+      return;
+    }
+    if (lastCompletionNoticeAtRef.current === exportJob.completedAt) {
+      return;
+    }
+    lastCompletionNoticeAtRef.current = exportJob.completedAt;
+    setExportCompletionNotice({
+      completedAt: exportJob.completedAt,
+      outputFiles: lastOutputFiles.length > 0 ? lastOutputFiles : outputPlan.outputFiles,
+    });
+  }, [exportJob.status, exportJob.completedAt, lastOutputFiles, outputPlan.outputFiles]);
+
+  useEffect(() => {
+    if (!exportCompletionNotice) {
+      return undefined;
+    }
+
+    const timer = window.setTimeout(() => {
+      setExportCompletionNotice((current) =>
+        current?.completedAt === exportCompletionNotice.completedAt ? null : current,
+      );
+    }, 8000);
+
+    return () => window.clearTimeout(timer);
+  }, [exportCompletionNotice]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    if (params.get("fixture") === "workbench") {
+    if (params.get("fixture") === "hundred-files") {
+      loadHundredFilesPerformanceFixture();
+    } else if (params.get("fixture") === "large-pages") {
+      loadLargePerformanceFixture();
+    } else if (params.get("fixture") === "workbench") {
       loadDevelopmentFixture();
     }
     const tool = params.get("tool");
     if (toolItems.some((item) => item.id === tool)) {
       setActiveTool(tool as ToolId);
     }
-  }, [loadDevelopmentFixture, setActiveTool]);
+  }, [
+    loadDevelopmentFixture,
+    loadHundredFilesPerformanceFixture,
+    loadLargePerformanceFixture,
+    setActiveTool,
+  ]);
 
   useEffect(() => {
     let disposed = false;
@@ -3989,6 +4160,13 @@ export function App() {
   }, [addLog, alphaLicense?.valid, cacheSession.path, e2eBootstrap]);
 
   useEffect(() => {
+    if (!cacheSession.path || !expandedThumbnailFileId || !isTauriRuntime()) {
+      return;
+    }
+    void renderExpandedFileThumbnails(expandedThumbnailFileId, cacheSession.path);
+  }, [cacheSession.path, expandedThumbnailFileId]);
+
+  useEffect(() => {
     const timer = window.setInterval(() => {
       if (!alphaLicense?.valid) {
         return;
@@ -4178,11 +4356,14 @@ export function App() {
         />
         <ExpandedTimeline
           onInternalDragActiveChange={markInternalDragActive}
-          onRequestTogglePagesExcluded={requestTogglePagesExcluded}
         />
       </main>
       <OutputBar logOpen={logOpen} onToggleLog={() => setLogOpen((open) => !open)} />
       <LogDrawerPreview open={logOpen} />
+      <ExportCompletionPopup
+        notice={exportCompletionNotice}
+        onClose={() => setExportCompletionNotice(null)}
+      />
       <ConfirmDialog dialog={confirmDialog} onClose={() => setConfirmDialog(null)} />
     </div>
   );

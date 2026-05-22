@@ -19,6 +19,7 @@ import { useWorkbenchStore } from "./store";
 import type { PageItem, PdfMetadata, WorkbenchFile, WorkbenchSnapshot } from "./types";
 
 const inFlightFiles = new Map<string, Promise<void>>();
+const inFlightThumbnailFiles = new Map<string, Promise<void>>();
 const activePreparationJobIds = new Set<string>();
 let activeExportJobId: string | undefined;
 let activeExportCancellationRequested = false;
@@ -189,30 +190,14 @@ async function processFileInternal(file: WorkbenchFile, sessionDir: string): Pro
     throwIfCurrentExportCancelled();
     useWorkbenchStore
       .getState()
-      .setFileCacheProgress(file.id, "converting", 78, `${file.name} のサムネイルを生成しています。`);
-
-    const thumbnailDir = joinWorkerPath(sessionDir, "thumbnails", file.id);
-    const thumbnailJobId = createProcessingJobId("thumbnail");
-    const thumbnails = await trackPreparationJob(thumbnailJobId, () =>
-      renderPdfThumbnailsStreaming(
-        pdfPath,
-        thumbnailDir,
-        inspection.pageCount,
-        password,
-        thumbnailJobId,
-        (event) => handleFilePreparationEvent(file.id, event, 78, 96),
-      ),
-    );
-    throwIfCurrentExportCancelled();
+      .setFileCacheProgress(file.id, "converting", 88, `${file.name} のページ構成を登録しています。`);
 
     useWorkbenchStore.getState().completeFileInspection(file.id, {
       cachePath: pdfPath,
       pageCount: inspection.pageCount,
       metadata: metadataFromInspection(inspection),
-      thumbnailPaths: thumbnailMap(thumbnails.thumbnails),
-      previewPaths: previewMap(thumbnails.thumbnails),
       engineState: file.kind === "pdf" ? "inspected" : "cached",
-      message: `${file.name} を実PDFとして準備しました。${inspection.pageCount}ページ。`,
+      message: `${file.name} を実PDFとして準備しました。${inspection.pageCount}ページ。サムネイルは展開時に生成します。`,
     });
   } catch (error) {
     if (error instanceof ProcessingEngineCancelledError) {
@@ -233,6 +218,73 @@ export function processWorkbenchFile(file: WorkbenchFile, sessionDir: string): P
     inFlightFiles.delete(file.id);
   });
   inFlightFiles.set(file.id, promise);
+  return promise;
+}
+
+export function renderExpandedFileThumbnails(fileId: string, sessionDir: string): Promise<void> {
+  const existing = inFlightThumbnailFiles.get(fileId);
+  if (existing) {
+    return existing;
+  }
+
+  const promise = (async () => {
+    const state = useWorkbenchStore.getState();
+    const file = state.files.find((item) => item.id === fileId);
+    const pages = state.pagesByFile[fileId] ?? [];
+    if (!file || file.cacheState !== "ready" || pages.length === 0) {
+      return;
+    }
+    if (!pages.some((page) => !page.thumbnailPath)) {
+      return;
+    }
+
+    const pdfPath = file.cachePath || file.sourcePath;
+    if (!pdfPath || isVirtualSource(pdfPath)) {
+      return;
+    }
+
+    const password = state.security.inputPassword;
+    const thumbnailDir = joinWorkerPath(sessionDir, "thumbnails", file.id);
+    const thumbnailJobId = createProcessingJobId("thumbnail");
+    state.addLog("info", `${file.name} のページサムネイルを生成しています。`);
+
+    try {
+      const thumbnails = await trackPreparationJob(thumbnailJobId, () =>
+        renderPdfThumbnailsStreaming(
+          pdfPath,
+          thumbnailDir,
+          file.pageCount || pages.length,
+          password,
+          thumbnailJobId,
+          (event) => {
+            if (event.type === "log" && event.message) {
+              useWorkbenchStore.getState().addLog(event.level ?? "info", event.message);
+            }
+          },
+        ),
+      );
+
+      useWorkbenchStore.getState().completeFileThumbnails(file.id, {
+        thumbnailPaths: thumbnailMap(thumbnails.thumbnails),
+        previewPaths: previewMap(thumbnails.thumbnails),
+        message: `${file.name} のページサムネイルを生成しました。`,
+      });
+    } catch (error) {
+      if (error instanceof ProcessingEngineCancelledError) {
+        useWorkbenchStore.getState().addLog("info", `${file.name} のサムネイル生成をキャンセルしました。`);
+        return;
+      }
+      useWorkbenchStore
+        .getState()
+        .addLog("warn", `${file.name} のサムネイル生成に失敗しました: ${normalizeEngineMessage(error)}`);
+    }
+  })().finally(() => {
+    if (inFlightThumbnailFiles.get(fileId) === promise) {
+      inFlightThumbnailFiles.delete(fileId);
+    }
+  });
+
+  inFlightThumbnailFiles.set(fileId, promise);
   return promise;
 }
 

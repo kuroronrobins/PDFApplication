@@ -1,0 +1,86 @@
+{
+  "url": "http://127.0.0.1:5173/?fixture=hundred-files",
+  "title": "PDF Workbench",
+  "initial": {
+    "fileCards": 100,
+    "pageCards": 0,
+    "fileStripClientWidth": 1322,
+    "fileStripScrollWidth": 19616,
+    "bodyScrollWidth": 1366,
+    "bodyScrollHeight": 768,
+    "viewport": {
+      "width": 1366,
+      "height": 768
+    },
+    "heapUsed": 25055134
+  },
+  "interactions": [
+    {
+      "name": "scroll-file-strip-end",
+      "settledMs": 15.4,
+      "scrollLeft": 18284,
+      "maxScrollLeft": 18294
+    },
+    {
+      "name": "scroll-file-strip-start",
+      "settledMs": 16.8,
+      "scrollLeft": 0,
+      "maxScrollLeft": 18294
+    },
+    {
+      "name": "expand-first-file",
+      "settledMs": 32.9
+    },
+    {
+      "name": "after-expand-counts",
+      "fileCards": 100,
+      "pageCards": 5
+    },
+    {
+      "name": "collapse-first-file",
+      "settledMs": 32.4
+    },
+    {
+      "name": "after-collapse-counts",
+      "fileCards": 100,
+      "pageCards": 0
+    }
+  ],
+  "frameDeltas": [
+    13,
+    16.7,
+    16.6,
+    16.7,
+    16.7,
+    16.6,
+    16.7,
+    16.7,
+    16.7,
+    16.6,
+    16.7,
+    16.7,
+    16.6,
+    16.7,
+    16.6,
+    16.7,
+    16.6,
+    16.8,
+    16.6,
+    16.7,
+    16.6,
+    16.7,
+    16.6,
+    16.7,
+    16.7,
+    16.7,
+    16.6,
+    16.7,
+    16.7,
+    16.7
+  ],
+  "frameP95": 16.7,
+  "timestamp": "2026-05-22T13:40:44.807Z",
+  "screenshot": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\docs\\reports\\screenshots\\2026-05-22-hundred-files-performance.png",
+  "profile": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\docs\\reports\\chrome-profile-hundred-files-1779457240",
+  "chrome": "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe"
+}

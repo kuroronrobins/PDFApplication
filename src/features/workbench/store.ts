@@ -46,6 +46,8 @@ type WorkbenchState = WorkbenchSnapshot & {
   decorationDrafts: Record<DecorationKind, DecorationDraft>;
   setActiveTool: (tool: ToolId) => void;
   loadDevelopmentFixture: () => void;
+  loadLargePerformanceFixture: () => void;
+  loadHundredFilesPerformanceFixture: () => void;
   updateDecorationDraft: (kind: DecorationKind, patch: Partial<DecorationDraft>) => void;
   setCacheSession: (session: CacheSession) => void;
   addInputFiles: (inputFiles: InputFileInfo[]) => void;
@@ -74,6 +76,14 @@ type WorkbenchState = WorkbenchSnapshot & {
       thumbnailPaths?: Record<number, string>;
       previewPaths?: Record<number, string>;
       engineState?: WorkbenchFile["engineState"];
+      message?: string;
+    },
+  ) => void;
+  completeFileThumbnails: (
+    fileId: string,
+    payload: {
+      thumbnailPaths: Record<number, string>;
+      previewPaths?: Record<number, string>;
       message?: string;
     },
   ) => void;
@@ -110,6 +120,7 @@ type WorkbenchState = WorkbenchSnapshot & {
 };
 
 type SelectionMode = "replace" | "toggle" | "range";
+const maxHistoryEntries = 50;
 
 const exportSteps: JobStep[] = [
   "Office変換",
@@ -520,7 +531,7 @@ function commitSnapshot(
   set({
     ...next,
     ...extra,
-    history: [...current.history, previous],
+    history: [...current.history, previous].slice(-maxHistoryEntries),
     future: [],
     canUndo: true,
     canRedo: false,
@@ -599,6 +610,102 @@ export const useWorkbenchStore = create<WorkbenchState>((set, get) => ({
       ...derive(snapshot, initialOutputSettings),
       toolActivationId: 0,
       logs: initialLogs.map((log) => ({ ...log })),
+      lastOutputFiles: [],
+      history: [],
+      future: [],
+      canUndo: false,
+      canRedo: false,
+    });
+  },
+
+  loadLargePerformanceFixture: () => {
+    const fileId = "large-performance-fixture";
+    const pageCount = 1200;
+    const snapshot: WorkbenchSnapshot = {
+      files: [
+        {
+          id: fileId,
+          sourcePath: "session://large-performance-fixture.pdf",
+          cachePath: "session://large-performance-fixture.pdf",
+          name: "large-performance-fixture.pdf",
+          kind: "pdf",
+          extension: "pdf",
+          sizeBytes: 96_000_000,
+          pageCount,
+          cacheState: "ready",
+          progress: 100,
+          expanded: true,
+          excluded: false,
+          selected: false,
+          engineState: "synthetic",
+          metadata: {
+            encrypted: false,
+            pageSizeLabel: "A4",
+          },
+        },
+      ],
+      pagesByFile: {
+        [fileId]: createPages(fileId, pageCount),
+      },
+      activeTool: "select",
+      decorations: [],
+      selectedDecorationId: undefined,
+      security: cloneSecurity(initialSecurity),
+    };
+    set({
+      ...derive(snapshot, initialOutputSettings),
+      toolActivationId: 0,
+      logs: [createLog("info", `${pageCount} page performance fixture loaded.`)],
+      lastOutputFiles: [],
+      history: [],
+      future: [],
+      canUndo: false,
+      canRedo: false,
+    });
+  },
+
+  loadHundredFilesPerformanceFixture: () => {
+    const fileCount = 100;
+    const pagesPerFile = 5;
+    const files: WorkbenchFile[] = Array.from({ length: fileCount }, (_, index) => {
+      const number = String(index + 1).padStart(3, "0");
+      const fileId = `hundred-files-fixture-${number}`;
+      return {
+        id: fileId,
+        sourcePath: `session://${fileId}.pdf`,
+        cachePath: `session://${fileId}.pdf`,
+        name: `batch-${number}.pdf`,
+        kind: "pdf",
+        extension: "pdf",
+        sizeBytes: 2_400_000 + index * 2048,
+        pageCount: pagesPerFile,
+        cacheState: "ready",
+        progress: 100,
+        expanded: false,
+        excluded: false,
+        selected: false,
+        engineState: "synthetic",
+        metadata: {
+          encrypted: false,
+          pageSizeLabel: "A4",
+        },
+      };
+    });
+    const pagesByFile = Object.fromEntries(
+      files.map((file) => [file.id, createPages(file.id, pagesPerFile)]),
+    );
+    const snapshot: WorkbenchSnapshot = {
+      files,
+      pagesByFile,
+      activeTool: "select",
+      decorations: [],
+      selectedDecorationId: undefined,
+      security: cloneSecurity(initialSecurity),
+    };
+    set({
+      ...derive(snapshot, initialOutputSettings),
+      toolActivationId: 0,
+      logs: [createLog("info", `${fileCount} file performance fixture loaded.`)],
       lastOutputFiles: [],
       history: [],
       future: [],
@@ -1051,6 +1158,43 @@ export const useWorkbenchStore = create<WorkbenchState>((set, get) => ({
         createLog(
           "info",
           payload.message ?? `${target.name} のPDF解析が完了しました。${payload.pageCount}ページ。`,
+        ),
+        ...current.logs,
+      ],
+    });
+  },
+
+  completeFileThumbnails: (fileId, payload) => {
+    const current = get();
+    const target = current.files.find((file) => file.id === fileId);
+    const pages = current.pagesByFile[fileId];
+    if (!target || !pages) {
+      return;
+    }
+
+    const pagesByFile = {
+      ...current.pagesByFile,
+      [fileId]: pages.map((page) => {
+        const sourcePageNumber = page.originalPageNumber || page.pageNumber;
+        const thumbnailPath = payload.thumbnailPaths[sourcePageNumber] ?? page.thumbnailPath;
+        const previewPath =
+          payload.previewPaths?.[sourcePageNumber] ??
+          payload.thumbnailPaths[sourcePageNumber] ??
+          page.previewPath;
+        return {
+          ...page,
+          thumbnailPath,
+          previewPath,
+        };
+      }),
+    };
+
+    set({
+      pagesByFile,
+      logs: [
+        createLog(
+          "info",
+          payload.message ?? `${target.name} のページサムネイルを生成しました。`,
         ),
         ...current.logs,
       ],

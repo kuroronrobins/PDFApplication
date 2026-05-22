@@ -627,3 +627,21 @@ Reference screenshot:
 - The production architecture remains Tauri/React for UI, Rust/Tauri for orchestration and cache/session commands, and `src-python/pdf_workbench_engine/` for worker jobs.
 - `pdf-workbench.exe --toolhub-smoke` is the non-GUI registration smoke check. It validates the bundled Python runtime, active worker package, and worker `ping` command without opening the workbench.
 - ToolHub staging output belongs under `build/toolhub-registration/` and must not be committed as active source.
+
+## 2026-05-22 Removal Confirmation and Export Completion Feedback
+
+- File-card removal continues to use the guarded confirmation dialog before files are removed from the workspace.
+- Page trash actions no longer show a confirmation dialog. Clicking or dropping the trash tool on a page, including a selected page batch, immediately toggles the page's output-excluded state. This remains recoverable because pages are marked excluded/restored rather than physically deleted.
+- Completed export jobs show a compact in-app popup stating that output has completed, with the produced output name summary. The bottom output bar remains the place for open/reveal/log actions.
+
+## 2026-05-22 Large PDF Performance Contract
+
+- Adding many PDF files must not eagerly generate every high-resolution preview image. Initial PDF preparation only inspects the source, records page count/metadata, and creates page records required for output planning.
+- UI thumbnails are generated only when a ready file is expanded. Unexpanded file cards may use the document icon placeholder until their page thumbnails are requested.
+- The expanded page timeline must virtualize page cards. Large documents should keep only the visible page-card window plus a small overscan mounted in the DOM.
+- Output planning and page-number decoration maps must avoid allocating full cloned page groups on every render. Counting passes are acceptable; repeated full page object copies are not.
+- Export must not wait for UI-only thumbnail generation. Export requires source/cache paths and page records, not rendered thumbnail images.
+- Final save should move the completed same-directory scratch PDF into place with atomic replace instead of reading and writing the entire PDF a second time.
+- Undo history should stay bounded so repeated operations on large page sets do not retain unbounded full-workspace snapshots.
+- The development-only `?fixture=hundred-files` route is allowed for repeatable 100-file responsiveness checks. It must not load automatically in production startup.
+- High-volume header/footer/page-number export must avoid embedding external font files once per page. ASCII decoration text should use a PDF built-in Latin font, and Japanese/non-ASCII decoration text should use the worker's built-in CJK path with a coordinate fallback when textbox layout rejects a compact header/footer slot.

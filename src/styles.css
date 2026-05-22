@@ -910,6 +910,11 @@ button:disabled {
   font-weight: 800;
 }
 
+.page-timeline-spacer {
+  grid-column: 1 / -1;
+  min-height: 0;
+}
+
 .page-card {
   position: relative;
   display: grid;
@@ -1513,6 +1518,68 @@ button:disabled {
 .confirm-actions .is-key-selected {
   outline: 3px solid rgb(37 99 235 / 18%);
   outline-offset: 2px;
+}
+
+.export-completion-popup {
+  position: fixed;
+  right: 18px;
+  bottom: 92px;
+  z-index: 1400;
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) 30px;
+  gap: 10px;
+  align-items: center;
+  width: min(390px, calc(100vw - 32px));
+  padding: 12px;
+  border: 1px solid #b9d9c9;
+  border-radius: 10px;
+  background: #ffffff;
+  box-shadow: 0 18px 42px rgb(15 23 42 / 18%);
+}
+
+.export-completion-icon {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  color: var(--green);
+  background: var(--green-soft);
+}
+
+.export-completion-text {
+  min-width: 0;
+}
+
+.export-completion-text strong {
+  display: block;
+  color: var(--text);
+  font-size: 13px;
+}
+
+.export-completion-text p {
+  min-width: 0;
+  overflow: hidden;
+  margin: 3px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.export-completion-popup button {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border-radius: 8px;
+  color: #64748b;
+}
+
+.export-completion-popup button:hover {
+  border-color: #c4d4e4;
+  background: #f8fafc;
 }
 
 .output-name-backdrop {

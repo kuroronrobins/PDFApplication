@@ -47,20 +47,35 @@ export function buildOutputPlan(
   security?: SecurityState,
   outputSettings?: OutputSettings,
 ): OutputPlan {
-  const activeFiles = files.filter((file) => !file.excluded);
-  const activePages = activeFiles.flatMap((file) =>
-    (pagesByFile[file.id] ?? []).filter((page) => !page.excluded),
-  );
-  const excludedPageCount = activeFiles.reduce(
-    (count, file) =>
-      count + (pagesByFile[file.id] ?? []).filter((page) => page.excluded).length,
-    0,
-  );
-  const splitCount = activePages.filter((page, index) => {
-    const isLastActivePage = index === activePages.length - 1;
-    return page.splitAfter && !isLastActivePage;
-  }).length;
-  const outputCount = activeFiles.length === 0 ? 0 : Math.max(1, splitCount + 1);
+  let activeFileCount = 0;
+  let activePageCount = 0;
+  let excludedPageCount = 0;
+  let activeSplitMarkers = 0;
+  let lastActivePageSplitAfter = false;
+
+  for (const file of files) {
+    if (file.excluded) {
+      continue;
+    }
+    activeFileCount += 1;
+    for (const page of pagesByFile[file.id] ?? []) {
+      if (page.excluded) {
+        excludedPageCount += 1;
+        continue;
+      }
+      activePageCount += 1;
+      if (page.splitAfter) {
+        activeSplitMarkers += 1;
+      }
+      lastActivePageSplitAfter = page.splitAfter;
+    }
+  }
+
+  const splitCount =
+    activePageCount > 0
+      ? activeSplitMarkers - (lastActivePageSplitAfter ? 1 : 0)
+      : 0;
+  const outputCount = activeFileCount === 0 ? 0 : Math.max(1, splitCount + 1);
   const outputStem = defaultOutputStem(files);
   const defaultOutputFileName = `${outputStem}.pdf`;
   const autoOutputFiles =
@@ -86,7 +101,7 @@ export function buildOutputPlan(
     outputFiles,
     customOutputNamesApplied,
     outputDestinationDir: customOutputNamesApplied ? outputSettings?.destinationDir : undefined,
-    activePageCount: activePages.length,
+    activePageCount,
     excludedPageCount,
     splitCount,
     decorationCount: decorations.length,

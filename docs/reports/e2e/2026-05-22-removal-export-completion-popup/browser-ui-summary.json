@@ -1,0 +1,27 @@
+{
+  "url": "http://127.0.0.1:5173/?fixture=workbench",
+  "viewport": {
+    "width": 1366,
+    "height": 768
+  },
+  "checks": {
+    "pageTrashNoConfirm": {
+      "confirmDialogs": 0,
+      "pageExcluded": true,
+      "excludedSummaryAfterClick": "12ページ | 除外 2 | 分割 1 | 装飾 2"
+    },
+    "fileRemoveConfirmation": {
+      "confirmDialogs": 1,
+      "dialogText": "ファイルを除外 添付資料.pdf をワークスペースから除外します。"
+    },
+    "exportCompletionPopup": {
+      "popupCount": 1,
+      "popupText": "出力が完了しました 2ファイル: 見積_PDF化_001.pdf, 見積_PDF化_002.pdf"
+    },
+    "consoleErrorsOrWarnings": []
+  },
+  "screenshot": {
+    "captured": false,
+    "reason": "Browser Page.captureScreenshot timed out repeatedly."
+  }
+}

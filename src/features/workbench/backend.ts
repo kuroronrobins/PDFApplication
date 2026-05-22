@@ -383,7 +383,7 @@ export async function renderPdfThumbnails(
     pageNumbers: Array.from({ length: pageCount }, (_, index) => index + 1),
     password,
     thumbnailZoom: 0.32,
-    previewZoom: 2.25,
+    previewZoom: 0,
   });
 }
 
@@ -407,7 +407,7 @@ export async function renderPdfThumbnailsStreaming(
       pageNumbers: Array.from({ length: pageCount }, (_, index) => index + 1),
       password,
       thumbnailZoom: 0.32,
-      previewZoom: 2.25,
+      previewZoom: 0,
     },
     jobId,
     onEvent,

@@ -1169,3 +1169,33 @@ Implemented:
 Verification:
 
 - See `docs/reports/2026-05-18-v0.2.0-release-upload.md`.
+
+## 2026-05-22 Page removal confirmation and export completion popup
+
+Implemented:
+
+- Kept file-card removal on the existing confirmation-dialog path.
+- Changed page trash actions to immediately toggle the selected page batch's output-excluded state without a confirmation dialog.
+- Added a compact in-app popup that appears once per completed export job and summarizes the produced output file names.
+
+Verification:
+
+- See `docs/reports/2026-05-22-removal-export-completion-popup.md`.
+
+## 2026-05-22 Large PDF performance hardening
+
+Implemented:
+
+- Split PDF/Office preparation from UI thumbnail rendering. Initial preparation now inspects PDFs, records page metadata, and creates page records without rendering every page thumbnail or high-resolution preview.
+- Added lazy thumbnail generation for the currently expanded ready file only.
+- Virtualized the expanded page timeline so large documents do not mount every page card in the DOM at once.
+- Removed high-resolution preview generation from batch thumbnail requests; large previews stay on the existing on-demand preview path.
+- Optimized output-plan and output-page-number calculations to avoid full cloned page groups for routine UI updates.
+- Capped undo history at 50 snapshots to prevent unbounded memory growth on large page operations.
+- Replaced final export byte-copy with same-directory atomic `os.replace` after scratch output has been fully produced.
+
+Verification:
+
+- See `docs/reports/2026-05-22-large-pdf-performance-root-cause.md`.
+- 100 loaded PDF file-card responsiveness was also checked with the synthetic fixture in `docs/reports/2026-05-22-hundred-files-performance-verification.md`.
+- 100 real-PDF export speed was checked and the decoration font bottleneck was optimized in `docs/reports/2026-05-22-export-speed-verification.md`.

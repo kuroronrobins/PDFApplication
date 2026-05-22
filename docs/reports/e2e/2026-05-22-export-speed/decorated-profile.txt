@@ -1,0 +1,46 @@
+elapsed=20.2528
+result={"outputFiles": ["C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\build\\export-speed-benchmark\\outputs\\decorated-profile-output.pdf"], "outputCount": 1}
+
+         2633593 function calls (2572985 primitive calls) in 20.252 seconds
+
+   Ordered by: cumulative time
+   List reduced from 2733 to 35 due to restriction <35>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+        1    0.000    0.000   20.253   20.253 export_workspace.py:263(handle)
+        1    0.000    0.000   19.476   19.476 export_workspace.py:147(_apply_post_processing)
+        1    0.012    0.012   19.473   19.473 pdf_decorations.py:407(apply_decorations)
+     1000    0.016    0.000   14.350    0.014 pdf_decorations.py:242(_draw_layout_item)
+     1000    0.011    0.000   14.291    0.014 pdf_decorations.py:341(_insert_textbox)
+     1000    0.009    0.000   14.280    0.014 __init__.py:12648(insert_textbox)
+     1000    0.078    0.000   13.248    0.013 __init__.py:15417(insert_textbox)
+     1000    0.016    0.000   12.996    0.013 __init__.py:12237(insert_font)
+      500    0.177    0.000   12.728    0.025 __init__.py:10196(_insertFont)
+      500    0.025    0.000   12.497    0.025 __init__.py:20385(JM_insert_font)
+      500    0.002    0.000    6.705    0.013 mupdf.py:55038(pdf_add_cid_font)
+      500    6.702    0.013    6.702    0.013 {built-in method pymupdf._mupdf.pdf_add_cid_font}
+      501    0.002    0.000    5.700    0.011 mupdf.py:49757(fz_new_font_from_file)
+      501    5.698    0.011    5.698    0.011 {built-in method pymupdf._mupdf.fz_new_font_from_file}
+        1    0.000    0.000    4.717    4.717 __init__.py:6472(save)
+        1    0.000    0.000    4.716    4.716 mupdf.py:57783(pdf_save_document)
+        1    4.716    4.716    4.716    4.716 {built-in method pymupdf._mupdf.pdf_save_document}
+        1    0.004    0.004    0.773    0.773 pdf_pages.py:10(write_page_sequence)
+     1000    0.012    0.000    0.554    0.001 __init__.py:15832(commit)
+     1000    0.002    0.000    0.470    0.000 __init__.py:12832(new_shape)
+     1000    0.009    0.000    0.468    0.000 __init__.py:14890(__init__)
+       25    0.002    0.000    0.405    0.016 __init__.py:1(<module>)
+     1000    0.003    0.000    0.275    0.000 __init__.py:13199(wrap_contents)
+     1000    0.008    0.000    0.272    0.000 __init__.py:9944(_count_q_balance)
+     2000    0.008    0.000    0.266    0.000 __init__.py:12828(mediabox_size)
+      500    0.000    0.000    0.258    0.001 _writer.py:588(add_page)
+      500    0.007    0.000    0.257    0.001 _writer.py:490(_add_page)
+     4000    0.021    0.000    0.255    0.000 __init__.py:12817(mediabox)
+     1000    0.002    0.000    0.242    0.000 __init__.py:22072(CheckFont)
+     5102    0.002    0.000    0.240    0.000 _base.py:382(get_object)
+     1000    0.003    0.000    0.239    0.000 __init__.py:12048(get_fonts)
+     4600    0.012    0.000    0.238    0.000 _reader.py:404(get_object)
+     1000    0.006    0.000    0.237    0.000 __init__.py:5071(get_page_fonts)
+ 3100/500    0.008    0.000    0.232    0.000 _data_structures.py:280(clone)
+ 3100/500    0.015    0.000    0.227    0.000 _data_structures.py:304(_clone)
+
+

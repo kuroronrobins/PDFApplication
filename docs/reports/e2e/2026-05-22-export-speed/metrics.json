@@ -1,0 +1,76 @@
+{
+  "timestamp": "2026-05-22T22:58:52+0900",
+  "fileCount": 100,
+  "pagesPerFile": 5,
+  "totalPages": 500,
+  "inputTotalBytes": 432305,
+  "inputDirectory": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\build\\export-speed-benchmark\\inputs",
+  "outputDirectory": "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\build\\export-speed-benchmark\\outputs",
+  "python": "C:\\Program Files\\Python313\\python.exe",
+  "results": [
+    {
+      "returncode": 0,
+      "elapsedSeconds": 0.513,
+      "status": "result",
+      "outputCount": 1,
+      "declaredOutputCount": 1,
+      "outputBytes": 419845,
+      "stdoutBytes": 184,
+      "stderrTail": "",
+      "pagesPerSecond": 974.67,
+      "outputs": [
+        "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\build\\export-speed-benchmark\\outputs\\single-output.pdf"
+      ],
+      "name": "single_output_100_files_500_pages"
+    },
+    {
+      "returncode": 0,
+      "elapsedSeconds": 0.6503,
+      "status": "result",
+      "outputCount": 100,
+      "declaredOutputCount": 100,
+      "outputBytes": 440495,
+      "stdoutBytes": 12465,
+      "stderrTail": "",
+      "pagesPerSecond": 768.93,
+      "outputs": [
+        "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\build\\export-speed-benchmark\\outputs\\split\\split-001.pdf",
+        "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\build\\export-speed-benchmark\\outputs\\split\\split-002.pdf",
+        "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\build\\export-speed-benchmark\\outputs\\split\\split-003.pdf",
+        "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\build\\export-speed-benchmark\\outputs\\split\\split-004.pdf",
+        "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\build\\export-speed-benchmark\\outputs\\split\\split-005.pdf"
+      ],
+      "name": "split_100_outputs_by_file"
+    },
+    {
+      "returncode": 0,
+      "elapsedSeconds": 4.0235,
+      "status": "result",
+      "outputCount": 1,
+      "declaredOutputCount": 1,
+      "outputBytes": 262246,
+      "stdoutBytes": 187,
+      "stderrTail": "",
+      "pagesPerSecond": 124.27,
+      "outputs": [
+        "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\build\\export-speed-benchmark\\outputs\\decorated-output.pdf"
+      ],
+      "name": "single_output_with_ascii_header_and_page_number"
+    },
+    {
+      "returncode": 0,
+      "elapsedSeconds": 7.258,
+      "status": "result",
+      "outputCount": 1,
+      "declaredOutputCount": 1,
+      "outputBytes": 262713,
+      "stdoutBytes": 196,
+      "stderrTail": "",
+      "pagesPerSecond": 68.89,
+      "outputs": [
+        "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\build\\export-speed-benchmark\\outputs\\decorated-japanese-output.pdf"
+      ],
+      "name": "single_output_with_japanese_header_and_page_number"
+    }
+  ]
+}
