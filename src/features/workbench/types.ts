@@ -147,6 +147,7 @@ export type OutputPlan = {
   outputFiles: string[];
   customOutputNamesApplied: boolean;
   outputDestinationDir?: string;
+  activeFileCount: number;
   activePageCount: number;
   excludedPageCount: number;
   splitCount: number;

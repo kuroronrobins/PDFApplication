@@ -88,6 +88,12 @@ export type RenderThumbnailsResult = {
   }>;
 };
 
+export type RenderThumbnailOptions = {
+  pageNumbers?: number[];
+  thumbnailZoom?: number;
+  previewZoom?: number;
+};
+
 export type ExportWorkspaceResult = {
   outputFiles: string[];
   outputCount: number;
@@ -375,15 +381,20 @@ export async function renderPdfThumbnails(
   outputDir: string,
   pageCount: number,
   password?: string,
+  options: RenderThumbnailOptions = {},
 ): Promise<RenderThumbnailsResult> {
+  const pageNumbers =
+    options.pageNumbers && options.pageNumbers.length > 0
+      ? options.pageNumbers
+      : Array.from({ length: pageCount }, (_, index) => index + 1);
   return runTypedEngine<RenderThumbnailsResult>({
     kind: "render_thumbnails",
     sourcePath,
     outputDir,
-    pageNumbers: Array.from({ length: pageCount }, (_, index) => index + 1),
+    pageNumbers,
     password,
-    thumbnailZoom: 0.32,
-    previewZoom: 0,
+    thumbnailZoom: options.thumbnailZoom ?? 0.32,
+    previewZoom: options.previewZoom ?? 0,
   });
 }
 
@@ -394,20 +405,25 @@ export async function renderPdfThumbnailsStreaming(
   password: string | undefined,
   jobId: string,
   onEvent: (event: ProcessingEngineEvent) => void,
+  options: RenderThumbnailOptions = {},
 ): Promise<RenderThumbnailsResult> {
   if (!isTauriRuntime()) {
-    return renderPdfThumbnails(sourcePath, outputDir, pageCount, password);
+    return renderPdfThumbnails(sourcePath, outputDir, pageCount, password, options);
   }
 
+  const pageNumbers =
+    options.pageNumbers && options.pageNumbers.length > 0
+      ? options.pageNumbers
+      : Array.from({ length: pageCount }, (_, index) => index + 1);
   return runProcessingEngineJob<RenderThumbnailsResult>(
     {
       kind: "render_thumbnails",
       sourcePath,
       outputDir,
-      pageNumbers: Array.from({ length: pageCount }, (_, index) => index + 1),
+      pageNumbers,
       password,
-      thumbnailZoom: 0.32,
-      previewZoom: 0,
+      thumbnailZoom: options.thumbnailZoom ?? 0.32,
+      previewZoom: options.previewZoom ?? 0,
     },
     jobId,
     onEvent,

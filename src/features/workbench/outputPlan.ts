@@ -101,6 +101,7 @@ export function buildOutputPlan(
     outputFiles,
     customOutputNamesApplied,
     outputDestinationDir: customOutputNamesApplied ? outputSettings?.destinationDir : undefined,
+    activeFileCount,
     activePageCount,
     excludedPageCount,
     splitCount,

@@ -4,6 +4,7 @@ use std::fs::Metadata;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 use tauri::{Emitter, Manager};
 
@@ -78,10 +79,13 @@ struct ToolHubSmokeReport {
 const ALPHA_EXPIRES_ON: &str = "2026-06-30";
 const ALPHA_EXPIRY_UNIX_SECONDS: u64 = 1_782_831_600; // 2026-07-01 00:00:00 JST.
 const MIN_SPLASH_VISIBLE_MILLIS: u64 = 4_000;
+const MAX_SPLASH_VISIBLE_MILLIS: u64 = 12_000;
 const STALE_CACHE_SESSION_SECONDS: u64 = 24 * 60 * 60;
 
-struct StartupClock {
+struct StartupState {
     launched_at: Instant,
+    completed: AtomicBool,
+    splash_cleanup_started: AtomicBool,
 }
 
 fn kind_from_extension(extension: &str) -> &'static str {
@@ -880,10 +884,76 @@ fn reveal_output_path(path: String) -> Result<(), String> {
     }
 }
 
+fn dispose_splash_window_once(app: &tauri::AppHandle) {
+    if let Some(splash_window) = app.get_webview_window("splashscreen") {
+        let _ = splash_window.hide();
+        if let Err(error) = splash_window.destroy() {
+            eprintln!("Failed to destroy splash window: {error}");
+            let _ = splash_window.close();
+        }
+    }
+}
+
+fn schedule_splash_disposal(app: &tauri::AppHandle) {
+    let app_for_task = app.clone();
+    if let Err(error) = app.run_on_main_thread(move || {
+        dispose_splash_window_once(&app_for_task);
+    }) {
+        eprintln!("Failed to schedule splash window cleanup: {error}");
+        dispose_splash_window_once(app);
+    }
+}
+
+fn start_splash_cleanup(app: &tauri::AppHandle, startup: &StartupState) {
+    if startup.splash_cleanup_started.swap(true, Ordering::AcqRel) {
+        schedule_splash_disposal(app);
+        return;
+    }
+
+    schedule_splash_disposal(app);
+
+    let app_for_retry = app.clone();
+    std::thread::spawn(move || {
+        for _ in 0..40 {
+            std::thread::sleep(Duration::from_millis(250));
+            schedule_splash_disposal(&app_for_retry);
+        }
+    });
+}
+
+fn reveal_main_window(app: &tauri::AppHandle, focus: bool) -> Result<(), String> {
+    let main_window = app
+        .get_webview_window("main")
+        .ok_or_else(|| "main window was not found".to_string())?;
+
+    main_window.show().map_err(|error| error.to_string())?;
+    if focus {
+        let _ = main_window.set_focus();
+    }
+
+    Ok(())
+}
+
+fn install_startup_watchdog(app: tauri::AppHandle) {
+    std::thread::spawn(move || {
+        std::thread::sleep(Duration::from_millis(MAX_SPLASH_VISIBLE_MILLIS));
+        let Some(startup) = app.try_state::<StartupState>() else {
+            return;
+        };
+        if startup.completed.load(Ordering::Acquire) {
+            return;
+        }
+        if reveal_main_window(&app, false).is_ok() {
+            startup.completed.store(true, Ordering::Release);
+            start_splash_cleanup(&app, startup.inner());
+        }
+    });
+}
+
 #[tauri::command]
 fn complete_startup(
     app: tauri::AppHandle,
-    startup: tauri::State<'_, StartupClock>,
+    startup: tauri::State<'_, StartupState>,
 ) -> Result<(), String> {
     let minimum_visible = Duration::from_millis(MIN_SPLASH_VISIBLE_MILLIS);
     let elapsed = startup.launched_at.elapsed();
@@ -891,16 +961,14 @@ fn complete_startup(
         std::thread::sleep(minimum_visible - elapsed);
     }
 
-    let main_window = app
-        .get_webview_window("main")
-        .ok_or_else(|| "main window was not found".to_string())?;
-
-    main_window.show().map_err(|error| error.to_string())?;
-    let _ = main_window.set_focus();
-
-    if let Some(splash_window) = app.get_webview_window("splashscreen") {
-        let _ = splash_window.close();
+    if startup.completed.load(Ordering::Acquire) {
+        start_splash_cleanup(&app, startup.inner());
+        return Ok(());
     }
+
+    reveal_main_window(&app, true)?;
+    startup.completed.store(true, Ordering::Release);
+    start_splash_cleanup(&app, startup.inner());
 
     Ok(())
 }
@@ -935,10 +1003,16 @@ mod tests {
 pub fn run() {
     tauri::Builder::default()
         .manage(python_worker::EngineJobRegistry::default())
-        .manage(StartupClock {
+        .manage(StartupState {
             launched_at: Instant::now(),
+            completed: AtomicBool::new(false),
+            splash_cleanup_started: AtomicBool::new(false),
         })
         .plugin(tauri_plugin_dialog::init())
+        .setup(|app| {
+            install_startup_watchdog(app.handle().clone());
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
             describe_input_files,
             check_alpha_license,

@@ -48,6 +48,7 @@ type WorkbenchState = WorkbenchSnapshot & {
   loadDevelopmentFixture: () => void;
   loadLargePerformanceFixture: () => void;
   loadHundredFilesPerformanceFixture: () => void;
+  loadOfficeQueuedFixture: () => void;
   updateDecorationDraft: (kind: DecorationKind, patch: Partial<DecorationDraft>) => void;
   setCacheSession: (session: CacheSession) => void;
   addInputFiles: (inputFiles: InputFileInfo[]) => void;
@@ -706,6 +707,81 @@ export const useWorkbenchStore = create<WorkbenchState>((set, get) => ({
       ...derive(snapshot, initialOutputSettings),
       toolActivationId: 0,
       logs: [createLog("info", `${fileCount} file performance fixture loaded.`)],
+      lastOutputFiles: [],
+      history: [],
+      future: [],
+      canUndo: false,
+      canRedo: false,
+    });
+  },
+
+  loadOfficeQueuedFixture: () => {
+    const files: WorkbenchFile[] = [
+      {
+        id: "office-queued-word-fixture",
+        sourcePath: "session://office-queued-word.docx",
+        name: "office-queued-word.docx",
+        kind: "word",
+        extension: "docx",
+        sizeBytes: 184_000,
+        pageCount: 0,
+        cacheState: "queued",
+        expanded: false,
+        excluded: false,
+        selected: false,
+        metadata: {
+          encrypted: false,
+          pageSizeLabel: "変換前",
+        },
+      },
+      {
+        id: "office-queued-excel-fixture",
+        sourcePath: "session://office-queued-excel.xlsx",
+        name: "office-queued-excel.xlsx",
+        kind: "excel",
+        extension: "xlsx",
+        sizeBytes: 322_000,
+        pageCount: 0,
+        cacheState: "queued",
+        expanded: false,
+        excluded: false,
+        selected: false,
+        priority: true,
+        metadata: {
+          encrypted: false,
+          pageSizeLabel: "変換前",
+        },
+      },
+      {
+        id: "office-queued-powerpoint-fixture",
+        sourcePath: "session://office-queued-powerpoint.pptx",
+        name: "office-queued-powerpoint.pptx",
+        kind: "powerpoint",
+        extension: "pptx",
+        sizeBytes: 514_000,
+        pageCount: 0,
+        cacheState: "queued",
+        expanded: false,
+        excluded: false,
+        selected: false,
+        metadata: {
+          encrypted: false,
+          pageSizeLabel: "変換前",
+        },
+      },
+    ];
+    const snapshot: WorkbenchSnapshot = {
+      files,
+      pagesByFile: Object.fromEntries(files.map((file) => [file.id, []])),
+      activeTool: "select",
+      decorations: [],
+      selectedDecorationId: undefined,
+      security: cloneSecurity(initialSecurity),
+    };
+    set({
+      ...derive(snapshot, initialOutputSettings),
+      toolActivationId: 0,
+      logs: [createLog("info", "Office queued fixture loaded.")],
       lastOutputFiles: [],
       history: [],
       future: [],

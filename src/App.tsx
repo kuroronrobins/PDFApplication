@@ -13,6 +13,9 @@ import {
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 import {
+  AlignCenter,
+  AlignLeft,
+  AlignRight,
   ArrowDown,
   ArrowUp,
   BadgeInfo,
@@ -26,7 +29,9 @@ import {
   FilePlus2,
   FileText,
   FolderOpen,
+  GripHorizontal,
   Hand,
+  Hash,
   Highlighter,
   Info,
   KeyRound,
@@ -73,7 +78,9 @@ import {
   renderCurrentExportDecorationOverlayFromManifestWithEngine,
   renderCurrentExportDecorationOverlayWithEngine,
   renderExpandedFileThumbnails,
+  renderExportPreviewPageImage,
   resetCurrentExportCancellation,
+  type PreviewPageImageResult,
 } from "./features/workbench/engineWorkflow";
 import {
   browserFilesToInputInfo,
@@ -108,6 +115,7 @@ const toolItems: Array<{
   { id: "trash", label: "ゴミ箱", icon: Trash2, danger: true },
   { id: "header", label: "ヘッダー", icon: Type },
   { id: "footer", label: "フッター", icon: Highlighter },
+  { id: "page-number", label: "ページ番号", icon: Hash },
   { id: "watermark", label: "透かし", icon: Stamp },
   { id: "lock", label: "鍵", icon: Lock },
   { id: "info", label: "情報", icon: Info },
@@ -116,6 +124,7 @@ const toolItems: Array<{
 const decorationToolIds: DecorationKind[] = [
   "header",
   "footer",
+  "page-number",
   "watermark",
 ];
 
@@ -132,6 +141,11 @@ type DragHitRect = {
   bottom: number;
   centerX: number;
   centerY: number;
+};
+
+type PanelPosition = {
+  left: number;
+  top: number;
 };
 
 type FilePointerDragRef = {
@@ -169,10 +183,31 @@ type PagePointerDragRef = {
   pointerId: number;
   startX: number;
   startY: number;
+  lastClientX: number;
+  lastClientY: number;
   target: PageDropTarget | null;
   active: boolean;
   hitRects: DragHitRect[];
   scrollLeft: number;
+  scrollTop: number;
+  sourceElement: HTMLButtonElement | null;
+};
+
+type PageAutoScrollRef = {
+  frame: number | null;
+  velocityX: number;
+  velocityY: number;
+  x: number;
+  y: number;
+  lastTime: number | null;
+};
+
+type FileOrderResizeRef = {
+  pointerId: number;
+  startY: number;
+  startHeight: number;
+  minHeight: number;
+  maxHeight: number;
 };
 
 type InternalDragActiveHandler = (active: boolean) => void;
@@ -207,15 +242,22 @@ type PreviewCanvasSize = {
   height: number;
 };
 
+type PreviewPageImageState = Pick<PreviewPageImageResult, "thumbnailPath" | "previewPath" | "previewZoom">;
+
 const decorationPreviewSessionCache = new Map<string, DecorationPreviewState>();
 const decorationPreviewSessionPromises = new Map<string, Promise<DecorationLayoutManifest | DecorationOverlayRenderResult>>();
 const decorationPreviewMaxCachedPages = 96;
 const previewNavigationSettleMs = 140;
 const previewNeighborPrefetchDelayMs = 260;
+const previewFilmstripItemWidth = 100;
+const previewRenderMinLongEdgePx = 1600;
+const previewRenderMaxLongEdgePx = 2200;
+const standardPdfLongEdgePt = 842;
 const defaultPreviewPageAspectRatio = 1 / Math.SQRT2;
 const pageTimelineColumnCount = 12;
 const pageTimelineRowHeight = 119;
 const pageTimelineOverscanRows = 2;
+const pageMouseDragPointerId = -1;
 
 type OutputPageNumberInfo = {
   outputPageNumber: number;
@@ -250,8 +292,11 @@ function kindLabel(kind: FileKind): string {
 }
 
 function cacheLabel(file: WorkbenchFile): string | undefined {
-  if (file.cacheState === "ready" || file.cacheState === "queued") {
+  if (file.cacheState === "ready") {
     return undefined;
+  }
+  if (file.cacheState === "queued") {
+    return file.priority ? "次にPDF化" : "PDF化待ち";
   }
   if (file.cacheState === "error") {
     return "変換エラー";
@@ -259,7 +304,35 @@ function cacheLabel(file: WorkbenchFile): string | undefined {
   if (file.cacheState === "stale") {
     return "再変換必要";
   }
-  return `PDF化中 ${file.progress ?? 0}%`;
+  return `${file.priority ? "優先" : ""}PDF化中 ${file.progress ?? 0}%`;
+}
+
+function conversionQueueLabel(files: WorkbenchFile[]): string {
+  const activeFiles = files.filter((file) => !file.excluded);
+  const convertingCount = activeFiles.filter((file) => file.cacheState === "converting").length;
+  const priorityCount = activeFiles.filter(
+    (file) => file.priority && ["queued", "converting", "stale"].includes(file.cacheState),
+  ).length;
+  const queuedCount = activeFiles.filter((file) => file.cacheState === "queued").length;
+  const staleCount = activeFiles.filter((file) => file.cacheState === "stale").length;
+  const errorCount = activeFiles.filter((file) => file.cacheState === "error").length;
+  const parts: string[] = [];
+  if (convertingCount > 0) {
+    parts.push(`処理中 ${convertingCount}`);
+  }
+  if (priorityCount > 0) {
+    parts.push(`優先 ${priorityCount}`);
+  }
+  if (queuedCount > 0) {
+    parts.push(`待ち ${queuedCount}`);
+  }
+  if (staleCount > 0) {
+    parts.push(`再変換 ${staleCount}`);
+  }
+  if (errorCount > 0) {
+    parts.push(`エラー ${errorCount}`);
+  }
+  return parts.length > 0 ? `PDF化: ${parts.join(" / ")}` : "";
 }
 
 function pageCountLabel(file: WorkbenchFile): string {
@@ -477,6 +550,7 @@ function exportPreviewSignature(
     })),
     outputPlan: {
       outputFiles: outputPlan.outputFiles,
+      activeFileCount: outputPlan.activeFileCount,
       activePageCount: outputPlan.activePageCount,
       splitCount: outputPlan.splitCount,
       decorationCount: outputPlan.decorationCount,
@@ -559,6 +633,40 @@ function previewPageFrameStyle(
     width: `${Math.max(32, Math.round(width))}px`,
     height: `${Math.max(32, Math.round(height))}px`,
   };
+}
+
+function previewRenderZoomForCanvas(
+  canvasSize: PreviewCanvasSize | null,
+  aspectRatio: number | undefined,
+): number {
+  if (!canvasSize || canvasSize.width <= 0 || canvasSize.height <= 0) {
+    return 1.9;
+  }
+
+  const ratio =
+    typeof aspectRatio === "number" && Number.isFinite(aspectRatio) && aspectRatio > 0
+      ? aspectRatio
+      : defaultPreviewPageAspectRatio;
+  const availableWidth = Math.max(96, canvasSize.width - 16);
+  const availableHeight = Math.max(96, canvasSize.height - 16);
+  let width = availableWidth;
+  let height = width / ratio;
+  if (height > availableHeight) {
+    height = availableHeight;
+    width = height * ratio;
+  }
+
+  const displayLongEdge = Math.max(width, height);
+  const pixelRatio =
+    typeof window === "undefined"
+      ? 1
+      : Math.max(1, Math.min(window.devicePixelRatio || 1, 2));
+  const targetLongEdge = Math.max(
+    previewRenderMinLongEdgePx,
+    Math.min(previewRenderMaxLongEdgePx, displayLongEdge * pixelRatio * 1.35),
+  );
+  const zoom = targetLongEdge / standardPdfLongEdgePt;
+  return Math.max(1.45, Math.min(2.65, Number(zoom.toFixed(2))));
 }
 
 function requestDecorationManifestPage(
@@ -1105,8 +1213,8 @@ function AppBar() {
       return;
     }
 
-    if (outputPlan.activePageCount === 0) {
-      addLog("warn", "書き出し対象のページがありません。ファイルを追加してください。");
+    if (outputPlan.activeFileCount === 0) {
+      addLog("warn", "書き出し対象のファイルがありません。ファイルを追加してください。");
       return;
     }
 
@@ -1173,8 +1281,8 @@ function AppBar() {
       return;
     }
 
-    if (outputPlan.activePageCount === 0) {
-      addLog("warn", "書き出し対象のページがありません。ファイルを追加して展開してください。");
+    if (outputPlan.activeFileCount === 0) {
+      addLog("warn", "書き出し対象のファイルがありません。ファイルを追加してください。");
       return;
     }
 
@@ -1226,7 +1334,7 @@ function AppBar() {
           <Redo2 size={18} />
         </button>
         <button
-          disabled={exportJob.status === "running" || outputPlan.activePageCount === 0}
+          disabled={exportJob.status === "running" || outputPlan.activeFileCount === 0}
           onClick={() => setOutputNameEditorOpen(true)}
           title="カット後の複数出力ファイル名を一括編集"
           type="button"
@@ -1247,7 +1355,7 @@ function AppBar() {
           </div>
         )}
         <button
-          disabled={exportJob.status === "running" || outputPlan.activePageCount === 0}
+          disabled={exportJob.status === "running" || outputPlan.activeFileCount === 0}
           onClick={requestExportPreview}
         >
           <Eye size={17} />
@@ -1255,7 +1363,7 @@ function AppBar() {
         </button>
         <button
           className="export-button"
-          disabled={exportJob.status === "running" || outputPlan.activePageCount === 0}
+          disabled={exportJob.status === "running" || outputPlan.activeFileCount === 0}
           onClick={() => void handleExport()}
         >
           <FileOutput size={17} />
@@ -1417,7 +1525,7 @@ function FileCard({
   const handleCardPointerDown = (event: React.PointerEvent<HTMLElement>) => {
     const target = event.target;
     if (
-      event.button !== 0 ||
+      (event.button !== 0 && event.buttons !== 1) ||
       isTextInputTarget(target) ||
       (target instanceof HTMLElement && target.closest("button"))
     ) {
@@ -1986,7 +2094,7 @@ function fileDecorationStatuses(
   pages: PageItem[],
   decorations: Decoration[],
 ) {
-  return (["header", "footer", "watermark"] as DecorationKind[])
+  return (["header", "footer", "page-number", "watermark"] as DecorationKind[])
     .map((kind) => ({
       kind,
       label: decorationMarkLabel(kind),
@@ -2278,6 +2386,7 @@ type PreviewFilmstripItemProps = {
   index: number;
   active: boolean;
   aspectRatio?: number;
+  thumbnailPath?: string;
   decorationPreview?: DecorationPreviewState;
   onSelect: (index: number) => void;
   onImageLoad: (pageKey: string, event: SyntheticEvent<HTMLImageElement>) => void;
@@ -2290,6 +2399,7 @@ const PreviewFilmstripItem = memo(function PreviewFilmstripItem({
   index,
   active,
   aspectRatio,
+  thumbnailPath,
   decorationPreview,
   onSelect,
   onImageLoad,
@@ -2297,7 +2407,7 @@ const PreviewFilmstripItem = memo(function PreviewFilmstripItem({
 }: PreviewFilmstripItemProps) {
   const decorationManifest = decorationPreview?.manifest ?? decorationPreview?.overlay;
   const decorationOverlaySrc = localAssetSrc(decorationPreview?.overlay?.overlayPath ?? undefined);
-  const thumbnailSrc = localAssetSrc(page.thumbnailPath);
+  const thumbnailSrc = localAssetSrc(thumbnailPath);
   const manifestAspectRatio =
     decorationManifest?.pageWidthPt && decorationManifest.pageHeightPt
       ? decorationManifest.pageWidthPt / decorationManifest.pageHeightPt
@@ -2359,6 +2469,9 @@ function PageCard({
   onPointerDragMove,
   onPointerDragEnd,
   onPointerDragCancel,
+  onMouseDragStart,
+  onMouseDragMove,
+  onMouseDragEnd,
   onRequestToggleExcluded,
 }: {
   page: PageItem;
@@ -2372,6 +2485,9 @@ function PageCard({
   onPointerDragMove: (event: React.PointerEvent<HTMLButtonElement>, pageId: string) => boolean;
   onPointerDragEnd: (event: React.PointerEvent<HTMLButtonElement>, pageId: string) => boolean;
   onPointerDragCancel: (event: React.PointerEvent<HTMLButtonElement>, pageId: string) => void;
+  onMouseDragStart: (event: React.MouseEvent<HTMLButtonElement>, pageId: string) => void;
+  onMouseDragMove: (event: React.MouseEvent<HTMLButtonElement>, pageId: string) => boolean;
+  onMouseDragEnd: (event: React.MouseEvent<HTMLButtonElement>, pageId: string) => boolean;
   onRequestToggleExcluded: (page: PageItem) => void;
 }) {
   const activeTool = useWorkbenchStore((state) => state.activeTool);
@@ -2380,6 +2496,9 @@ function PageCard({
   const applyDecorationToTarget = useWorkbenchStore(
     (state) => state.applyDecorationToTarget,
   );
+  const activeDecorationKind = decorationToolIds.includes(activeTool as DecorationKind)
+    ? (activeTool as DecorationKind)
+    : undefined;
   const clickGuardRef = useRef(false);
 
   const applyTool = (event?: React.MouseEvent) => {
@@ -2408,7 +2527,7 @@ function PageCard({
     );
   };
   const handlePointerDown = (event: React.PointerEvent<HTMLButtonElement>) => {
-    if (activeTool !== "select" || event.button !== 0) {
+    if (activeTool !== "select" || (event.button !== 0 && event.buttons !== 1)) {
       return;
     }
     onPointerDragStart(event, page.id);
@@ -2429,6 +2548,25 @@ function PageCard({
   const handlePointerCancel = (event: React.PointerEvent<HTMLButtonElement>) => {
     onPointerDragCancel(event, page.id);
   };
+  const handleMouseDown = (event: React.MouseEvent<HTMLButtonElement>) => {
+    if (activeTool !== "select" || event.button !== 0) {
+      return;
+    }
+    onMouseDragStart(event, page.id);
+  };
+  const handleMouseMove = (event: React.MouseEvent<HTMLButtonElement>) => {
+    if (onMouseDragMove(event, page.id)) {
+      clickGuardRef.current = true;
+    }
+  };
+  const handleMouseUp = (event: React.MouseEvent<HTMLButtonElement>) => {
+    if (onMouseDragEnd(event, page.id)) {
+      clickGuardRef.current = true;
+      window.setTimeout(() => {
+        clickGuardRef.current = false;
+      }, 0);
+    }
+  };
 
   return (
     <button
@@ -2438,6 +2576,8 @@ function PageCard({
         page.selected ? "is-selected" : "",
         draggingPageId === page.id ? "is-dragging" : "",
         dropTarget?.pageId === page.id ? `is-drop-${dropTarget.position}` : "",
+        activeDecorationKind ? "is-decoration-target" : "",
+        activeDecorationKind ? `decoration-${activeDecorationKind}` : "",
       ].join(" ")}
       onClick={applyTool}
       onDragOver={(event) => onDragOver(event, page.id)}
@@ -2446,6 +2586,9 @@ function PageCard({
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
       onPointerCancel={handlePointerCancel}
+      onMouseDown={handleMouseDown}
+      onMouseMove={handleMouseMove}
+      onMouseUp={handleMouseUp}
       type="button"
       data-file-id={fileId}
       data-page-id={page.id}
@@ -2482,30 +2625,49 @@ function PageCard({
 
 function DecorationPanel({
   kind,
+  panelPosition,
+  onPanelPositionChange,
   onClose,
 }: {
   kind: DecorationKind;
+  panelPosition: PanelPosition | null;
+  onPanelPositionChange: (position: PanelPosition) => void;
   onClose: () => void;
 }) {
   const draft = useWorkbenchStore((state) => state.decorationDrafts[kind]);
   const updateDecorationDraft = useWorkbenchStore(
     (state) => state.updateDecorationDraft,
   );
+  const [isDraggingPanel, setIsDraggingPanel] = useState(false);
   const textInputRef = useRef<HTMLInputElement | null>(null);
+  const panelRef = useRef<HTMLDivElement | null>(null);
+  const panelDragRef = useRef<{
+    parentRect: DOMRect;
+    offsetX: number;
+    offsetY: number;
+    width: number;
+    height: number;
+  } | null>(null);
   const Icon =
-    kind === "header" ? Type : kind === "footer" ? Highlighter : Stamp;
+    kind === "header"
+      ? Type
+      : kind === "footer"
+        ? Highlighter
+        : kind === "page-number"
+          ? Hash
+          : Stamp;
   const isWatermark = kind === "watermark";
-  const positionOptions: Array<{ label: string; value: DecorationPosition }> =
+  const positionOptions: Array<{ label: string; value: DecorationPosition; icon: typeof AlignLeft }> =
     kind === "header"
       ? [
-          { label: "左", value: "top-left" },
-          { label: "中央", value: "top" },
-          { label: "右", value: "top-right" },
+          { label: "左", value: "top-left", icon: AlignLeft },
+          { label: "中央", value: "top", icon: AlignCenter },
+          { label: "右", value: "top-right", icon: AlignRight },
         ]
       : [
-          { label: "左", value: "bottom-left" },
-          { label: "中央", value: "bottom" },
-          { label: "右", value: "bottom-right" },
+          { label: "左", value: "bottom-left", icon: AlignLeft },
+          { label: "中央", value: "bottom", icon: AlignCenter },
+          { label: "右", value: "bottom-right", icon: AlignRight },
         ];
   const setPosition = (position: DecorationPosition) => {
     updateDecorationDraft(kind, { position });
@@ -2525,15 +2687,141 @@ function DecorationPanel({
   const keepTextInputActive = (event: React.MouseEvent<HTMLButtonElement>) => {
     event.preventDefault();
   };
+  const clampPanelPosition = (
+    position: PanelPosition,
+    parentRect: DOMRect,
+    width: number,
+    height: number,
+  ): PanelPosition => {
+    const padding = 8;
+    const maxLeft = Math.max(padding, parentRect.width - width - padding);
+    const maxTop = Math.max(padding, parentRect.height - height - padding);
+    return {
+      left: Math.max(padding, Math.min(maxLeft, position.left)),
+      top: Math.max(padding, Math.min(maxTop, position.top)),
+    };
+  };
+  useEffect(() => {
+    if (!panelPosition) {
+      return undefined;
+    }
+    const panel = panelRef.current;
+    const parent = panel?.offsetParent as HTMLElement | null;
+    if (!panel || !parent) {
+      return undefined;
+    }
+
+    const keepPanelInBounds = () => {
+      const panelRect = panel.getBoundingClientRect();
+      const parentRect = parent.getBoundingClientRect();
+      const nextPosition = clampPanelPosition(
+        panelPosition,
+        parentRect,
+        panelRect.width,
+        panelRect.height,
+      );
+      if (
+        Math.abs(nextPosition.left - panelPosition.left) >= 1 ||
+        Math.abs(nextPosition.top - panelPosition.top) >= 1
+      ) {
+        onPanelPositionChange(nextPosition);
+      }
+    };
+
+    keepPanelInBounds();
+    if (typeof ResizeObserver === "undefined") {
+      window.addEventListener("resize", keepPanelInBounds);
+      return () => window.removeEventListener("resize", keepPanelInBounds);
+    }
+
+    const observer = new ResizeObserver(keepPanelInBounds);
+    observer.observe(parent);
+    observer.observe(panel);
+    return () => observer.disconnect();
+  }, [panelPosition, onPanelPositionChange]);
+  const startPanelDrag = (event: React.PointerEvent<HTMLDivElement>) => {
+    if ((event.target as HTMLElement).closest("button")) {
+      return;
+    }
+    const panel = panelRef.current;
+    const parent = panel?.offsetParent as HTMLElement | null;
+    if (!panel || !parent) {
+      return;
+    }
+    const panelRect = panel.getBoundingClientRect();
+    const parentRect = parent.getBoundingClientRect();
+    panelDragRef.current = {
+      parentRect,
+      offsetX: event.clientX - panelRect.left,
+      offsetY: event.clientY - panelRect.top,
+      width: panelRect.width,
+      height: panelRect.height,
+    };
+    onPanelPositionChange({
+      left: panelRect.left - parentRect.left,
+      top: panelRect.top - parentRect.top,
+    });
+    setIsDraggingPanel(true);
+    event.currentTarget.setPointerCapture(event.pointerId);
+    event.preventDefault();
+  };
+  const movePanelDrag = (event: React.PointerEvent<HTMLDivElement>) => {
+    const drag = panelDragRef.current;
+    if (!drag) {
+      return;
+    }
+    onPanelPositionChange(
+      clampPanelPosition(
+        {
+          left: event.clientX - drag.parentRect.left - drag.offsetX,
+          top: event.clientY - drag.parentRect.top - drag.offsetY,
+        },
+        drag.parentRect,
+        drag.width,
+        drag.height,
+      ),
+    );
+  };
+  const endPanelDrag = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+    panelDragRef.current = null;
+    setIsDraggingPanel(false);
+  };
 
   return (
-    <div className="floating-panel decoration-panel">
-      <div className="floating-title">
+    <div
+      className={["floating-panel decoration-panel", isDraggingPanel ? "is-dragging" : ""].join(" ")}
+      ref={panelRef}
+      role="group"
+      aria-label={`${decorationLabel(kind)}設定`}
+      style={
+        panelPosition
+          ? {
+              left: panelPosition.left,
+              top: panelPosition.top,
+              right: "auto",
+              bottom: "auto",
+            }
+          : undefined
+      }
+    >
+      <div
+        className="floating-title panel-drag-handle"
+        onPointerDown={startPanelDrag}
+        onPointerMove={movePanelDrag}
+        onPointerUp={endPanelDrag}
+        onPointerCancel={endPanelDrag}
+        title="ドラッグで移動"
+      >
         <span>
+          <GripHorizontal size={15} />
           <Icon size={16} />
           {decorationLabel(kind)}
         </span>
-        <button className="panel-close" onClick={onClose} aria-label="設定を隠す">
+        <small>ドラッグで移動</small>
+        <button className="panel-close" onClick={onClose} aria-label="設定を隠す" type="button">
           <X size={14} />
         </button>
       </div>
@@ -2547,18 +2835,23 @@ function DecorationPanel({
       </label>
       {!isWatermark && (
         <>
-          <div className="floating-controls">
-            {positionOptions.map((option) => (
-              <button
-                className={draft.position === option.value ? "is-active" : ""}
-                onClick={() => setPosition(option.value)}
-                onMouseDown={keepTextInputActive}
-                type="button"
-                key={option.value}
-              >
-                {option.label}
-              </button>
-            ))}
+          <div className="floating-controls" aria-label="配置">
+            {positionOptions.map((option) => {
+              const PositionIcon = option.icon;
+              return (
+                <button
+                  className={draft.position === option.value ? "is-active" : ""}
+                  aria-label={option.label}
+                  title={option.label}
+                  onClick={() => setPosition(option.value)}
+                  onMouseDown={keepTextInputActive}
+                  type="button"
+                  key={option.value}
+                >
+                  <PositionIcon size={15} />
+                </button>
+              );
+            })}
           </div>
           <div className="token-controls">
             <button onClick={() => addToken("{page}")} onMouseDown={keepTextInputActive} type="button">
@@ -2571,7 +2864,7 @@ function DecorationPanel({
         </>
       )}
       {isWatermark && (
-        <div className="color-controls">
+        <div className="color-controls" aria-label="色">
           {[
             { label: "赤", value: "#d56a6a" },
             { label: "灰", value: "#8d98a8" },
@@ -2704,9 +2997,28 @@ function ExpandedTimeline({
   const [draggingPageId, setDraggingPageId] = useState<string | null>(null);
   const [dropTarget, setDropTarget] = useState<PageDropTarget | null>(null);
   const [settingsPanelHidden, setSettingsPanelHidden] = useState(false);
+  const [decorationPanelPosition, setDecorationPanelPosition] =
+    useState<PanelPosition | null>(null);
   const [timelineViewportHeight, setTimelineViewportHeight] = useState(0);
   const [timelineScrollTop, setTimelineScrollTop] = useState(0);
   const pagePointerDragRef = useRef<PagePointerDragRef | null>(null);
+  const pageAutoScrollRef = useRef<PageAutoScrollRef>({
+    frame: null,
+    velocityX: 0,
+    velocityY: 0,
+    x: 0,
+    y: 0,
+    lastTime: null,
+  });
+  const pagePointerWindowHandlersRef = useRef<{
+    move: (event: PointerEvent) => void;
+    up: (event: PointerEvent) => void;
+    cancel: (event: PointerEvent) => void;
+  } | null>(null);
+  const pageMouseWindowHandlersRef = useRef<{
+    move: (event: MouseEvent) => void;
+    up: (event: MouseEvent) => void;
+  } | null>(null);
   const pageTimelineRef = useRef<HTMLDivElement | null>(null);
 
   const totalTimelineRows = Math.ceil(pages.length / pageTimelineColumnCount);
@@ -2793,13 +3105,18 @@ function ExpandedTimeline({
     }
 
     const scrollContainer = pageTimelineRef.current;
-    const scrollDelta =
+    const scrollDeltaX =
       (scrollContainer?.scrollLeft ?? drag?.scrollLeft ?? 0) - (drag?.scrollLeft ?? 0);
+    const scrollDeltaY =
+      (scrollContainer?.scrollTop ?? drag?.scrollTop ?? 0) - (drag?.scrollTop ?? 0);
     const adjustedRects = hitRects.map((rect) => ({
       ...rect,
-      left: rect.left - scrollDelta,
-      right: rect.right - scrollDelta,
-      centerX: rect.centerX - scrollDelta,
+      left: rect.left - scrollDeltaX,
+      right: rect.right - scrollDeltaX,
+      top: rect.top - scrollDeltaY,
+      bottom: rect.bottom - scrollDeltaY,
+      centerX: rect.centerX - scrollDeltaX,
+      centerY: rect.centerY - scrollDeltaY,
     }));
     const hitRect = adjustedRects.find(
       (rect) =>
@@ -2832,73 +3149,215 @@ function ExpandedTimeline({
     };
   };
 
-  const resetPagePointerDrag = () => {
-    pagePointerDragRef.current = null;
-    onInternalDragActiveChange(false);
-    setDraggingPageId(null);
-    setDropTarget(null);
+  const removePagePointerWindowHandlers = () => {
+    const handlers = pagePointerWindowHandlersRef.current;
+    if (!handlers) {
+      return;
+    }
+    window.removeEventListener("pointermove", handlers.move);
+    window.removeEventListener("pointerup", handlers.up);
+    window.removeEventListener("pointercancel", handlers.cancel);
+    pagePointerWindowHandlersRef.current = null;
   };
 
-  const handlePagePointerDragStart = (
-    event: React.PointerEvent<HTMLButtonElement>,
-    pageId: string,
-  ) => {
-    onInternalDragActiveChange(true);
-    pagePointerDragRef.current = {
-      pageId,
-      pointerId: event.pointerId,
-      startX: event.clientX,
-      startY: event.clientY,
-      target: null,
-      active: false,
-      hitRects: [],
-      scrollLeft: pageTimelineRef.current?.scrollLeft ?? 0,
-    };
-    event.currentTarget.setPointerCapture(event.pointerId);
+  const removePageMouseWindowHandlers = () => {
+    const handlers = pageMouseWindowHandlersRef.current;
+    if (!handlers) {
+      return;
+    }
+    window.removeEventListener("mousemove", handlers.move);
+    window.removeEventListener("mouseup", handlers.up);
+    pageMouseWindowHandlersRef.current = null;
   };
 
-  const handlePagePointerDragMove = (
-    event: React.PointerEvent<HTMLButtonElement>,
-    pageId: string,
+  const stopPageAutoScroll = () => {
+    const autoScroll = pageAutoScrollRef.current;
+    if (autoScroll.frame !== null) {
+      window.cancelAnimationFrame(autoScroll.frame);
+    }
+    autoScroll.frame = null;
+    autoScroll.velocityX = 0;
+    autoScroll.velocityY = 0;
+    autoScroll.lastTime = null;
+  };
+
+  const refreshPageHitRects = () => {
+    const drag = pagePointerDragRef.current;
+    const timeline = pageTimelineRef.current;
+    if (!drag || !timeline) {
+      return;
+    }
+    const hitRects = capturePageHitRects();
+    if (hitRects.length === 0) {
+      return;
+    }
+    drag.hitRects = hitRects;
+    drag.scrollLeft = timeline.scrollLeft;
+    drag.scrollTop = timeline.scrollTop;
+  };
+
+  const updatePageDragTarget = (clientX: number, clientY: number) => {
+    const drag = pagePointerDragRef.current;
+    if (!drag?.active) {
+      return;
+    }
+    drag.lastClientX = clientX;
+    drag.lastClientY = clientY;
+    refreshPageHitRects();
+    const nextTarget = pageDropTargetFromPoint(clientX, clientY);
+    drag.target = nextTarget;
+    setDraggingPageId(drag.pageId);
+    setDropTarget(nextTarget);
+  };
+
+  const runPageAutoScroll = (timestamp: number) => {
+    const autoScroll = pageAutoScrollRef.current;
+    const timeline = pageTimelineRef.current;
+    const drag = pagePointerDragRef.current;
+    if (
+      !timeline ||
+      !drag?.active ||
+      (autoScroll.velocityX === 0 && autoScroll.velocityY === 0)
+    ) {
+      stopPageAutoScroll();
+      return;
+    }
+
+    refreshPageHitRects();
+    const elapsedMs =
+      autoScroll.lastTime === null ? 16.7 : timestamp - autoScroll.lastTime;
+    autoScroll.lastTime = timestamp;
+    const deltaSeconds = Math.min(0.05, Math.max(0.001, elapsedMs / 1000));
+    const maxScrollLeft = Math.max(0, timeline.scrollWidth - timeline.clientWidth);
+    const maxScrollTop = Math.max(0, timeline.scrollHeight - timeline.clientHeight);
+    const nextScrollLeft = Math.max(
+      0,
+      Math.min(maxScrollLeft, timeline.scrollLeft + autoScroll.velocityX * deltaSeconds),
+    );
+    const nextScrollTop = Math.max(
+      0,
+      Math.min(maxScrollTop, timeline.scrollTop + autoScroll.velocityY * deltaSeconds),
+    );
+    const leftChanged = Math.abs(nextScrollLeft - timeline.scrollLeft) >= 0.5;
+    const topChanged = Math.abs(nextScrollTop - timeline.scrollTop) >= 0.5;
+
+    if (!leftChanged && !topChanged) {
+      stopPageAutoScroll();
+      return;
+    }
+
+    timeline.scrollLeft = nextScrollLeft;
+    timeline.scrollTop = nextScrollTop;
+    setTimelineScrollTop(nextScrollTop);
+    const nextTarget = pageDropTargetFromPoint(autoScroll.x, autoScroll.y);
+    drag.target = nextTarget;
+    setDraggingPageId(drag.pageId);
+    setDropTarget(nextTarget);
+    autoScroll.frame = window.requestAnimationFrame(runPageAutoScroll);
+  };
+
+  const updatePageAutoScroll = (clientX: number, clientY: number) => {
+    const timeline = pageTimelineRef.current;
+    const drag = pagePointerDragRef.current;
+    if (!timeline || !drag?.active) {
+      return;
+    }
+
+    const rect = timeline.getBoundingClientRect();
+    const verticalEdge = Math.min(76, Math.max(44, rect.height * 0.18));
+    const horizontalEdge = Math.min(72, Math.max(44, rect.width * 0.08));
+    const maxVerticalSpeed = 940;
+    const maxHorizontalSpeed = 620;
+    let velocityX = 0;
+    let velocityY = 0;
+
+    if (clientY < rect.top + verticalEdge) {
+      const intensity = Math.min(
+        1,
+        Math.max(0, (rect.top + verticalEdge - clientY) / verticalEdge),
+      );
+      velocityY = -Math.round(intensity * maxVerticalSpeed);
+    } else if (clientY > rect.bottom - verticalEdge) {
+      const intensity = Math.min(
+        1,
+        Math.max(0, (clientY - (rect.bottom - verticalEdge)) / verticalEdge),
+      );
+      velocityY = Math.round(intensity * maxVerticalSpeed);
+    }
+
+    if (clientX < rect.left + horizontalEdge) {
+      const intensity = Math.min(
+        1,
+        Math.max(0, (rect.left + horizontalEdge - clientX) / horizontalEdge),
+      );
+      velocityX = -Math.round(intensity * maxHorizontalSpeed);
+    } else if (clientX > rect.right - horizontalEdge) {
+      const intensity = Math.min(
+        1,
+        Math.max(0, (clientX - (rect.right - horizontalEdge)) / horizontalEdge),
+      );
+      velocityX = Math.round(intensity * maxHorizontalSpeed);
+    }
+
+    const maxScrollLeft = Math.max(0, timeline.scrollWidth - timeline.clientWidth);
+    const maxScrollTop = Math.max(0, timeline.scrollHeight - timeline.clientHeight);
+    if ((velocityX < 0 && timeline.scrollLeft <= 0) || (velocityX > 0 && timeline.scrollLeft >= maxScrollLeft)) {
+      velocityX = 0;
+    }
+    if ((velocityY < 0 && timeline.scrollTop <= 0) || (velocityY > 0 && timeline.scrollTop >= maxScrollTop)) {
+      velocityY = 0;
+    }
+
+    const autoScroll = pageAutoScrollRef.current;
+    autoScroll.x = clientX;
+    autoScroll.y = clientY;
+    autoScroll.velocityX = velocityX;
+    autoScroll.velocityY = velocityY;
+
+    if (velocityX === 0 && velocityY === 0) {
+      stopPageAutoScroll();
+      return;
+    }
+
+    if (autoScroll.frame === null) {
+      autoScroll.frame = window.requestAnimationFrame(runPageAutoScroll);
+    }
+  };
+
+  const updatePagePointerDrag = (
+    pointerId: number,
+    clientX: number,
+    clientY: number,
   ): boolean => {
     const drag = pagePointerDragRef.current;
-    if (!drag || drag.pageId !== pageId || drag.pointerId !== event.pointerId) {
+    if (!drag || drag.pointerId !== pointerId) {
       return false;
     }
 
-    const distance = Math.hypot(event.clientX - drag.startX, event.clientY - drag.startY);
+    drag.lastClientX = clientX;
+    drag.lastClientY = clientY;
+    const distance = Math.hypot(clientX - drag.startX, clientY - drag.startY);
     if (!drag.active && distance < 6) {
       return false;
     }
 
     if (!drag.active) {
-      drag.hitRects = capturePageHitRects();
-      drag.scrollLeft = pageTimelineRef.current?.scrollLeft ?? 0;
+      refreshPageHitRects();
     }
     drag.active = true;
-    event.preventDefault();
-    const nextTarget = pageDropTargetFromPoint(event.clientX, event.clientY);
-    drag.target = nextTarget;
-    setDraggingPageId(drag.pageId);
-    setDropTarget(nextTarget);
+    updatePageDragTarget(clientX, clientY);
+    updatePageAutoScroll(clientX, clientY);
     return true;
   };
 
-  const handlePagePointerDragEnd = (
-    event: React.PointerEvent<HTMLButtonElement>,
-    pageId: string,
-  ): boolean => {
+  const completePagePointerDrag = (pointerId: number): boolean => {
     const drag = pagePointerDragRef.current;
-    if (!drag || drag.pageId !== pageId || drag.pointerId !== event.pointerId) {
+    if (!drag || drag.pointerId !== pointerId) {
       return false;
     }
 
     const wasDragging = drag.active;
     const target = drag.target;
-    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
-      event.currentTarget.releasePointerCapture(event.pointerId);
-    }
-
     resetPagePointerDrag();
 
     if (wasDragging && target && expandedFile) {
@@ -2915,6 +3374,133 @@ function ExpandedTimeline({
     return wasDragging;
   };
 
+  const attachPagePointerWindowHandlers = () => {
+    removePagePointerWindowHandlers();
+    const move = (event: PointerEvent) => {
+      const drag = pagePointerDragRef.current;
+      if (!drag || drag.pointerId !== event.pointerId) {
+        return;
+      }
+      if (updatePagePointerDrag(event.pointerId, event.clientX, event.clientY)) {
+        event.preventDefault();
+      }
+    };
+    const up = (event: PointerEvent) => {
+      const drag = pagePointerDragRef.current;
+      if (!drag || drag.pointerId !== event.pointerId) {
+        return;
+      }
+      if (completePagePointerDrag(event.pointerId)) {
+        event.preventDefault();
+      }
+    };
+    const cancel = (event: PointerEvent) => {
+      const drag = pagePointerDragRef.current;
+      if (!drag || drag.pointerId !== event.pointerId) {
+        return;
+      }
+      resetPagePointerDrag();
+    };
+    pagePointerWindowHandlersRef.current = { move, up, cancel };
+    window.addEventListener("pointermove", move, { passive: false });
+    window.addEventListener("pointerup", up, { passive: false });
+    window.addEventListener("pointercancel", cancel);
+  };
+
+  const attachPageMouseWindowHandlers = () => {
+    removePageMouseWindowHandlers();
+    const move = (event: MouseEvent) => {
+      const drag = pagePointerDragRef.current;
+      if (!drag || drag.pointerId !== pageMouseDragPointerId) {
+        return;
+      }
+      if (updatePagePointerDrag(pageMouseDragPointerId, event.clientX, event.clientY)) {
+        event.preventDefault();
+      }
+    };
+    const up = (event: MouseEvent) => {
+      const drag = pagePointerDragRef.current;
+      if (!drag || drag.pointerId !== pageMouseDragPointerId) {
+        return;
+      }
+      if (completePagePointerDrag(pageMouseDragPointerId)) {
+        event.preventDefault();
+      }
+    };
+    pageMouseWindowHandlersRef.current = { move, up };
+    window.addEventListener("mousemove", move, { passive: false });
+    window.addEventListener("mouseup", up, { passive: false });
+  };
+
+  const resetPagePointerDrag = () => {
+    stopPageAutoScroll();
+    removePagePointerWindowHandlers();
+    removePageMouseWindowHandlers();
+    const drag = pagePointerDragRef.current;
+    if (
+      drag &&
+      drag.pointerId !== pageMouseDragPointerId &&
+      drag.sourceElement?.hasPointerCapture(drag.pointerId)
+    ) {
+      drag.sourceElement.releasePointerCapture(drag.pointerId);
+    }
+    pagePointerDragRef.current = null;
+    onInternalDragActiveChange(false);
+    setDraggingPageId(null);
+    setDropTarget(null);
+  };
+
+  const handlePagePointerDragStart = (
+    event: React.PointerEvent<HTMLButtonElement>,
+    pageId: string,
+  ) => {
+    onInternalDragActiveChange(true);
+    pagePointerDragRef.current = {
+      pageId,
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      lastClientX: event.clientX,
+      lastClientY: event.clientY,
+      target: null,
+      active: false,
+      hitRects: [],
+      scrollLeft: pageTimelineRef.current?.scrollLeft ?? 0,
+      scrollTop: pageTimelineRef.current?.scrollTop ?? 0,
+      sourceElement: event.currentTarget,
+    };
+    event.currentTarget.setPointerCapture(event.pointerId);
+    attachPagePointerWindowHandlers();
+  };
+
+  const handlePagePointerDragMove = (
+    event: React.PointerEvent<HTMLButtonElement>,
+    pageId: string,
+  ): boolean => {
+    const drag = pagePointerDragRef.current;
+    if (!drag || drag.pageId !== pageId || drag.pointerId !== event.pointerId) {
+      return false;
+    }
+
+    const wasUpdated = updatePagePointerDrag(event.pointerId, event.clientX, event.clientY);
+    if (wasUpdated) {
+      event.preventDefault();
+    }
+    return wasUpdated;
+  };
+
+  const handlePagePointerDragEnd = (
+    event: React.PointerEvent<HTMLButtonElement>,
+    pageId: string,
+  ): boolean => {
+    const drag = pagePointerDragRef.current;
+    if (!drag || drag.pageId !== pageId || drag.pointerId !== event.pointerId) {
+      return false;
+    }
+
+    return completePagePointerDrag(event.pointerId);
+  };
+
   const handlePagePointerDragCancel = (
     event: React.PointerEvent<HTMLButtonElement>,
     pageId: string,
@@ -2927,6 +3513,59 @@ function ExpandedTimeline({
       event.currentTarget.releasePointerCapture(event.pointerId);
     }
     resetPagePointerDrag();
+  };
+
+  const handlePageMouseDragStart = (
+    event: React.MouseEvent<HTMLButtonElement>,
+    pageId: string,
+  ) => {
+    if (pagePointerDragRef.current) {
+      return;
+    }
+    onInternalDragActiveChange(true);
+    pagePointerDragRef.current = {
+      pageId,
+      pointerId: pageMouseDragPointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      lastClientX: event.clientX,
+      lastClientY: event.clientY,
+      target: null,
+      active: false,
+      hitRects: [],
+      scrollLeft: pageTimelineRef.current?.scrollLeft ?? 0,
+      scrollTop: pageTimelineRef.current?.scrollTop ?? 0,
+      sourceElement: event.currentTarget,
+    };
+    attachPageMouseWindowHandlers();
+  };
+
+  const handlePageMouseDragMove = (
+    event: React.MouseEvent<HTMLButtonElement>,
+    pageId: string,
+  ): boolean => {
+    const drag = pagePointerDragRef.current;
+    if (!drag || drag.pageId !== pageId || drag.pointerId !== pageMouseDragPointerId) {
+      return false;
+    }
+
+    const wasUpdated = updatePagePointerDrag(pageMouseDragPointerId, event.clientX, event.clientY);
+    if (wasUpdated) {
+      event.preventDefault();
+    }
+    return wasUpdated;
+  };
+
+  const handlePageMouseDragEnd = (
+    event: React.MouseEvent<HTMLButtonElement>,
+    pageId: string,
+  ): boolean => {
+    const drag = pagePointerDragRef.current;
+    if (!drag || drag.pageId !== pageId || drag.pointerId !== pageMouseDragPointerId) {
+      return false;
+    }
+
+    return completePagePointerDrag(pageMouseDragPointerId);
   };
 
   const handlePageDragOver = (event: DragEvent<HTMLButtonElement>, pageId: string) => {
@@ -2943,6 +3582,9 @@ function ExpandedTimeline({
 
   useEffect(
     () => () => {
+      stopPageAutoScroll();
+      removePagePointerWindowHandlers();
+      removePageMouseWindowHandlers();
       onInternalDragActiveChange(false);
     },
     [onInternalDragActiveChange],
@@ -2979,24 +3621,25 @@ function ExpandedTimeline({
     setDropTarget(null);
   };
 
+  const activeDecorationKind = decorationToolIds.includes(activeTool as DecorationKind)
+    ? (activeTool as DecorationKind)
+    : undefined;
   const activePanel =
     activeTool === "lock" ? (
       <SecurityPanel onClose={() => setSettingsPanelHidden(true)} />
     ) : activeTool === "info" ? (
       <InfoPanel file={expandedFile ?? files[0]} onClose={() => setSettingsPanelHidden(true)} />
-    ) : decorationToolIds.includes(activeTool as DecorationKind) ? (
+    ) : activeDecorationKind ? (
       <DecorationPanel
-        kind={activeTool as DecorationKind}
+        kind={activeDecorationKind}
+        panelPosition={decorationPanelPosition}
+        onPanelPositionChange={setDecorationPanelPosition}
         onClose={() => setSettingsPanelHidden(true)}
       />
     ) : (
       null
     );
-  const hasActivePanel = Boolean(
-    activeTool === "lock" ||
-      activeTool === "info" ||
-      decorationToolIds.includes(activeTool as DecorationKind),
-  );
+  const hasFloatingPanel = Boolean(activeTool === "lock" || activeTool === "info" || activeDecorationKind);
 
   return (
     <section className="workspace-section page-editor">
@@ -3040,6 +3683,9 @@ function ExpandedTimeline({
                 onPointerDragMove={handlePagePointerDragMove}
                 onPointerDragEnd={handlePagePointerDragEnd}
                 onPointerDragCancel={handlePagePointerDragCancel}
+                onMouseDragStart={handlePageMouseDragStart}
+                onMouseDragMove={handlePageMouseDragMove}
+                onMouseDragEnd={handlePageMouseDragEnd}
                 onRequestToggleExcluded={requestPageExclusion}
                 key={page.id}
               />
@@ -3054,7 +3700,7 @@ function ExpandedTimeline({
       </div>
 
       {!settingsPanelHidden && activePanel}
-      {settingsPanelHidden && hasActivePanel && (
+      {settingsPanelHidden && hasFloatingPanel && (
         <button className="floating-panel-reopen" onClick={() => setSettingsPanelHidden(false)}>
           <BadgeInfo size={15} />
           設定
@@ -3115,6 +3761,7 @@ function OutputBar({
           }, 0) / conversionFiles.length,
         );
   const isPreparing = pendingCount > 0;
+  const queueLabel = conversionQueueLabel(files);
   const progressWidth =
     exportJob.status === "running" || exportJob.status === "completed"
       ? `${exportJob.progress}%`
@@ -3125,11 +3772,17 @@ function OutputBar({
     exportJob.status === "running"
       ? exportJob.currentStep
       : isPreparing
-        ? `変換中 ${conversionProgress}%`
+        ? queueLabel || `変換中 ${conversionProgress}%`
         : exportJob.status === "idle"
-          ? ""
+          ? queueLabel
           : exportJob.message;
   const outputNames = plannedOutputNames(outputPlan);
+  const pageReadout =
+    outputPlan.activePageCount > 0
+      ? `${outputPlan.activePageCount}ページ`
+      : outputPlan.activeFileCount > 0
+        ? `${outputPlan.activeFileCount}件 準備待ち`
+        : "0ページ";
   const firstOutputFile = lastOutputFiles[0];
   const openFirstOutput = async () => {
     if (!firstOutputFile) {
@@ -3169,7 +3822,7 @@ function OutputBar({
           </span>
           <span>
             <ListChecks size={13} />
-            {outputPlan.activePageCount}ページ
+            {pageReadout}
           </span>
         </div>
       </div>
@@ -3228,11 +3881,18 @@ function ExportPreviewModal({
   const [previewCanvasSize, setPreviewCanvasSize] = useState<PreviewCanvasSize | null>(null);
   const [previewImageFallbacks, setPreviewImageFallbacks] = useState<Record<string, boolean>>({});
   const [previewHighResReady, setPreviewHighResReady] = useState<Record<string, boolean>>({});
+  const [previewPageImages, setPreviewPageImages] = useState<Record<string, PreviewPageImageState>>({});
+  const [pageJumpValue, setPageJumpValue] = useState("1");
+  const [filmstripScrollLeft, setFilmstripScrollLeft] = useState(0);
+  const [filmstripViewportWidth, setFilmstripViewportWidth] = useState(0);
   const previewCanvasRef = useRef<HTMLDivElement | null>(null);
+  const filmstripRef = useRef<HTMLDivElement | null>(null);
   const thumbnailRefs = useRef<Record<string, HTMLButtonElement | null>>({});
   const decorationPreviewPagesRef = useRef<Record<string, DecorationPreviewState>>({});
   const previewHighResReadyRef = useRef<Record<string, boolean>>({});
   const previewImageFallbacksRef = useRef<Record<string, boolean>>({});
+  const previewPageImagesRef = useRef<Record<string, PreviewPageImageState>>({});
+  const previewImageRequestsRef = useRef<Set<string>>(new Set());
   const decorationPreviewGenerationRef = useRef(0);
   const groups = useMemo(
     () => buildExportPreviewGroups(files, pagesByFile, outputPlan),
@@ -3296,6 +3956,48 @@ function ExportPreviewModal({
   const currentPage = pages[currentIndex];
   const currentKey = currentPage ? decorationPreviewKey(currentPage) : "";
 
+  const requestPreviewPageImage = useCallback(
+    (page: ExportPreviewFilmstripPage | undefined, desiredZoom: number) => {
+      if (!page || !cacheSession.path || !isTauriRuntime()) {
+        return;
+      }
+      const pageKey = decorationPreviewKey(page);
+      const roundedZoom = Math.round(desiredZoom * 100);
+      const requestKey = `${pageKey}:${roundedZoom}`;
+      const currentPreviewImage = previewPageImagesRef.current[pageKey];
+      if (
+        currentPreviewImage?.previewPath &&
+        (currentPreviewImage.previewZoom ?? 0) >= desiredZoom - 0.05
+      ) {
+        return;
+      }
+      if (previewImageRequestsRef.current.has(requestKey)) {
+        return;
+      }
+      previewImageRequestsRef.current.add(requestKey);
+      void renderExportPreviewPageImage(page.id, cacheSession.path, {
+        previewZoom: desiredZoom,
+      }).then((result) => {
+        if (!result.thumbnailPath && !result.previewPath) {
+          return;
+        }
+        setPreviewPageImages((current) => {
+          const next = {
+            ...current,
+            [pageKey]: {
+              thumbnailPath: result.thumbnailPath,
+              previewPath: result.previewPath,
+              previewZoom: result.previewZoom ?? desiredZoom,
+            },
+          };
+          previewPageImagesRef.current = next;
+          return next;
+        });
+      });
+    },
+    [cacheSession.path],
+  );
+
   useEffect(() => {
     decorationPreviewPagesRef.current = decorationPreviewPages;
   }, [decorationPreviewPages]);
@@ -3307,6 +4009,10 @@ function ExportPreviewModal({
   useEffect(() => {
     previewImageFallbacksRef.current = previewImageFallbacks;
   }, [previewImageFallbacks]);
+
+  useEffect(() => {
+    previewPageImagesRef.current = previewPageImages;
+  }, [previewPageImages]);
 
   const commitDecorationPreviewState = useCallback(
     (key: string, nextState: DecorationPreviewState) => {
@@ -3408,8 +4114,11 @@ function ExportPreviewModal({
     setDecorationPreviewPages(cachedPages);
     previewImageFallbacksRef.current = {};
     previewHighResReadyRef.current = {};
+    previewPageImagesRef.current = {};
+    previewImageRequestsRef.current.clear();
     setPreviewImageFallbacks({});
     setPreviewHighResReady({});
+    setPreviewPageImages({});
   }, [open, pages.length, previewSignature]);
 
   useEffect(() => {
@@ -3446,6 +4155,31 @@ function ExportPreviewModal({
     }
 
     const observer = new ResizeObserver(updateCanvasSize);
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+    const node = filmstripRef.current;
+    if (!node) {
+      return;
+    }
+
+    const updateFilmstripViewport = () => {
+      setFilmstripViewportWidth(node.clientWidth);
+      setFilmstripScrollLeft(node.scrollLeft);
+    };
+    updateFilmstripViewport();
+
+    if (typeof ResizeObserver === "undefined") {
+      window.addEventListener("resize", updateFilmstripViewport);
+      return () => window.removeEventListener("resize", updateFilmstripViewport);
+    }
+
+    const observer = new ResizeObserver(updateFilmstripViewport);
     observer.observe(node);
     return () => observer.disconnect();
   }, [open]);
@@ -3525,6 +4259,34 @@ function ExportPreviewModal({
   ]);
 
   useEffect(() => {
+    if (!open || pages.length === 0 || pendingFiles.length > 0 || settledPreviewIndex !== currentIndex) {
+      return;
+    }
+
+    const targetPage = pages[settledPreviewIndex];
+    const targetZoom = previewRenderZoomForCanvas(
+      previewCanvasSize,
+      targetPage ? pageAspectRatios[decorationPreviewKey(targetPage)] : undefined,
+    );
+    requestPreviewPageImage(targetPage, targetZoom);
+    const timer = window.setTimeout(() => {
+      const neighborZoom = Math.max(1.45, targetZoom - 0.2);
+      requestPreviewPageImage(pages[settledPreviewIndex - 1], neighborZoom);
+      requestPreviewPageImage(pages[settledPreviewIndex + 1], neighborZoom);
+    }, previewNeighborPrefetchDelayMs);
+    return () => window.clearTimeout(timer);
+  }, [
+    currentIndex,
+    open,
+    pageAspectRatios,
+    pages,
+    pendingFiles.length,
+    previewCanvasSize,
+    requestPreviewPageImage,
+    settledPreviewIndex,
+  ]);
+
+  useEffect(() => {
     if (!open || pages.length === 0 || settledPreviewIndex !== currentIndex) {
       return;
     }
@@ -3535,16 +4297,19 @@ function ExportPreviewModal({
         return;
       }
       const key = decorationPreviewKey(page);
+      const previewImage = previewPageImagesRef.current[key];
+      const thumbnailPath = page.thumbnailPath ?? previewImage?.thumbnailPath;
+      const previewPath = previewImage?.previewPath ?? page.previewPath;
       if (
         previewHighResReadyRef.current[key] ||
         previewImageFallbacksRef.current[key] ||
-        !page.previewPath ||
-        !page.thumbnailPath ||
-        page.previewPath === page.thumbnailPath
+        !previewPath ||
+        !thumbnailPath ||
+        previewPath === thumbnailPath
       ) {
         return;
       }
-      const src = localAssetSrc(page.previewPath);
+      const src = localAssetSrc(previewPath);
       if (!src) {
         return;
       }
@@ -3600,14 +4365,38 @@ function ExportPreviewModal({
     });
   }, [currentKey, open]);
 
+  useEffect(() => {
+    if (!open || pages.length === 0) {
+      return;
+    }
+    const node = filmstripRef.current;
+    if (!node) {
+      return;
+    }
+    const nextLeft = Math.max(
+      0,
+      currentIndex * previewFilmstripItemWidth - node.clientWidth / 2 + previewFilmstripItemWidth / 2,
+    );
+    if (Math.abs(node.scrollLeft - nextLeft) > previewFilmstripItemWidth * 1.5) {
+      node.scrollLeft = nextLeft;
+      setFilmstripScrollLeft(nextLeft);
+    }
+  }, [currentIndex, open, pages.length]);
+
   const goToPage = useCallback((nextIndex: number) => {
     if (pages.length === 0) {
       setCurrentIndex(0);
+      setPageJumpValue("1");
       return;
     }
     const boundedIndex = Math.max(0, Math.min(pages.length - 1, nextIndex));
     setCurrentIndex((current) => (current === boundedIndex ? current : boundedIndex));
+    setPageJumpValue(String(boundedIndex + 1));
   }, [pages.length]);
+
+  useEffect(() => {
+    setPageJumpValue(String(pages.length === 0 ? 1 : currentIndex + 1));
+  }, [currentIndex, pages.length]);
 
   const rememberPageAspectRatio = useCallback(
     (pageKey: string, event: SyntheticEvent<HTMLImageElement>) => {
@@ -3633,10 +4422,13 @@ function ExportPreviewModal({
   );
 
   const fallbackToThumbnailPreview = useCallback(() => {
-    if (!currentPage || !currentKey || !currentPage.previewPath || !currentPage.thumbnailPath) {
+    const previewImage = currentKey ? previewPageImagesRef.current[currentKey] : undefined;
+    const previewPath = previewImage?.previewPath ?? currentPage?.previewPath;
+    const thumbnailPath = currentPage?.thumbnailPath ?? previewImage?.thumbnailPath;
+    if (!currentPage || !currentKey || !previewPath || !thumbnailPath) {
       return;
     }
-    if (currentPage.previewPath === currentPage.thumbnailPath) {
+    if (previewPath === thumbnailPath) {
       return;
     }
     previewImageFallbacksRef.current = {
@@ -3652,14 +4444,59 @@ function ExportPreviewModal({
     return null;
   }
 
+  const currentPreviewImage = currentKey ? previewPageImages[currentKey] : undefined;
+  const currentThumbnailPath = currentPage?.thumbnailPath ?? currentPreviewImage?.thumbnailPath;
+  const currentPreviewPath = currentPreviewImage?.previewPath ?? currentPage?.previewPath;
   const currentImagePath =
     currentPage && currentKey && previewImageFallbacks[currentKey]
-      ? currentPage.thumbnailPath
-      : currentPage?.previewPath &&
-          (previewHighResReady[currentKey] || !currentPage.thumbnailPath)
-        ? currentPage.previewPath
-        : currentPage?.thumbnailPath ?? currentPage?.previewPath;
+      ? currentThumbnailPath
+      : currentPreviewPath &&
+          (previewHighResReady[currentKey] || !currentThumbnailPath || Boolean(currentPreviewImage?.previewPath))
+        ? currentPreviewPath
+        : currentThumbnailPath ?? currentPreviewPath;
   const currentThumbnailSrc = localAssetSrc(currentImagePath);
+  const visibleFilmstripStart = Math.max(
+    0,
+    Math.floor(filmstripScrollLeft / previewFilmstripItemWidth) - 6,
+  );
+  const visibleFilmstripEnd = Math.min(
+    pages.length,
+    Math.ceil(
+      (filmstripScrollLeft + Math.max(filmstripViewportWidth, previewFilmstripItemWidth)) /
+        previewFilmstripItemWidth,
+    ) + 6,
+  );
+  const visibleFilmstripPages = pages.slice(visibleFilmstripStart, visibleFilmstripEnd);
+  const leftFilmstripSpacer = visibleFilmstripStart * previewFilmstripItemWidth;
+  const rightFilmstripSpacer = Math.max(0, pages.length - visibleFilmstripEnd) * previewFilmstripItemWidth;
+  const outputStartIndexes = groups.reduce<number[]>((indexes, group, groupIndex) => {
+    const previousCount = groups
+      .slice(0, groupIndex)
+      .reduce((count, item) => count + item.pages.length, 0);
+    if (group.pages.length > 0) {
+      indexes.push(previousCount);
+    }
+    return indexes;
+  }, []);
+  const currentOutputStartIndex =
+    outputStartIndexes
+      .slice()
+      .reverse()
+      .find((index) => index <= currentIndex) ?? 0;
+  const nextOutputStartIndex = outputStartIndexes.find((index) => index > currentIndex);
+  const previousOutputStartIndex = outputStartIndexes
+    .slice()
+    .reverse()
+    .find((index) => index < currentOutputStartIndex);
+  const canConfirmOutput = outputPlan.activeFileCount > 0;
+  const submitPreviewJump = () => {
+    const pageNumber = Number.parseInt(pageJumpValue, 10);
+    if (!Number.isFinite(pageNumber)) {
+      setPageJumpValue(String(currentIndex + 1));
+      return;
+    }
+    goToPage(pageNumber - 1);
+  };
   const currentDecorationPreview = currentKey ? decorationPreviewPages[currentKey] : undefined;
   const currentDecorationManifest =
     currentDecorationPreview?.manifest ?? currentDecorationPreview?.overlay;
@@ -3714,6 +4551,55 @@ function ExportPreviewModal({
           )}
         </div>
 
+        <div className="preview-navigation">
+          <button disabled={pages.length === 0 || currentIndex === 0} onClick={() => goToPage(0)} type="button">
+            先頭
+          </button>
+          <button disabled={pages.length === 0 || currentIndex === 0} onClick={() => goToPage(currentIndex - 1)} type="button">
+            前へ
+          </button>
+          <label>
+            <span>ページ</span>
+            <input
+              type="number"
+              min={1}
+              max={Math.max(1, pages.length)}
+              value={pageJumpValue}
+              onChange={(event) => setPageJumpValue(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault();
+                  submitPreviewJump();
+                }
+              }}
+            />
+            <span>/ {Math.max(1, pages.length)}</span>
+          </label>
+          <button disabled={pages.length === 0} onClick={submitPreviewJump} type="button">
+            移動
+          </button>
+          <button disabled={pages.length === 0 || currentIndex >= pages.length - 1} onClick={() => goToPage(currentIndex + 1)} type="button">
+            次へ
+          </button>
+          <button disabled={pages.length === 0 || currentIndex >= pages.length - 1} onClick={() => goToPage(pages.length - 1)} type="button">
+            末尾
+          </button>
+          <button
+            disabled={previousOutputStartIndex === undefined}
+            onClick={() => previousOutputStartIndex !== undefined && goToPage(previousOutputStartIndex)}
+            type="button"
+          >
+            前の出力
+          </button>
+          <button
+            disabled={nextOutputStartIndex === undefined}
+            onClick={() => nextOutputStartIndex !== undefined && goToPage(nextOutputStartIndex)}
+            type="button"
+          >
+            次の出力
+          </button>
+        </div>
+
         <div className="preview-stage">
           <button
             className="preview-nav-button is-prev"
@@ -3729,6 +4615,8 @@ function ExportPreviewModal({
               <div
                 className="preview-live-page"
                 style={currentPageFrameStyle}
+                data-preview-quality={currentPreviewImage?.previewPath ? "high" : currentThumbnailSrc ? "light" : "empty"}
+                data-preview-render-zoom={currentPreviewImage?.previewZoom?.toFixed(2)}
               >
                 {currentThumbnailSrc ? (
                   <img
@@ -3751,6 +4639,11 @@ function ExportPreviewModal({
                   idPrefix={`preview-${currentKey}`}
                 />
               </div>
+            ) : pendingFiles.length > 0 ? (
+              <div className="preview-live-empty">
+                <Loader2 size={40} />
+                <span>PDF化後にプレビューを表示します</span>
+              </div>
             ) : (
               <div className="preview-live-empty">出力対象ページがありません</div>
             )}
@@ -3766,10 +4659,21 @@ function ExportPreviewModal({
           </button>
         </div>
 
-        <div className="preview-filmstrip" aria-label="出力ページ一覧">
+        <div
+          className="preview-filmstrip"
+          aria-label="出力ページ一覧"
+          ref={filmstripRef}
+          onScroll={(event) => setFilmstripScrollLeft(event.currentTarget.scrollLeft)}
+        >
           {pages.length > 0 ? (
-            pages.map((page, index) => {
+            <>
+            {leftFilmstripSpacer > 0 && (
+              <div className="filmstrip-virtual-spacer" style={{ width: leftFilmstripSpacer }} />
+            )}
+            {visibleFilmstripPages.map((page, visibleIndex) => {
+              const index = visibleFilmstripStart + visibleIndex;
               const pageKey = decorationPreviewKey(page);
+              const previewImage = previewPageImages[pageKey];
               return (
                 <PreviewFilmstripItem
                   key={pageKey}
@@ -3778,6 +4682,7 @@ function ExportPreviewModal({
                   index={index}
                   active={index === currentIndex}
                   aspectRatio={pageAspectRatios[pageKey]}
+                  thumbnailPath={page.thumbnailPath ?? previewImage?.thumbnailPath}
                   decorationPreview={decorationPreviewPages[pageKey]}
                   onSelect={goToPage}
                   onImageLoad={rememberPageAspectRatio}
@@ -3785,6 +4690,11 @@ function ExportPreviewModal({
                 />
               );
             })
+            }
+            {rightFilmstripSpacer > 0 && (
+              <div className="filmstrip-virtual-spacer" style={{ width: rightFilmstripSpacer }} />
+            )}
+            </>
           ) : (
             <div className="preview-empty">出力対象ページがありません</div>
           )}
@@ -3794,7 +4704,7 @@ function ExportPreviewModal({
           <button onClick={onClose}>戻る</button>
           <button
             className="export-button"
-            disabled={exportJob.status === "running" || outputPlan.activePageCount === 0}
+            disabled={exportJob.status === "running" || !canConfirmOutput}
             onClick={onConfirm}
           >
             <FileOutput size={17} />
@@ -3852,8 +4762,12 @@ export function App() {
     useState<ExportCompletionNotice | null>(null);
   const [alphaLicense, setAlphaLicense] = useState<AlphaLicenseStatus | null>(null);
   const [e2eBootstrap, setE2eBootstrap] = useState<E2eBootstrapInfo | null>(null);
+  const [fileOrderHeightPx, setFileOrderHeightPx] = useState<number | null>(null);
+  const [isResizingFileOrder, setIsResizingFileOrder] = useState(false);
   const e2eStartedRef = useRef(false);
   const internalDragActiveRef = useRef(false);
+  const workbenchRef = useRef<HTMLElement | null>(null);
+  const fileOrderResizeRef = useRef<FileOrderResizeRef | null>(null);
   const lastCompletionNoticeAtRef = useRef<number | undefined>(undefined);
   const markInternalDragActive = useCallback((active: boolean) => {
     internalDragActiveRef.current = active;
@@ -3861,6 +4775,163 @@ export function App() {
       setDropActive(false);
     }
   }, []);
+  const measureFileOrderHeightBounds = useCallback(() => {
+    const workbench = workbenchRef.current;
+    const fileSection = workbench?.querySelector<HTMLElement>(".file-order-section");
+    if (!workbench || !fileSection) {
+      return null;
+    }
+
+    const workbenchStyle = window.getComputedStyle(workbench);
+    const paddingTop = Number.parseFloat(workbenchStyle.paddingTop) || 0;
+    const paddingBottom = Number.parseFloat(workbenchStyle.paddingBottom) || 0;
+    const rowGap =
+      Number.parseFloat(workbenchStyle.rowGap || workbenchStyle.gap) || 12;
+    const compactLayout = window.matchMedia("(max-width: 980px), (max-height: 620px)").matches;
+    const cssMinimumHeight = compactLayout ? 184 : 196;
+    const pageMinimumHeight = compactLayout ? 118 : 220;
+    const availableHeight =
+      workbench.clientHeight - paddingTop - paddingBottom - rowGap;
+    const maxHeight = Math.max(
+      cssMinimumHeight,
+      Math.floor(availableHeight - pageMinimumHeight),
+    );
+
+    const heading = fileSection.querySelector<HTMLElement>(".section-heading");
+    const strip = fileSection.querySelector<HTMLElement>(".file-strip");
+    const cards = Array.from(fileSection.querySelectorAll<HTMLElement>(".file-card"));
+    const headingHeight = heading?.getBoundingClientRect().height ?? 38;
+    const stripStyle = strip ? window.getComputedStyle(strip) : null;
+    const stripPadding =
+      (stripStyle ? Number.parseFloat(stripStyle.paddingTop) || 0 : 0) +
+      (stripStyle ? Number.parseFloat(stripStyle.paddingBottom) || 0 : 0);
+    const cardHeight = cards.reduce(
+      (height, card) => Math.max(height, card.getBoundingClientRect().height),
+      0,
+    );
+    const stripScrollbarAllowance =
+      strip && strip.scrollWidth > strip.clientWidth ? 14 : 0;
+    const minimumWithCards =
+      cardHeight > 0
+        ? Math.ceil(headingHeight + cardHeight + stripPadding + stripScrollbarAllowance + 6)
+        : cssMinimumHeight;
+    const minHeight = Math.min(
+      maxHeight,
+      Math.max(cssMinimumHeight, minimumWithCards),
+    );
+    const currentHeight = Math.round(fileSection.getBoundingClientRect().height);
+
+    return {
+      minHeight,
+      maxHeight: Math.max(minHeight, maxHeight),
+      currentHeight,
+    };
+  }, []);
+  const clampFileOrderHeight = (
+    height: number,
+    bounds: Pick<FileOrderResizeRef, "minHeight" | "maxHeight">,
+  ) => Math.round(Math.max(bounds.minHeight, Math.min(bounds.maxHeight, height)));
+  const handleFileOrderResizeStart = (event: React.PointerEvent<HTMLDivElement>) => {
+    const bounds = measureFileOrderHeightBounds();
+    if (!bounds) {
+      return;
+    }
+    const startHeight = clampFileOrderHeight(bounds.currentHeight, bounds);
+    fileOrderResizeRef.current = {
+      pointerId: event.pointerId,
+      startY: event.clientY,
+      startHeight,
+      minHeight: bounds.minHeight,
+      maxHeight: bounds.maxHeight,
+    };
+    setFileOrderHeightPx(startHeight);
+    setIsResizingFileOrder(true);
+    markInternalDragActive(true);
+    event.currentTarget.focus();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    event.preventDefault();
+  };
+  const handleFileOrderResizeMove = (event: React.PointerEvent<HTMLDivElement>) => {
+    const resize = fileOrderResizeRef.current;
+    if (!resize || resize.pointerId !== event.pointerId) {
+      return;
+    }
+    const nextHeight = clampFileOrderHeight(
+      resize.startHeight + event.clientY - resize.startY,
+      resize,
+    );
+    setFileOrderHeightPx(nextHeight);
+    event.preventDefault();
+  };
+  const finishFileOrderResize = (event: React.PointerEvent<HTMLDivElement>) => {
+    const resize = fileOrderResizeRef.current;
+    if (!resize || resize.pointerId !== event.pointerId) {
+      return;
+    }
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+    fileOrderResizeRef.current = null;
+    setIsResizingFileOrder(false);
+    markInternalDragActive(false);
+  };
+  const handleFileOrderResizeKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    const bounds = measureFileOrderHeightBounds();
+    if (!bounds) {
+      return;
+    }
+    const baseHeight = fileOrderHeightPx ?? bounds.currentHeight;
+    let nextHeight: number | null = null;
+    if (event.key === "ArrowUp") {
+      nextHeight = baseHeight - 12;
+    } else if (event.key === "ArrowDown") {
+      nextHeight = baseHeight + 12;
+    } else if (event.key === "PageUp") {
+      nextHeight = baseHeight - 36;
+    } else if (event.key === "PageDown") {
+      nextHeight = baseHeight + 36;
+    } else if (event.key === "Home") {
+      nextHeight = bounds.minHeight;
+    } else if (event.key === "End") {
+      nextHeight = bounds.maxHeight;
+    } else if (event.key === "Escape") {
+      setFileOrderHeightPx(null);
+      return;
+    }
+    if (nextHeight === null) {
+      return;
+    }
+    event.preventDefault();
+    setFileOrderHeightPx(clampFileOrderHeight(nextHeight, bounds));
+  };
+  useEffect(() => {
+    if (fileOrderHeightPx === null) {
+      return undefined;
+    }
+    const workbench = workbenchRef.current;
+    if (!workbench) {
+      return undefined;
+    }
+
+    const keepFileOrderHeightInBounds = () => {
+      const bounds = measureFileOrderHeightBounds();
+      if (!bounds) {
+        return;
+      }
+      setFileOrderHeightPx((height) =>
+        height === null ? null : clampFileOrderHeight(height, bounds),
+      );
+    };
+
+    if (typeof ResizeObserver === "undefined") {
+      window.addEventListener("resize", keepFileOrderHeightInBounds);
+      return () => window.removeEventListener("resize", keepFileOrderHeightInBounds);
+    }
+
+    const observer = new ResizeObserver(keepFileOrderHeightInBounds);
+    observer.observe(workbench);
+    return () => observer.disconnect();
+  }, [fileOrderHeightPx, measureFileOrderHeightBounds]);
   const addInputFiles = useWorkbenchStore((state) => state.addInputFiles);
   const addLog = useWorkbenchStore((state) => state.addLog);
   const undo = useWorkbenchStore((state) => state.undo);
@@ -3883,6 +4954,9 @@ export function App() {
   );
   const loadHundredFilesPerformanceFixture = useWorkbenchStore(
     (state) => state.loadHundredFilesPerformanceFixture,
+  );
+  const loadOfficeQueuedFixture = useWorkbenchStore(
+    (state) => state.loadOfficeQueuedFixture,
   );
   const exportJob = useWorkbenchStore((state) => state.exportJob);
   const lastOutputFiles = useWorkbenchStore((state) => state.lastOutputFiles);
@@ -3953,6 +5027,8 @@ export function App() {
       loadHundredFilesPerformanceFixture();
     } else if (params.get("fixture") === "large-pages") {
       loadLargePerformanceFixture();
+    } else if (params.get("fixture") === "office-queued") {
+      loadOfficeQueuedFixture();
     } else if (params.get("fixture") === "workbench") {
       loadDevelopmentFixture();
     }
@@ -3964,6 +5040,7 @@ export function App() {
     loadDevelopmentFixture,
     loadHundredFilesPerformanceFixture,
     loadLargePerformanceFixture,
+    loadOfficeQueuedFixture,
     setActiveTool,
   ]);
 
@@ -4340,12 +5417,21 @@ export function App() {
     return <AlphaExpiredScreen license={alphaLicense} />;
   }
 
+  const workbenchStyle =
+    fileOrderHeightPx === null
+      ? undefined
+      : ({
+          "--file-order-height": `${fileOrderHeightPx}px`,
+        } as CSSProperties);
+
   return (
     <div className={["app-shell", dropActive ? "is-drop-active" : ""].join(" ")}>
       <AppBar />
       <ToolBar />
       <main
-        className="workbench"
+        className={["workbench", isResizingFileOrder ? "is-resizing-file-order" : ""].join(" ")}
+        ref={workbenchRef}
+        style={workbenchStyle}
         onDragOver={handleWorkbenchDragOver}
         onDragLeave={handleWorkbenchDragLeave}
         onDrop={handleWorkbenchDrop}
@@ -4354,6 +5440,23 @@ export function App() {
           onInternalDragActiveChange={markInternalDragActive}
           onRequestRemoveFiles={requestRemoveFiles}
         />
+        <div
+          className="workbench-resizer"
+          role="separator"
+          aria-label="ファイル順序エリアの高さ"
+          aria-orientation="horizontal"
+          tabIndex={0}
+          title="ドラッグで高さを調整"
+          onPointerDown={handleFileOrderResizeStart}
+          onPointerMove={handleFileOrderResizeMove}
+          onPointerUp={finishFileOrderResize}
+          onPointerCancel={finishFileOrderResize}
+          onKeyDown={handleFileOrderResizeKeyDown}
+        >
+          <span aria-hidden="true">
+            <GripHorizontal size={18} />
+          </span>
+        </div>
         <ExpandedTimeline
           onInternalDragActiveChange={markInternalDragActive}
         />

@@ -1199,3 +1199,30 @@ Verification:
 - See `docs/reports/2026-05-22-large-pdf-performance-root-cause.md`.
 - 100 loaded PDF file-card responsiveness was also checked with the synthetic fixture in `docs/reports/2026-05-22-hundred-files-performance-verification.md`.
 - 100 real-PDF export speed was checked and the decoration font bottleneck was optimized in `docs/reports/2026-05-22-export-speed-verification.md`.
+
+## 2026-05-25 Splash residual startup hardening
+
+Implemented:
+
+- Startup completion now repeatedly schedules splash cleanup on the Tauri main thread: hide first, force-destroy second, and use `close()` only as a fallback if force-destroy fails.
+- The startup completion command is idempotent, so duplicate frontend calls still dispose any remaining splash window without stealing focus again.
+- A Rust-side 12-second startup watchdog reveals the main window and disposes the splash if the frontend never reaches `complete_startup`, preventing an indefinite splash-only state.
+- The existing 4-second minimum splash display remains unchanged for normal startup.
+
+Verification:
+
+- See `docs/reports/2026-05-25-splash-residual-hardening.md`.
+
+## 2026-05-30 Usability priority fixes
+
+Implemented:
+
+- Office-only workspaces can open output naming, preview, and export before conversion has finished.
+- Office conversion queue states are visible on file cards and in the bottom output bar while keeping the existing serial Office COM worker path.
+- Export preview now has page jump and output navigation, virtualizes the filmstrip, and requests current-page preview images on demand.
+- Large-PDF timelines now expose visible range, page jump, and return controls for split, excluded, and decorated pages.
+- Added an explicit `?fixture=office-queued` development fixture for pre-conversion Office UI verification.
+
+Verification:
+
+- See `docs/reports/2026-05-30-usability-priority-fixes.md`.

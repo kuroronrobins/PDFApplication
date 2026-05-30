@@ -1,0 +1,303 @@
+{
+  "outputFiles": [
+    "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\docs\\reports\\e2e\\2026-05-30-usability-office-only\\outputs\\office-only-usability-result_001.pdf",
+    "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\docs\\reports\\e2e\\2026-05-30-usability-office-only\\outputs\\office-only-usability-result_002.pdf"
+  ],
+  "snapshot": {
+    "exportJob": {
+      "cancellable": false,
+      "completedAt": 1780142957449,
+      "currentStep": "保存",
+      "message": "書き出し完了",
+      "progress": 100,
+      "startedAt": 1780142957047,
+      "status": "completed"
+    },
+    "files": [
+      {
+        "cacheState": "ready",
+        "engineState": "cached",
+        "id": "office_excel_wide-mpsb56my-0",
+        "kind": "excel",
+        "name": "office_excel_wide.xlsx",
+        "pageCount": 2
+      },
+      {
+        "cacheState": "ready",
+        "engineState": "cached",
+        "id": "office_powerpoint_edge-mpsb56my-2",
+        "kind": "powerpoint",
+        "name": "office_powerpoint_edge.pptx",
+        "pageCount": 1
+      },
+      {
+        "cacheState": "ready",
+        "engineState": "cached",
+        "id": "office_word_dense-mpsb56my-4",
+        "kind": "word",
+        "name": "office_word_dense.docx",
+        "pageCount": 1
+      }
+    ],
+    "lastOutputFiles": [
+      "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\docs\\reports\\e2e\\2026-05-30-usability-office-only\\outputs\\office-only-usability-result_001.pdf",
+      "C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\docs\\reports\\e2e\\2026-05-30-usability-office-only\\outputs\\office-only-usability-result_002.pdf"
+    ],
+    "logs": [
+      {
+        "id": "log-f783867e-998d-498e-9b7c-0f13d4f32932",
+        "level": "info",
+        "message": "書き出しが完了しました: office-only-usability-result_001.pdf, office-only-usability-result_002.pdf",
+        "time": "21:09:17"
+      },
+      {
+        "id": "log-dc80e53e-1bf4-424d-9321-02e5f29a35d1",
+        "level": "info",
+        "message": "一括書き出しジョブを開始しました。出力予定 2ファイル。",
+        "time": "21:09:17"
+      },
+      {
+        "id": "log-c26f846e-2dc8-4d3c-b3f1-b8d2b35a90ed",
+        "level": "info",
+        "message": "E2E CHECK をページへ配置しました。",
+        "time": "21:09:17"
+      },
+      {
+        "id": "log-1c0ac569-ff02-4d28-8424-64b1ce09b4fb",
+        "level": "info",
+        "message": "{page} / {total} をページへ配置しました。",
+        "time": "21:09:17"
+      },
+      {
+        "id": "log-16678a3d-3206-4eb4-8d6c-60a4f6268b8f",
+        "level": "info",
+        "message": "PDF Workbench E2E をページへ配置しました。",
+        "time": "21:09:17"
+      },
+      {
+        "id": "log-0a97f200-1fe9-46d0-80e5-c7543e0476a6",
+        "level": "info",
+        "message": "office_word_dense.docx を実PDFとして準備しました。1ページ。サムネイルは展開時に生成します。",
+        "time": "21:09:17"
+      },
+      {
+        "id": "log-41e4875c-6f59-489a-95e1-05183bea3afd",
+        "level": "info",
+        "message": "office_word_dense.docx のページ構成を登録しています。",
+        "time": "21:09:17"
+      },
+      {
+        "id": "log-a7a8255c-add3-4d10-9cb6-e88b5c6a3f97",
+        "level": "info",
+        "message": "worker処理を開始しました。",
+        "time": "21:09:16"
+      },
+      {
+        "id": "log-2c21f3e2-e8bc-4dd1-a42d-a2f265677496",
+        "level": "info",
+        "message": "office_word_dense.docx のPDF化が完了しました。ページ解析中です。",
+        "time": "21:09:16"
+      },
+      {
+        "id": "log-743e0b95-3ae3-478b-b930-64223ab18cad",
+        "level": "info",
+        "message": "office_word_dense.docx のPDF化が完了しました。",
+        "time": "21:09:16"
+      },
+      {
+        "id": "log-c3ddfc41-63d3-411f-ab23-9a4e414479bd",
+        "level": "info",
+        "message": "Microsoft Office をバックグラウンドで起動しています。",
+        "time": "21:09:13"
+      },
+      {
+        "id": "log-6b71da33-0e02-496b-a44b-3302f64455fb",
+        "level": "info",
+        "message": "office_word_dense.docx のPDF化を開始しています。",
+        "time": "21:09:13"
+      },
+      {
+        "id": "log-87a491ad-8fd6-49b9-a4a4-b71f9d6fb940",
+        "level": "info",
+        "message": "worker処理を開始しました。",
+        "time": "21:09:13"
+      },
+      {
+        "id": "log-78bb9ffd-fff5-4f47-a37b-9b3a027fb6f8",
+        "level": "info",
+        "message": "office_word_dense.docx のOffice PDF化を開始しました。",
+        "time": "21:09:13"
+      },
+      {
+        "id": "log-b45bbffa-3526-4d37-915c-6c111dab6081",
+        "level": "info",
+        "message": "office_powerpoint_edge.pptx を実PDFとして準備しました。1ページ。サムネイルは展開時に生成します。",
+        "time": "21:09:13"
+      },
+      {
+        "id": "log-0cf2c427-0287-474c-958d-6af055cfc39c",
+        "level": "info",
+        "message": "office_powerpoint_edge.pptx のページ構成を登録しています。",
+        "time": "21:09:13"
+      },
+      {
+        "id": "log-57d800f6-da78-4991-9429-e67f62045609",
+        "level": "info",
+        "message": "worker処理を開始しました。",
+        "time": "21:09:13"
+      },
+      {
+        "id": "log-f27e5f98-4b18-45f2-b945-ff8026e21ba8",
+        "level": "info",
+        "message": "office_powerpoint_edge.pptx のPDF化が完了しました。ページ解析中です。",
+        "time": "21:09:13"
+      },
+      {
+        "id": "log-dc755921-4374-4c95-9043-05d5075bf3f5",
+        "level": "info",
+        "message": "office_powerpoint_edge.pptx のPDF化が完了しました。",
+        "time": "21:09:13"
+      },
+      {
+        "id": "log-956913f1-2f8e-44da-89a5-9a9ca00c14cd",
+        "level": "info",
+        "message": "Microsoft Office をバックグラウンドで起動しています。",
+        "time": "21:09:05"
+      },
+      {
+        "id": "log-d57df352-da50-48ef-b4bb-86e41a778da7",
+        "level": "info",
+        "message": "office_powerpoint_edge.pptx のPDF化を開始しています。",
+        "time": "21:09:05"
+      },
+      {
+        "id": "log-39b5d095-8ceb-4689-bee6-4c698b848404",
+        "level": "info",
+        "message": "worker処理を開始しました。",
+        "time": "21:09:05"
+      },
+      {
+        "id": "log-c0ad0db8-f43a-4179-b5ba-b1c792ed1904",
+        "level": "info",
+        "message": "office_powerpoint_edge.pptx のOffice PDF化を開始しました。",
+        "time": "21:09:05"
+      },
+      {
+        "id": "log-88257d2f-8cbe-447a-9276-58af28408e1f",
+        "level": "info",
+        "message": "office_excel_wide.xlsx を実PDFとして準備しました。2ページ。サムネイルは展開時に生成します。",
+        "time": "21:09:05"
+      },
+      {
+        "id": "log-735d7fc2-a2e2-4e11-be25-851631819788",
+        "level": "info",
+        "message": "office_excel_wide.xlsx のページ構成を登録しています。",
+        "time": "21:09:05"
+      },
+      {
+        "id": "log-746c2d9f-342c-4f80-8a2d-43f780dc9b8e",
+        "level": "info",
+        "message": "worker処理を開始しました。",
+        "time": "21:09:04"
+      },
+      {
+        "id": "log-6c37bad6-3482-4b1c-b0f7-0096a4de6eee",
+        "level": "info",
+        "message": "office_excel_wide.xlsx のPDF化が完了しました。ページ解析中です。",
+        "time": "21:09:04"
+      },
+      {
+        "id": "log-0b05a73f-f8a3-4892-ba90-d18f402d4962",
+        "level": "info",
+        "message": "office_excel_wide.xlsx のPDF化が完了しました。",
+        "time": "21:09:04"
+      },
+      {
+        "id": "log-a42c8073-7a96-4e98-9843-e80327a5766a",
+        "level": "info",
+        "message": "Microsoft Office をバックグラウンドで起動しています。",
+        "time": "21:08:59"
+      },
+      {
+        "id": "log-2e807e32-11d9-4c0e-bf24-904b613fac54",
+        "level": "info",
+        "message": "office_excel_wide.xlsx のPDF化を開始しています。",
+        "time": "21:08:59"
+      },
+      {
+        "id": "log-9fd96e30-62b5-4759-a110-78b74c8d4c86",
+        "level": "info",
+        "message": "worker処理を開始しました。",
+        "time": "21:08:59"
+      },
+      {
+        "id": "log-accfe382-4ae5-467b-bf1f-da2395a0b84b",
+        "level": "info",
+        "message": "office_excel_wide.xlsx のOffice PDF化を開始しました。",
+        "time": "21:08:59"
+      },
+      {
+        "id": "log-b55bf130-c858-4a5c-9781-5b43ae539444",
+        "level": "info",
+        "message": "出力先を設定しました: C:\\Users\\kuroron\\Documents\\RD\\20260215_PDFApplication\\docs\\reports\\e2e\\2026-05-30-usability-office-only\\outputs\\office-only-usability-result.pdf",
+        "time": "21:08:59"
+      },
+      {
+        "id": "log-5fff5285-1a59-4d3f-9180-ead362d7a407",
+        "level": "info",
+        "message": "office_word_dense.docx を追加しました。PDF 化はバックグラウンドで待機します。",
+        "time": "21:08:59"
+      },
+      {
+        "id": "log-b2f2b35d-24be-4b7c-bcee-81d35a7020f8",
+        "level": "info",
+        "message": "office_powerpoint_edge.pptx を追加しました。PDF 化はバックグラウンドで待機します。",
+        "time": "21:08:59"
+      },
+      {
+        "id": "log-6d1a588f-35b0-484e-9746-9eac22978e68",
+        "level": "info",
+        "message": "office_excel_wide.xlsx を追加しました。PDF 化はバックグラウンドで待機します。",
+        "time": "21:08:59"
+      },
+      {
+        "id": "log-5490f5c6-c3d8-4cd6-bef5-a833a2c57d95",
+        "level": "info",
+        "message": "E2Eファイル投入を開始します: 3件",
+        "time": "21:08:56"
+      },
+      {
+        "id": "log-1dab320d-d68c-41b9-a370-9be3dbe2b08e",
+        "level": "info",
+        "message": "セッション一時キャッシュを準備しました: C:\\Users\\kuroron\\AppData\\Local\\Temp\\pdf-workbench-sessions\\session-1780142936203",
+        "time": "21:08:56"
+      },
+      {
+        "id": "log-5dae0edf-65df-4d78-87a2-d1d141fefce8",
+        "level": "info",
+        "message": "E2E起動設定を検出しました。",
+        "time": "21:08:56"
+      }
+    ],
+    "outputPlan": {
+      "activeFileCount": 3,
+      "activePageCount": 4,
+      "autoOutputFiles": [
+        "office_excel_wide_PDF化_001.pdf",
+        "office_excel_wide_PDF化_002.pdf"
+      ],
+      "customOutputNamesApplied": false,
+      "decorationCount": 3,
+      "defaultOutputFileName": "office_excel_wide_PDF化.pdf",
+      "encrypted": false,
+      "excludedPageCount": 0,
+      "outputCount": 2,
+      "outputFiles": [
+        "office_excel_wide_PDF化_001.pdf",
+        "office_excel_wide_PDF化_002.pdf"
+      ],
+      "splitCount": 1
+    }
+  },
+  "status": "completed"
+}

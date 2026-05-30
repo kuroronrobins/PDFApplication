@@ -20,9 +20,21 @@ import type { PageItem, PdfMetadata, WorkbenchFile, WorkbenchSnapshot } from "./
 
 const inFlightFiles = new Map<string, Promise<void>>();
 const inFlightThumbnailFiles = new Map<string, Promise<void>>();
+const inFlightPreviewPageImages = new Map<string, Promise<PreviewPageImageResult>>();
 const activePreparationJobIds = new Set<string>();
 let activeExportJobId: string | undefined;
 let activeExportCancellationRequested = false;
+
+export type PreviewPageImageResult = {
+  pageId: string;
+  thumbnailPath?: string;
+  previewPath?: string;
+  previewZoom?: number;
+};
+
+export type PreviewPageImageOptions = {
+  previewZoom?: number;
+};
 
 function isVirtualSource(path?: string): boolean {
   return Boolean(
@@ -123,6 +135,17 @@ function previewMap(
       thumbnail.previewPath ?? thumbnail.thumbnailPath,
     ]),
   );
+}
+
+function findPageById(pageId: string): { fileId: string; page: PageItem } | undefined {
+  const state = useWorkbenchStore.getState();
+  for (const [fileId, pages] of Object.entries(state.pagesByFile)) {
+    const page = pages.find((item) => item.id === pageId);
+    if (page) {
+      return { fileId, page };
+    }
+  }
+  return undefined;
 }
 
 function shouldProcessWithEngine(file: WorkbenchFile): boolean {
@@ -285,6 +308,106 @@ export function renderExpandedFileThumbnails(fileId: string, sessionDir: string)
   });
 
   inFlightThumbnailFiles.set(fileId, promise);
+  return promise;
+}
+
+export function renderExportPreviewPageImage(
+  pageId: string,
+  sessionDir: string,
+  options: PreviewPageImageOptions = {},
+): Promise<PreviewPageImageResult> {
+  const pageLocation = findPageById(pageId);
+  if (!pageLocation) {
+    return Promise.resolve({ pageId });
+  }
+
+  const sourceFileId = pageLocation.page.sourceFileId ?? pageLocation.fileId;
+  const sourcePageNumber = pageLocation.page.originalPageNumber || pageLocation.page.pageNumber;
+  const previewZoom = Math.max(0.9, Math.min(2.7, options.previewZoom ?? 1.9));
+  const zoomKey = Math.round(previewZoom * 100);
+  const key = `${sourceFileId}:${sourcePageNumber}:${sessionDir}:${zoomKey}`;
+  const existing = inFlightPreviewPageImages.get(key);
+  if (existing) {
+    return existing;
+  }
+
+  const promise = (async (): Promise<PreviewPageImageResult> => {
+    const state = useWorkbenchStore.getState();
+    const sourceFile = state.files.find((file) => file.id === sourceFileId);
+    if (!sourceFile || sourceFile.cacheState !== "ready") {
+      return { pageId };
+    }
+
+    const pdfPath = sourceFile.cachePath || sourceFile.sourcePath;
+    if (!pdfPath || isVirtualSource(pdfPath)) {
+      return { pageId };
+    }
+
+    const password = state.security.inputPassword;
+    const thumbnailDir = joinWorkerPath(
+      sessionDir,
+      "preview-thumbnails",
+      sourceFile.id,
+      `z${zoomKey}`,
+      String(sourcePageNumber),
+    );
+    const thumbnailJobId = createProcessingJobId("preview-thumbnail");
+    state.addLog("info", `${sourceFile.name} p${sourcePageNumber} のプレビュー画像を生成しています。`);
+
+    try {
+      const result = await trackPreparationJob(thumbnailJobId, () =>
+        renderPdfThumbnailsStreaming(
+          pdfPath,
+          thumbnailDir,
+          Math.max(sourceFile.pageCount || 0, sourcePageNumber),
+          password,
+          thumbnailJobId,
+          (event) => {
+            if (event.type === "log" && event.message) {
+              useWorkbenchStore.getState().addLog(event.level ?? "info", event.message);
+            }
+          },
+          {
+            pageNumbers: [sourcePageNumber],
+            thumbnailZoom: 0.32,
+            previewZoom,
+          },
+        ),
+      );
+      const thumbnail = result.thumbnails.find((item) => item.pageNumber === sourcePageNumber);
+      if (!thumbnail) {
+        return { pageId };
+      }
+
+      if (pageLocation.fileId === sourceFile.id) {
+        useWorkbenchStore.getState().completeFileThumbnails(sourceFile.id, {
+          thumbnailPaths: thumbnailMap([thumbnail]),
+          previewPaths: previewMap([thumbnail]),
+          message: `${sourceFile.name} p${sourcePageNumber} のプレビュー画像を生成しました。`,
+        });
+      }
+
+      return {
+        pageId,
+        thumbnailPath: thumbnail.thumbnailPath,
+        previewPath: thumbnail.previewPath ?? thumbnail.thumbnailPath,
+        previewZoom,
+      };
+    } catch (error) {
+      if (!(error instanceof ProcessingEngineCancelledError)) {
+        useWorkbenchStore
+          .getState()
+          .addLog("warn", `${sourceFile.name} p${sourcePageNumber} のプレビュー画像生成に失敗しました: ${normalizeEngineMessage(error)}`);
+      }
+      return { pageId };
+    }
+  })().finally(() => {
+    if (inFlightPreviewPageImages.get(key) === promise) {
+      inFlightPreviewPageImages.delete(key);
+    }
+  });
+
+  inFlightPreviewPageImages.set(key, promise);
   return promise;
 }
 
